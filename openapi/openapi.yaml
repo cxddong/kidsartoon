@@ -1,0 +1,1059 @@
+openapi: 3.0.3
+info:
+  title: Kids Art Tales API
+  description: API for children's drawing app with image-to-story, image-to-cartoon, and image-to-animation features
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags:
+        - System
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  # Media Generation APIs
+  /api/media/image-to-voice:
+    post:
+      summary: Generate audio story from image and voice keywords
+      description: Analyzes image and combines with user voice keywords to generate a story with audio
+      tags:
+        - Media
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: User's drawing image
+                voiceText:
+                  type: string
+                  description: Keywords from user voice input
+                userId:
+                  type: string
+                  description: User ID
+      responses:
+        '200':
+          description: Story and audio generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  keywords:
+                    type: array
+                    items:
+                      type: string
+                  story:
+                    type: string
+                  audioUrl:
+                    type: string
+                  userId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+
+  /api/media/image-to-image:
+    post:
+      summary: Generate cartoon image from user's drawing
+      description: Converts user's drawing to cartoon style based on keywords
+      tags:
+        - Media
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: User's drawing image
+                prompt:
+                  type: string
+                  description: Keywords for cartoon generation
+                userId:
+                  type: string
+                originalImageUrl:
+                  type: string
+      responses:
+        '200':
+          description: Cartoon image generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  prompt:
+                    type: string
+                  originalImageUrl:
+                    type: string
+                  cartoonImageUrl:
+                    type: string
+                  userId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+
+  /api/media/image-to-video:
+    post:
+      summary: Generate animation video from image
+      description: Creates a short animation (under 1 minute) from user's drawing
+      tags:
+        - Media
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                prompt:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        '200':
+          description: Animation video generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  prompt:
+                    type: string
+                  videoUrl:
+                    type: string
+                  durationSec:
+                    type: integer
+                  userId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+
+  /api/media/generate-picture-book:
+    post:
+      summary: Generate picture book from cartoon image
+      description: Creates a 4-6 page picture book story from cartoon image and user interaction
+      tags:
+        - Media
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                cartoonImage:
+                  type: string
+                  format: binary
+                cartoonImageUrl:
+                  type: string
+                prompt:
+                  type: string
+                userId:
+                  type: string
+                pageCount:
+                  type: integer
+                  minimum: 4
+                  maximum: 6
+                  default: 4
+      responses:
+        '200':
+          description: Picture book generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  pages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pageNumber:
+                          type: integer
+                        imageUrl:
+                          type: string
+                        text:
+                          type: string
+                  pageCount:
+                    type: integer
+                  coverImageUrl:
+                    type: string
+                  userId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+
+  /api/media/cocreate:
+    post:
+      summary: Co-create content from multiple works
+      description: Generate new content by combining multiple user works
+      tags:
+        - Media
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workIds
+                - type
+                - userId
+              properties:
+                workIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 2
+                type:
+                  type: string
+                  enum: [picture-book, animation, audio-story]
+                userId:
+                  type: string
+                prompt:
+                  type: string
+      responses:
+        '200':
+          description: Co-created content generated
+        '400':
+          description: Invalid request (need at least 2 work IDs)
+
+  # User Management APIs
+  /api/users:
+    post:
+      summary: Create new user
+      tags:
+        - Users
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                avatarUrl:
+                  type: string
+                language:
+                  type: string
+                  default: en
+                age:
+                  type: integer
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /api/users/{id}:
+    get:
+      summary: Get user profile
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          description: User not found
+    patch:
+      summary: Update user profile
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                avatarUrl:
+                  type: string
+                language:
+                  type: string
+                age:
+                  type: integer
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /api/users/{id}/points/add:
+    post:
+      summary: Add points to user
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+      responses:
+        '200':
+          description: Points added
+
+  /api/users/{id}/points/deduct:
+    post:
+      summary: Deduct points from user
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+      responses:
+        '200':
+          description: Points deducted
+        '400':
+          description: Insufficient points
+
+  /api/users/{id}/points/claim-like-rewards:
+    post:
+      summary: Claim like rewards
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rewards claimed
+
+  /api/users/{id}/points/add-like-reward:
+    post:
+      summary: Add like reward (internal)
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  default: 1
+      responses:
+        '200':
+          description: Reward added
+
+  /api/users/{id}/membership:
+    post:
+      summary: Update membership level
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                level:
+                  type: string
+                  enum: [free, gold]
+      responses:
+        '200':
+          description: Membership updated
+
+  /api/users/{id}/creations:
+    get:
+      summary: Get user's creations
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [audio, picture, animation, picture-book]
+      responses:
+        '200':
+          description: User creations
+    post:
+      summary: Add creation to user history
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                type:
+                  type: string
+                  enum: [audio, picture, animation, picture-book]
+                title:
+                  type: string
+                mediaUrl:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Creation added
+
+  /api/users/{id}/stats:
+    get:
+      summary: Get user statistics
+      tags:
+        - Users
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User statistics
+
+  # Community APIs
+  /api/community/works:
+    get:
+      summary: List community works
+      tags:
+        - Community
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [audio, picture, animation]
+        - in: query
+          name: authorId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of works
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Work'
+    post:
+      summary: Publish work to community
+      tags:
+        - Community
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - authorId
+                - type
+                - mediaUrl
+              properties:
+                authorId:
+                  type: string
+                authorName:
+                  type: string
+                authorAvatar:
+                  type: string
+                type:
+                  type: string
+                  enum: [audio, picture, animation]
+                title:
+                  type: string
+                description:
+                  type: string
+                mediaUrl:
+                  type: string
+                thumbnailUrl:
+                  type: string
+                canCoCreate:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Work published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+
+  /api/community/works/{id}:
+    get:
+      summary: Get work by ID
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Work details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+        '404':
+          description: Work not found
+
+  /api/community/works/{id}/like:
+    post:
+      summary: Like a work
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+      responses:
+        '200':
+          description: Work liked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  likeCount:
+                    type: integer
+                  authorReward:
+                    type: integer
+
+  /api/community/works/{id}/unlike:
+    post:
+      summary: Unlike a work
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+      responses:
+        '200':
+          description: Work unliked
+
+  /api/community/works/{id}/liked:
+    get:
+      summary: Check if user liked a work
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Like status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+
+  /api/community/works/{id}/share:
+    post:
+      summary: Share a work
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Work shared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  shareCount:
+                    type: integer
+                  shareUrl:
+                    type: string
+
+  /api/community/works/{id}/cocreate:
+    post:
+      summary: Co-create from a work
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - authorId
+              properties:
+                authorId:
+                  type: string
+                authorName:
+                  type: string
+                authorAvatar:
+                  type: string
+                title:
+                  type: string
+                description:
+                  type: string
+                mediaUrl:
+                  type: string
+                thumbnailUrl:
+                  type: string
+      responses:
+        '201':
+          description: Co-created work
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Work'
+        '403':
+          description: Co-create disabled for this work
+
+  /api/community/users/{userId}/liked:
+    get:
+      summary: Get user's liked works
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liked works
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Work'
+
+  /api/community/users/{userId}/like-rewards:
+    get:
+      summary: Get author's like rewards
+      tags:
+        - Community
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Like rewards summary
+
+  # Subscription APIs
+  /api/subscriptions/plans:
+    get:
+      summary: Get subscription plans
+      tags:
+        - Subscriptions
+      responses:
+        '200':
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  free:
+                    $ref: '#/components/schemas/Plan'
+                  gold:
+                    $ref: '#/components/schemas/Plan'
+
+  /api/subscriptions/{userId}/usage:
+    get:
+      summary: Get daily usage
+      tags:
+        - Subscriptions
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daily usage
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pictureBooks:
+                    type: integer
+                  animations:
+                    type: integer
+                  audioStories:
+                    type: integer
+                  lastResetDate:
+                    type: string
+                    format: date
+                  isNewDay:
+                    type: boolean
+
+  /api/subscriptions/{userId}/check-quota:
+    post:
+      summary: Check if user can consume quota
+      tags:
+        - Subscriptions
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [pictureBooks, animations, audioStories]
+                membership:
+                  type: string
+                  enum: [free, gold]
+                  default: free
+      responses:
+        '200':
+          description: Quota check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canConsume:
+                    type: boolean
+                  current:
+                    type: integer
+                  limit:
+                    type: string
+                  remaining:
+                    type: string
+                  membership:
+                    type: string
+
+  /api/subscriptions/{userId}/consume:
+    post:
+      summary: Consume a quota item
+      tags:
+        - Subscriptions
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [pictureBooks, animations, audioStories]
+                membership:
+                  type: string
+                  enum: [free, gold]
+                  default: free
+      responses:
+        '200':
+          description: Quota consumed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  usage:
+                    type: object
+                  remaining:
+                    type: object
+        '403':
+          description: Daily quota exceeded
+
+  /api/subscriptions/{userId}/reset:
+    post:
+      summary: Reset usage (admin/testing)
+      tags:
+        - Subscriptions
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usage reset
+
+components:
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        avatarUrl:
+          type: string
+        language:
+          type: string
+        age:
+          type: integer
+        membership:
+          type: string
+          enum: [free, gold]
+        points:
+          type: integer
+        creations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+                enum: [audio, picture, animation, picture-book]
+              title:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+              mediaUrl:
+                type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+        pendingLikeRewards:
+          type: integer
+
+    Work:
+      type: object
+      properties:
+        id:
+          type: string
+        authorId:
+          type: string
+        authorName:
+          type: string
+        authorAvatar:
+          type: string
+        type:
+          type: string
+          enum: [audio, picture, animation]
+        title:
+          type: string
+        description:
+          type: string
+        likeCount:
+          type: integer
+        likedBy:
+          type: array
+          items:
+            type: string
+        canCoCreate:
+          type: boolean
+        mediaUrl:
+          type: string
+        thumbnailUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        shareCount:
+          type: integer
+
+    Plan:
+      type: object
+      properties:
+        name:
+          type: string
+        perks:
+          type: array
+          items:
+            type: string
+        watermark:
+          type: boolean
+        limits:
+          type: object
+          properties:
+            audioStories:
+              type: integer
+            pictureBooks:
+              type: integer
+            animations:
+              type: integer

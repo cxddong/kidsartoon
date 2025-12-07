@@ -1,0 +1,75 @@
+﻿Testing Doubao Service...
+
+1. Testing Text Generation...
+node.exe : generateS
+tory failed: Error: 
+Chat API failed
+所在位置 行:1 字符: 1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (gene   
+ rateStory f...C    
+hat API failed:    S
+tring) [], Rem    ot
+eException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+    at DoubaoService
+.generateStory (D:\K
+AT\KAT\src\services\
+doubao.ts:106:37)
+    at process.proce
+ssTicksAndRejections
+ (node:internal/proc
+ess/task_queues:105:
+5)
+    at async test (D
+:\KAT\KAT\scripts\te
+st-doubao.ts:10:23)
+Text Generation Fail
+ed: Error: Chat API 
+failed
+    at DoubaoService
+.generateStory (D:\K
+AT\KAT\src\services\
+doubao.ts:106:37)
+    at process.proce
+ssTicksAndRejections
+ (node:internal/proc
+ess/task_queues:105:
+5)
+    at async test (D
+:\KAT\KAT\scripts\te
+st-doubao.ts:10:23)
+
+2. Testing Image Generation...
+Success! Image URL: https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/021764565984952b840dd7b9652efdc537cb0c7fa5f038f5ff436_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251201%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251201T051311Z&X-Tos-Expires=86400&X-Tos-Signature=29a1bb314baf6e26b46db56c8d1bae33535cbd578ed722067461c50a1c1222e8&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115
+
+3. Testing Vision Analysis...
+Vision API might not
+ be supported or mod
+el wrong: {"error":{
+"code":"InvalidEndpo
+intOrModel.NotFound"
+,"message":"The mode
+l or endpoint doubao
+-vision-pro-32k does
+ not exist or you do
+ not have access to 
+it. Request id: 0217
+645659919872eab9fabc
+9ad84f0428d102c7bd74
+a7cf40769","param":"
+","type":"Not Found"
+}}
+Success! Description: A colorful drawing full of imagination.

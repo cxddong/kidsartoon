@@ -1,0 +1,342 @@
+[
+  {
+    "id": "0b70b601-513e-4c9a-8d17-0b591e7ad932",
+    "userId": "demo-user",
+    "imageUrl": "/generated/comic-grid-a173f7ab-fe3f-4e58-9138-177d9fdd75b3.jpg",
+    "type": "comic",
+    "createdAt": "2025-12-06T22:56:06.712Z",
+    "prompt": "what is playing a ball",
+    "meta": {
+      "title": "The Fun of Playing Ball",
+      "isGrid": true
+    },
+    "favorite": false
+  },
+  {
+    "id": "ccd9ae9c-e1b7-450c-adbc-ea70073ab28b",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/021765061753646b567b14751f30536ac72f97dc0c2191ca466ef_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T225600Z&X-Tos-Expires=86400&X-Tos-Signature=00aa39125637525c71b5b0d2a3a14cbcb10a2e020837672ffbd5e6631c09cac0&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T22:56:06.714Z",
+    "prompt": "Panel 1: It's a sunny day. Little Tom is excited to go out and play ball in the park.",
+    "meta": {
+      "title": "The Fun of Playing Ball",
+      "pageNumber": 1
+    },
+    "favorite": false
+  },
+  {
+    "id": "a9788372-552d-4ccc-8505-a5a26d89e643",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650617541217c9b46b38c423994d80a3872465ebcf855b4c2_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T225601Z&X-Tos-Expires=86400&X-Tos-Signature=d4e26bd0cbc760d8e4bf9921ec720855734ed6164a5a28280f4657f8415644a7&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMjE%3D%2Cx_106%2Cy_106",
+    "type": "comic",
+    "createdAt": "2025-12-06T22:56:06.716Z",
+    "prompt": "Panel 2: Tom throws the ball high into the air and chases after it with a big smile.",
+    "meta": {
+      "title": "The Fun of Playing Ball",
+      "pageNumber": 2
+    },
+    "favorite": false
+  },
+  {
+    "id": "c54733d6-f773-4f53-94c5-69e4345a09c3",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650617540876d201c9b369c26bba9074d9a1e476adf8fc461_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T225600Z&X-Tos-Expires=86400&X-Tos-Signature=4c14ece303a1e266ed2685031b88bc55316c7f9031b22a753b96499176d5417a&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T22:56:06.717Z",
+    "prompt": "Panel 3: Suddenly, the ball rolls into a bush. Tom tries hard to find it.",
+    "meta": {
+      "title": "The Fun of Playing Ball",
+      "pageNumber": 3
+    },
+    "favorite": false
+  },
+  {
+    "id": "aef84625-c38a-4c81-b465-6e7b8e6e1f2e",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650617540947c9b46b38c423994d80a3872465ebcf8d753a7_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T225600Z&X-Tos-Expires=86400&X-Tos-Signature=7844d2f7676964a1d61e363b983fd38b14a84dc099dcb21d6f8846bc53fc05c3&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T22:56:06.718Z",
+    "prompt": "Panel 4: Finally, Tom finds the ball and continues to play happily, enjoying the fun of playing ball.",
+    "meta": {
+      "title": "The Fun of Playing Ball",
+      "pageNumber": 4
+    },
+    "favorite": false
+  },
+  {
+    "id": "0fa4a038-1a49-4442-998c-cfb174ef5567",
+    "userId": "demo-user",
+    "imageUrl": "/generated/comic-grid-0f1b794c-ae24-421e-a1d3-c1aee6f0b970.jpg",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:03:54.248Z",
+    "prompt": "a cat is playing a ball",
+    "meta": {
+      "title": "The Playful Cat",
+      "isGrid": true
+    },
+    "favorite": false
+  },
+  {
+    "id": "4350e876-5723-4e04-b3e7-b5aef60742e6",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/021765062218934571e879a7e0eb1247cfcaaab487786a1896eb1_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T230345Z&X-Tos-Expires=86400&X-Tos-Signature=a4329dd058fff29ed90bb8371b4fe79e6c527c15f1a8dddd6dedd54551a9ed46&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:03:54.250Z",
+    "prompt": "Panel 1: The curious cat spots a colorful ball and decides to play with it.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 1
+    },
+    "favorite": false
+  },
+  {
+    "id": "7e1a609e-04da-4ec1-985b-9cb0bb982a34",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/02176506221940144a0c29b4a29aed28235da222addf5f120d853_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T230345Z&X-Tos-Expires=86400&X-Tos-Signature=cbbdc25ccc8d17fc4f81474e36bf2c78e3a7cbc2e9923359949cf1ec30e2d1eb&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMjE%3D%2Cx_106%2Cy_106",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:03:54.251Z",
+    "prompt": "Panel 2: The cat chases the ball around the room, having a lot of fun.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 2
+    },
+    "favorite": false
+  },
+  {
+    "id": "d321ad5c-39ab-44f7-872a-7aefcdfeaabd",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650622193825e43bed6e99f957d955d5fe9d6168763165e77_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T230346Z&X-Tos-Expires=86400&X-Tos-Signature=00aacfc91da4f70bbe79c058bb4ff7d2205b4c4598dbf6c478879614ea8ce12f&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:03:54.252Z",
+    "prompt": "Panel 3: The ball rolls under the furniture, and the cat tries to reach it.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 3
+    },
+    "favorite": false
+  },
+  {
+    "id": "9e704abe-4fb2-4185-b8f3-c4d4caf6bb50",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650622193903683317075330b6cc9f64af0089ac7f93f7d1f_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T230346Z&X-Tos-Expires=86400&X-Tos-Signature=431b69bca6e3ccabd2634ea27931559b9039228f2aaa7d498c0ecab74fdda19b&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:03:54.254Z",
+    "prompt": "Panel 4: The cat finally gets the ball and continues to play, meowing happily.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 4
+    },
+    "favorite": false
+  },
+  {
+    "id": "b674773b-44ad-40a6-91a8-f09df2601677",
+    "userId": "demo-user",
+    "imageUrl": "/generated/comic-grid-2fac7979-fe8f-4026-9202-a1b066f1ebe5.jpg",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:11:28.385Z",
+    "prompt": "cat is playing a ball",
+    "meta": {
+      "title": "The Playful Cat",
+      "isGrid": true
+    },
+    "favorite": false
+  },
+  {
+    "id": "d6bedcb6-b34a-49ff-ba14-2303fcbe229c",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/021765062676057e3a31c433292ba20cb5fbeea5c08b176c5332c_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T231123Z&X-Tos-Expires=86400&X-Tos-Signature=afa37fb28d74b4d2f0d09cd6570d05d7948d9c5505a79cea4e6583684d9c8962&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:11:28.387Z",
+    "prompt": "The cat spots a ball and gets excited.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 1
+    },
+    "favorite": false
+  },
+  {
+    "id": "79789167-b092-46f7-b6f9-48d72b0ccfeb",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650626765097fa2ee3d7fbb71d5b51dbedad605a21ee753aa_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T231122Z&X-Tos-Expires=86400&X-Tos-Signature=625ffead72226f79a0c3a8d0c3260e6fb1958fb1b0a8d6938dcc91b881cbf9c9&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:11:28.389Z",
+    "prompt": "It chases the ball around the room.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 2
+    },
+    "favorite": false
+  },
+  {
+    "id": "5d067c44-bdd7-4da3-802d-f0f9ec0609be",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650626765014b09b8175a46b11eb7384672dbc0d4c39f9765_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T231122Z&X-Tos-Expires=86400&X-Tos-Signature=5e2abd8cf2bd26fbbc692ec68d9929164e8f32aafeb031f37d60aa599a89a4ee&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:11:28.391Z",
+    "prompt": "The ball bounces into a corner.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 3
+    },
+    "favorite": false
+  },
+  {
+    "id": "7b0827cb-7274-4bd1-b881-91c9b15acfaa",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/0217650626765078edd2369ecdae8f7c496a12d84e74b77a90f7e_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T231123Z&X-Tos-Expires=86400&X-Tos-Signature=964cd12efe66b131cbe9ce865a1ca87c9cff6fcac5005f3c2841c06e0d0f532f&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:11:28.392Z",
+    "prompt": "The cat finally catches the ball and is happy.",
+    "meta": {
+      "title": "The Playful Cat",
+      "pageNumber": 4
+    },
+    "favorite": false
+  },
+  {
+    "id": "bda06f67-4af8-4db4-a475-0329d43f5bfd",
+    "userId": "demo-user",
+    "imageUrl": "/generated/comic-grid-9f098411-056f-481e-b763-e189e0ab60ba.jpg",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:23:40.749Z",
+    "prompt": "a cat is playing a ball",
+    "meta": {
+      "isGrid": true
+    },
+    "favorite": false
+  },
+  {
+    "id": "62257560-725d-43b4-a0e4-73bd6beae40b",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/021765063333910ef398553b715ac4b99fa12f8f5bc1c37388be9_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T232219Z&X-Tos-Expires=86400&X-Tos-Signature=68e31da8e7e8ef39145306e8e995ceeec5a845a0f06895ce662799d74d72a303&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:23:40.751Z",
+    "prompt": "The cat is chasing the ball.",
+    "meta": {
+      "pageNumber": 1
+    },
+    "favorite": false
+  },
+  {
+    "id": "e0531946-bdf7-49e8-86d2-e8980345674f",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/02176506333453749e6abb1458e8172426b2aec92a3693de1fe07_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T232220Z&X-Tos-Expires=86400&X-Tos-Signature=800b1fd595cdf1164fd0d3c80b73e5dbfe72a26b522b41736b4781075e4225ab&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:23:40.753Z",
+    "prompt": "The ball rolls under the table.",
+    "meta": {
+      "pageNumber": 2
+    },
+    "favorite": false
+  },
+  {
+    "id": "6749f93d-95d3-401c-8d95-1614940b74ac",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/021765063334533b97f6b8ab26d0f1fb0c6e11a1c6580ee3abfff_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T232331Z&X-Tos-Expires=86400&X-Tos-Signature=e156707e913467fad6c846a6faf83f31769a1765561606568190c9f0e6fbf191&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:23:40.754Z",
+    "prompt": "The cat tries to reach the ball.",
+    "meta": {
+      "pageNumber": 3
+    },
+    "favorite": false
+  },
+  {
+    "id": "d79713fe-8518-4a1d-a104-89f59a662502",
+    "userId": "demo-user",
+    "imageUrl": "https://ark-content-generation-v2-cn-beijing.tos-cn-beijing.volces.com/doubao-seedream-4-0/021765063334542e7e2bee875a26dc1f94a802ca60c593d9b727a_0.jpeg?X-Tos-Algorithm=TOS4-HMAC-SHA256&X-Tos-Credential=AKLTYWJkZTExNjA1ZDUyNDc3YzhjNTM5OGIyNjBhNDcyOTQ%2F20251206%2Fcn-beijing%2Ftos%2Frequest&X-Tos-Date=20251206T232221Z&X-Tos-Expires=86400&X-Tos-Signature=4b723a09b265edc94991a8fcd4e62929d0901e5225762fa0c0a4f392702bb2c4&X-Tos-SignedHeaders=host&x-tos-process=image%2Fwatermark%2Cimage_YXNzZXRzL3dhdGVybWFya192MS5wbmc_eC10b3MtcHJvY2Vzcz1pbWFnZS9yZXNpemUscF8xMzE%3D%2Cx_115%2Cy_115",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:23:40.756Z",
+    "prompt": "The cat gets the ball and is happy.",
+    "meta": {
+      "pageNumber": 4
+    },
+    "favorite": false
+  },
+  {
+    "id": "8030fa6a-e751-46f8-9e7d-686e8f1ab130",
+    "userId": "demo-user",
+    "imageUrl": "/generated/comic-official-c9f98bc2-dbe0-4b5a-97be-3ae27301d67c.jpg",
+    "type": "comic",
+    "createdAt": "2025-12-06T23:40:40.797Z",
+    "prompt": "cat is the playing a ball",
+    "meta": {
+      "title": "My Story",
+      "isGrid": true
+    },
+    "favorite": false
+  },
+  {
+    "id": "f9e1716a-f30e-473b-8800-1119ff4f7416",
+    "userId": "demo-user",
+    "imageUrl": "/generated/comic-official-7fc8c12c-27e4-497f-a1aa-eb351dddce60.jpg",
+    "type": "comic",
+    "createdAt": "2025-12-07T02:48:11.985Z",
+    "prompt": "cat is drawing a picture",
+    "meta": {
+      "isGrid": true
+    },
+    "favorite": false
+  },
+  {
+    "id": "5f8152fa-b01f-4b88-9f2a-f8be993614c9",
+    "userId": "demo-user",
+    "imageUrl": "/mock/audio/96d0e5a2-6b99-46ee-b428-bab2df2b8435.mp3",
+    "type": "story",
+    "createdAt": "2025-12-07T03:02:34.080Z",
+    "prompt": "This is a story about a magical dragon who loves ice cream.",
+    "meta": {
+      "story": "Once upon a time, in a colorful land filled with bright flowers and tall green trees, there lived a magical dragon named Spike. Spike was not your ordinary dragon. He had scales that sparkled like rainbows in the sunlight and eyes as big and round as the full moon.\n\nOne day, while Spike was flying high in the sky, he saw a group of children having a picnic. They were all enjoying delicious ice cream cones. Spike had never seen anything like it before. His curiosity got the better of him, and he decided to land and take a closer look.\n\nAs he approached the children, they were a little scared at first. But when they saw how friendly Spike was, they welcomed him with open arms. One of the children, a little girl named Lily, offered Spike a lick of her ice cream. Spike's eyes widened in delight as the cold, sweet treat touched his tongue. He had never tasted anything so wonderful in his life!\n\nFrom that day on, Spike became obsessed with ice cream. He would fly around the land, looking for more ice cream to eat. Sometimes he would find a little stand selling ice cream cones, and he would gobble them up as fast as he could. Other times, he would ask the children to share their ice cream with him, and they were always happy to oblige.\n\nOne day, Spike had a brilliant idea. He decided to use his magic to create his very own ice cream factory. He spent days and days working on it, using his fire breath to melt the ingredients and his sharp claws to shape the cones. Finally, the factory was ready.\n\nSpike invited all the children in the land to come and visit his ice cream factory. They were amazed when they saw all the different flavors of ice cream that Spike had created. There was chocolate, vanilla, strawberry, and even a special flavor that tasted like rainbows.\n\nThe children had a wonderful time at the ice cream factory. They ate as much ice cream as they could, and Spike was happy to see them all so happy. From that day on, Spike's ice cream factory became the most popular place in the land, and all the children loved to visit and enjoy his delicious treats. And Spike was never without his favorite snack - ice cream!"
+    },
+    "favorite": false
+  },
+  {
+    "id": "8a6c088d-cd95-4ef9-b65b-aa7fc77fcdea",
+    "userId": "demo-user",
+    "imageUrl": "/mock/audio/76835c07-b707-4649-9dac-a9ce043ecce1.mp3",
+    "type": "story",
+    "createdAt": "2025-12-07T03:24:40.443Z",
+    "prompt": "This is a story about a magical dragon who loves ice cream.",
+    "meta": {
+      "story": "Once upon a time, in a colorful land filled with bright flowers and tall, green trees, there lived a magical dragon named Sparkles. Sparkles was not your ordinary dragon. He had scales that shone like rainbows in the sunlight, and his eyes twinkled like stars.\n\nOne day, as Sparkles was flying over a small village, he smelled something delicious. It was the sweet smell of ice cream! Sparkles had never tasted ice cream before, but he was instantly drawn to it. He landed in the village and followed the smell to a little ice cream shop.\n\nThe shopkeeper, a kind old woman with a big smile, saw Sparkles and wasn't scared at all. She welcomed him and asked him what flavor of ice cream he would like. Sparkles looked at all the different flavors and couldn't decide. There was chocolate, vanilla, strawberry, and so many more.\n\nFinally, Sparkles chose a scoop of rainbow sherbet. As soon as he took a lick, his eyes widened in delight. The ice cream was cold and sweet, and it tasted like all the colors of the rainbow. Sparkles loved it so much that he ate the whole scoop in one big gulp.\n\nFrom that day on, Sparkles visited the ice cream shop every day. He tried all the different flavors and even came up with some of his own. He would mix together chocolate and vanilla to make a \"dragon swirl\" or add sprinkles to his strawberry ice cream to make it even more magical.\n\nThe children in the village loved Sparkles and would often come to the ice cream shop to watch him eat. They would giggle and laugh as he licked his ice cream cone and blew smoke rings in the air.\n\nOne day, Sparkles had an idea. He wanted to share the magic of ice cream with all the other dragons in the land. So, he flew off to find them and told them about the delicious treat. The other dragons were skeptical at first, but when they saw how happy Sparkles was, they decided to give it a try.\n\nThe dragons flew to the ice cream shop and were amazed by all the different flavors. They loved the ice cream just as much as Sparkles did, and from that day on, they too became regular customers.\n\nAnd so, the magical dragon who loved ice cream brought joy and deliciousness to the entire land. And every time Sparkles ate his ice cream, he would think about how lucky he was to have discovered such a wonderful treat. The end."
+    },
+    "favorite": false
+  },
+  {
+    "id": "505c31c9-7b8c-4f51-a6e4-0a48a3fbe522",
+    "userId": "demo-user",
+    "imageUrl": "/mock/audio/06b90a47-f7df-436f-b65b-34e76d223587.mp3",
+    "type": "story",
+    "createdAt": "2025-12-07T03:28:36.880Z",
+    "prompt": "A fun story about this drawing.",
+    "meta": {
+      "story": "Once upon a time, in a magical land far, far away, there was a little girl named Lily. Lily loved to draw, and she would spend hours every day creating wonderful pictures in her sketchbook.\n\nOne day, Lily drew a very special picture. It was a picture of a beautiful garden, filled with colorful flowers and singing birds. In the middle of the garden was a big, shiny sun, and next to the sun was a friendly little cloud.\n\nLily was so proud of her drawing that she decided to show it to her parents. They were very impressed and told her that it was the most beautiful picture they had ever seen.\n\nThat night, as Lily was sleeping, something神奇 happened. Her drawing came to life! The flowers started to dance, the birds started to sing, and the sun and the cloud started to talk.\n\n\"Hello, little cloud,\" said the sun. \"How are you today?\"\n\n\"I'm fine, thank you,\" replied the cloud. \"But I'm a little bit lonely. I wish there was someone to play with me.\"\n\n\"Don't worry,\" said the sun. \"I'll play with you.\"\n\nAnd so, the sun and the cloud played together all night long. They chased each other around the garden, they played hide and seek, and they even had a race.\n\nThe next morning, when Lily woke up, she was amazed to see that her drawing was still alive. The flowers were still dancing, the birds were still singing, and the sun and the cloud were still playing.\n\nLily was so happy that she decided to keep her drawing alive forever. She added more flowers, more birds, and even a little fairy to the garden. And every night, when she went to sleep, she would dream of playing in her magical garden with the sun, the cloud, and all of her other friends.\n\nFrom that day on, Lily's drawing became a source of joy and inspiration for her. It taught her that anything was possible if she used her imagination and believed in herself. And she lived happily ever after, creating beautiful pictures and sharing them with the world."
+    },
+    "favorite": false
+  },
+  {
+    "id": "01a8acfb-bd57-423d-ad7e-70d3b05db8b5",
+    "userId": "demo-user",
+    "imageUrl": "/mock/audio/4b3ac597-7e1b-4b15-ae10-1129695a2483.mp3",
+    "type": "story",
+    "createdAt": "2025-12-07T03:42:32.816Z",
+    "prompt": "A fun story about this drawing.",
+    "meta": {
+      "story": "One day, a little cutie drew a big sun. The sun was smiling. Then, the cutie drew some clouds. The clouds were white and fluffy. Next, the cutie drew a green grassland. There were some colorful flowers on it. Finally, the cutie drew a little bird. The bird was flying in the sky. The little cutie was very happy with the drawing."
+    },
+    "favorite": false
+  },
+  {
+    "id": "0e90637f-cf21-47f7-ad2a-507718cf665b",
+    "userId": "lLcqrs6ZfnZLqaWzSt88nfcdkcv2",
+    "imageUrl": "/mock/audio/f894471e-2063-44d9-99ae-93edc5b106cd.mp3",
+    "type": "story",
+    "createdAt": "2025-12-07T04:49:10.053Z",
+    "prompt": "A fun story about this drawing.",
+    "meta": {
+      "story": "Once upon a time, there was a little cutie. She drew a big, colorful sun in the sky. Under the sun, there was a beautiful garden. In the garden, there were many flowers and a happy little bird. The bird was singing a song. The little cutie was so happy looking at her drawing. She thought it was the most wonderful thing in the world."
+    },
+    "favorite": false
+  }
+]

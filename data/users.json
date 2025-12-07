@@ -1,0 +1,16 @@
+[
+  {
+    "uid": "demo-user",
+    "name": "New Artist",
+    "points": 108,
+    "createdAt": "2025-12-06T22:56:06.721Z",
+    "profileCompleted": false
+  },
+  {
+    "uid": "lLcqrs6ZfnZLqaWzSt88nfcdkcv2",
+    "name": "New Artist",
+    "points": 15,
+    "createdAt": "2025-12-07T04:49:10.057Z",
+    "profileCompleted": false
+  }
+]

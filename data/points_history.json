@@ -1,0 +1,65 @@
+[
+  {
+    "id": "d60839a7-de75-4a9b-abca-a21bc083b732",
+    "userId": "demo-user",
+    "delta": 12,
+    "reason": "comic",
+    "createdAt": "2025-12-06T22:56:06.722Z"
+  },
+  {
+    "id": "93858d5a-30c7-424b-b2fe-ead7fc1aba84",
+    "userId": "demo-user",
+    "delta": 12,
+    "reason": "comic",
+    "createdAt": "2025-12-06T23:03:54.258Z"
+  },
+  {
+    "id": "9b2b8983-2221-49c6-8583-d0f2d3fb7262",
+    "userId": "demo-user",
+    "delta": 12,
+    "reason": "comic",
+    "createdAt": "2025-12-06T23:11:28.396Z"
+  },
+  {
+    "id": "81ab2b2f-9dae-40ee-8256-a269e08cd98f",
+    "userId": "demo-user",
+    "delta": 12,
+    "reason": "comic",
+    "createdAt": "2025-12-06T23:23:40.759Z"
+  },
+  {
+    "id": "3e2b3f04-1046-4342-8a97-e5128125767b",
+    "userId": "demo-user",
+    "delta": 15,
+    "reason": "story",
+    "createdAt": "2025-12-07T03:02:34.085Z"
+  },
+  {
+    "id": "15278923-48f6-4eb0-ac16-d27696e894ea",
+    "userId": "demo-user",
+    "delta": 15,
+    "reason": "story",
+    "createdAt": "2025-12-07T03:24:40.446Z"
+  },
+  {
+    "id": "375a0da1-7777-482b-9804-641c7d55f5fc",
+    "userId": "demo-user",
+    "delta": 15,
+    "reason": "story",
+    "createdAt": "2025-12-07T03:28:36.885Z"
+  },
+  {
+    "id": "d83e8576-f573-4d5c-9535-42a3b89924dd",
+    "userId": "demo-user",
+    "delta": 15,
+    "reason": "story",
+    "createdAt": "2025-12-07T03:42:32.822Z"
+  },
+  {
+    "id": "55b7c58e-99bf-4076-a50d-a4bf5009a6fd",
+    "userId": "lLcqrs6ZfnZLqaWzSt88nfcdkcv2",
+    "delta": 15,
+    "reason": "story",
+    "createdAt": "2025-12-07T04:49:10.058Z"
+  }
+]

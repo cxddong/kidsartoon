@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kids Art Tales - Demo</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Microsoft YaHei", sans-serif; margin: 24px; line-height: 1.5; }
+    h1 { margin: 0 0 8px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    section { border: 1px solid #8884; border-radius: 12px; padding: 16px; }
+    button { padding: 8px 12px; border-radius: 8px; border: 1px solid #9996; cursor: pointer; }
+    input, select { padding: 8px; border-radius: 8px; border: 1px solid #9996; width: 100%; box-sizing: border-box; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .muted { opacity: 0.75; font-size: 12px; }
+    pre { background: #00000008; padding: 12px; border-radius: 8px; overflow: auto; }
+    .media { display: grid; gap: 8px; }
+    .kpis { display: flex; gap: 12px; flex-wrap: wrap; }
+    .kpi { padding: 8px 12px; border-radius: 999px; background: #7c3aed18; border: 1px solid #7c3aed42; }
+  </style>
+  <script>
+    async function jsonFetch(url, opts) {
+      const res = await fetch(url, opts);
+      const text = await res.text();
+      try { return { ok: res.ok, status: res.status, json: JSON.parse(text) }; }
+      catch { return { ok: res.ok, status: res.status, json: text }; }
+    }
+
+    async function checkHealth() {
+      const r = await jsonFetch('/health');
+      document.getElementById('healthOut').textContent = JSON.stringify(r, null, 2);
+    }
+
+    async function createUser() {
+      const name = document.getElementById('userName').value || 'Kid Artist';
+      const r = await jsonFetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+      document.getElementById('userOut').textContent = JSON.stringify(r.json, null, 2);
+      if (r.ok && r.json?.id) document.getElementById('userId').value = r.json.id;
+    }
+
+    async function getUser() {
+      const id = document.getElementById('userId').value.trim();
+      if (!id) return alert('请输入用户ID');
+      const r = await jsonFetch(`/api/users/${id}`);
+      document.getElementById('userOut').textContent = JSON.stringify(r.json, null, 2);
+    }
+
+    async function genImageToVoice() {
+      const voiceText = document.getElementById('voiceText').value;
+      const image = document.getElementById('imgInput1').files[0];
+      const fd = new FormData();
+      if (image) fd.append('image', image);
+      if (voiceText) fd.append('voiceText', voiceText);
+      const res = await fetch('/api/media/image-to-voice', { method: 'POST', body: fd });
+      const data = await res.json();
+      document.getElementById('mediaOut').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function genImageToImage() {
+      const prompt = document.getElementById('imgPrompt').value;
+      const image = document.getElementById('imgInput2').files[0];
+      const fd = new FormData();
+      if (image) fd.append('image', image);
+      if (prompt) fd.append('prompt', prompt);
+      const res = await fetch('/api/media/image-to-image', { method: 'POST', body: fd });
+      const data = await res.json();
+      document.getElementById('mediaOut').textContent = JSON.stringify(data, null, 2);
+      if (data.imageUrl) {
+        const img = document.getElementById('previewImg');
+        img.src = data.imageUrl; img.alt = 'generated'; img.style.display = 'block';
+      }
+    }
+
+    async function genImageToVideo() {
+      const prompt = document.getElementById('videoPrompt').value;
+      const image = document.getElementById('imgInput3').files[0];
+      const fd = new FormData();
+      if (image) fd.append('image', image);
+      if (prompt) fd.append('prompt', prompt);
+      const res = await fetch('/api/media/image-to-video', { method: 'POST', body: fd });
+      const data = await res.json();
+      document.getElementById('mediaOut').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function listWorks() {
+      const r = await jsonFetch('/api/community/works');
+      document.getElementById('communityOut').textContent = JSON.stringify(r.json, null, 2);
+    }
+
+    async function publishWork() {
+      const authorId = document.getElementById('userId').value.trim() || 'anon';
+      const type = document.getElementById('workType').value;
+      const title = document.getElementById('workTitle').value || 'Untitled';
+      const r = await jsonFetch('/api/community/works', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authorId, type, title, canCoCreate: true }) });
+      document.getElementById('communityOut').textContent = JSON.stringify(r.json, null, 2);
+      if (r.ok && r.json?.id) document.getElementById('workId').value = r.json.id;
+    }
+
+    async function likeWork() {
+      const id = document.getElementById('workId').value.trim();
+      if (!id) return alert('请先输入作品ID');
+      const r = await jsonFetch(`/api/community/works/${id}/like`, { method: 'POST' });
+      document.getElementById('communityOut').textContent = JSON.stringify(r.json, null, 2);
+    }
+
+    async function coCreate() {
+      const id = document.getElementById('workId').value.trim();
+      const authorId = document.getElementById('userId').value.trim() || 'anon';
+      if (!id) return alert('请先输入作品ID');
+      const r = await jsonFetch(`/api/community/works/${id}/cocreate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authorId }) });
+      document.getElementById('communityOut').textContent = JSON.stringify(r.json, null, 2);
+    }
+
+    async function viewPlans() {
+      const r = await jsonFetch('/api/subscriptions/plans');
+      document.getElementById('subsOut').textContent = JSON.stringify(r.json, null, 2);
+    }
+
+    async function viewUsage() {
+      const id = document.getElementById('userId').value.trim();
+      if (!id) return alert('请先创建或输入用户ID');
+      const r = await jsonFetch(`/api/subscriptions/${id}/usage`);
+      document.getElementById('subsOut').textContent = JSON.stringify(r.json, null, 2);
+    }
+
+    async function consumeQuota() {
+      const id = document.getElementById('userId').value.trim();
+      if (!id) return alert('请先创建或输入用户ID');
+      const type = document.getElementById('quotaType').value;
+      const r = await jsonFetch(`/api/subscriptions/${id}/consume`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) });
+      document.getElementById('subsOut').textContent = JSON.stringify(r.json, null, 2);
+    }
+  </script>
+</head>
+<body>
+  <h1>Kids Art Tales - 演示页面</h1>
+  <div class="muted">快速体验后端能力：健康检查、用户、媒体生成、社区、订阅</div>
+  <div class="kpis">
+    <span class="kpi">GET <code>/docs</code> 为 Swagger API 文档</span>
+    <span class="kpi">静态资源来自 <code>/public</code></span>
+  </div>
+
+  <div class="grid" style="margin-top:16px;">
+    <section>
+      <h3>健康检查</h3>
+      <div class="row">
+        <button onclick="checkHealth()">检查 /health</button>
+      </div>
+      <pre id="healthOut">点击上方按钮运行</pre>
+    </section>
+
+    <section>
+      <h3>用户</h3>
+      <div class="row">
+        <input id="userName" placeholder="用户名，默认 Kid Artist" />
+        <button onclick="createUser()">创建用户</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <input id="userId" placeholder="用户ID（自动填入）" />
+        <button onclick="getUser()">获取用户</button>
+      </div>
+      <pre id="userOut">等待操作…</pre>
+    </section>
+
+    <section>
+      <h3>媒体生成</h3>
+      <div class="media">
+        <div class="row">
+          <input id="voiceText" placeholder="图像讲述关键词（可选）" />
+          <input id="imgInput1" type="file" accept="image/*" />
+          <button onclick="genImageToVoice()">图像 → 音频</button>
+        </div>
+        <div class="row">
+          <input id="imgPrompt" placeholder="卡通图像提示词（可选）" />
+          <input id="imgInput2" type="file" accept="image/*" />
+          <button onclick="genImageToImage()">图像 → 图像</button>
+        </div>
+        <div class="row">
+          <input id="videoPrompt" placeholder="动画提示词（可选）" />
+          <input id="imgInput3" type="file" accept="image/*" />
+          <button onclick="genImageToVideo()">图像 → 视频</button>
+        </div>
+        <img id="previewImg" style="max-width:100%;display:none;border-radius:8px;border:1px solid #9996;" />
+      </div>
+      <pre id="mediaOut">等待操作…</pre>
+    </section>
+
+    <section>
+      <h3>社区作品</h3>
+      <div class="row">
+        <select id="workType">
+          <option value="audio">audio</option>
+          <option value="picture">picture</option>
+          <option value="animation">animation</option>
+        </select>
+        <input id="workTitle" placeholder="作品标题（可选）" />
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button onclick="publishWork()">发布作品</button>
+        <button onclick="listWorks()">查看作品列表</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <input id="workId" placeholder="作品ID（发布后自动填入）" />
+        <button onclick="likeWork()">点赞</button>
+        <button onclick="coCreate()">协作创作</button>
+      </div>
+      <pre id="communityOut">等待操作…</pre>
+    </section>
+
+    <section>
+      <h3>订阅与配额</h3>
+      <div class="row">
+        <button onclick="viewPlans()">查看套餐</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <select id="quotaType">
+          <option value="pictureBooks">pictureBooks</option>
+          <option value="animations">animations</option>
+          <option value="audioStories">audioStories</option>
+        </select>
+        <button onclick="viewUsage()">查看日用量</button>
+        <button onclick="consumeQuota()">消耗一次配额</button>
+      </div>
+      <pre id="subsOut">等待操作…</pre>
+    </section>
+  </div>
+
+  <p class="muted">更多接口与字段，请访问 <a href="/docs" target="_blank" rel="noreferrer">Swagger 文档</a>。</p>
+</body>
+</html>
+
+
+
