@@ -94,6 +94,7 @@ const AppRoutes = () => {
 };
 
 function App() {
+  console.log('App component rendering...');
   return (
     <BrowserRouter>
       <AuthProvider>

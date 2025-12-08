@@ -11,8 +11,8 @@ export class GeminiService {
     private rateLimits: Map<string, RateLimit> = new Map();
 
     // Configuration
-    private readonly TEXT_MODEL = 'gemini-1.5-flash'; // Switched from 8b for stability
-    private readonly IMAGE_MODEL = 'gemini-2.5-flash-image'; // As requested
+    private readonly TEXT_MODEL = 'gemini-pro'; // Reverting to stable legacy model
+    private readonly IMAGE_MODEL = 'gemini-pro-vision'; // Vision model
     private readonly DAILY_TEXT_LIMIT = 100;
     private readonly DAILY_IMAGE_LIMIT = 100;
 
@@ -69,7 +69,13 @@ export class GeminiService {
                 generationConfig: {
                     maxOutputTokens: maxTokens,
                     temperature: 0.7,
-                }
+                },
+                safetySettings: [
+                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                ]
             });
 
             const response = await result.response;
@@ -181,6 +187,36 @@ export class GeminiService {
     }
 
     /**
+     * Analyze Image using Vision (Public Method)
+     */
+    async analyzeImage(base64Image: string, prompt?: string): Promise<string> {
+        this.checkQuota('system', 'text'); // Counts as system usage or text?
+
+        try {
+            const visionModel = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+
+            // Extract mimeType from data URI (e.g., "data:image/jpeg;base64,...")
+            const mimeType = base64Image.substring(base64Image.indexOf(':') + 1, base64Image.indexOf(';')) || 'image/png';
+
+            const imagePart = {
+                inlineData: {
+                    data: base64Image.split(',')[1],
+                    mimeType
+                }
+            };
+
+            const userPrompt = prompt || "Describe this image in detail.";
+            const result = await visionModel.generateContent([userPrompt, imagePart]);
+            const response = await result.response;
+            return response.text();
+        } catch (error) {
+            console.error('Gemini Vision Analysis Failed:', error);
+            // Fallback
+            return "A colorful drawing.";
+        }
+    }
+
+    /**
      * Generate Speech (Google Cloud TTS via REST)
      * Requires "Cloud Text-to-Speech API" to be enabled in Google Cloud Console.
      */
@@ -193,15 +229,18 @@ export class GeminiService {
         const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
 
         try {
+            let voiceName = 'en-US-Journey-D';
+            if (lang.startsWith('zh')) voiceName = 'cmn-CN-Neural2-C'; // Chinese
+            if (lang.startsWith('fr')) voiceName = 'fr-FR-Neural2-B'; // French
+            if (lang.startsWith('es')) voiceName = 'es-ES-Neural2-B'; // Spanish
+
             console.log(`[Gemini Cloud TTS] Fetching from ${url.split('?')[0]}...`);
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     input: { text },
-                    // User requested "Kenrir" (likely "Fenrir" from Live API).
-                    // In Cloud TTS v1, 'en-US-Journey-D' is the robust Male Expressive (Journey) voice.
-                    voice: { languageCode: lang, ssmlGender: 'MALE', name: 'en-US-Journey-D' },
+                    voice: { languageCode: lang, ssmlGender: 'MALE', name: voiceName },
                     audioConfig: { audioEncoding: 'MP3' }
                 })
             });
@@ -212,22 +251,11 @@ export class GeminiService {
                 const err = await response.text();
                 console.error(`[Gemini Cloud TTS] Error Body: ${err}`);
 
-                // Fallback to Neural2 if Journey fails
-                if (response.status === 400 && err.includes('voice')) {
-                    console.log("[Gemini Cloud TTS] Journey voice failed, falling back to Neural2...");
-                    const fallbackResponse = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            input: { text },
-                            voice: { languageCode: lang, ssmlGender: 'MALE', name: 'en-US-Neural2-D' },
-                            audioConfig: { audioEncoding: 'MP3' }
-                        })
-                    });
-                    if (!fallbackResponse.ok) throw new Error(await fallbackResponse.text());
-                    const data = await fallbackResponse.json();
-                    return Buffer.from(data.audioContent, 'base64');
+                // Fallback (Simple)
+                if (response.status === 400 || response.status === 403) {
+                    throw new Error(`TTS API Error: ${err}`);
                 }
+
                 throw new Error(`Google TTS Error: ${response.status} - ${err}`);
             }
 

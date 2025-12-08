@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Mic, MicOff, Play, Pause, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Upload, Play, Pause, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { BottomNav } from '../components/BottomNav';
@@ -100,11 +100,10 @@ export const AudioStoryPage: React.FC = () => {
     const [step, setStep] = useState<'upload' | 'recording' | 'generating' | 'finished'>('upload');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [isListening, setIsListening] = useState(false);
-    const [transcript, setTranscript] = useState('');
+    // Voice input removed
     const [audioStoryUrl, setAudioStoryUrl] = useState<string | null>(null);
     const [resultData, setResultData] = useState<any>(null);
-    const [lang, setLang] = useState<'en' | 'zh'>('zh'); // Default Chinese as requested
+    const [lang, setLang] = useState<'en' | 'zh' | 'fr' | 'es'>('zh'); // Default Chinese as requested
 
     const [genProgress, setGenProgress] = useState(0);
 
@@ -135,20 +134,7 @@ export const AudioStoryPage: React.FC = () => {
         }
     };
 
-    const toggleRecording = () => {
-        if (isListening) {
-            setIsListening(false);
-            // Mock transcript for now
-            setTranscript("This is a story about a magical dragon who loves ice cream.");
-        } else {
-            setIsListening(true);
-            // In real app, start Web Speech API or MediaRecorder
-            setTimeout(() => {
-                setIsListening(false);
-                setTranscript("This is a story about a magical dragon who loves ice cream.");
-            }, 3000);
-        }
-    };
+    // Voice input removed
 
     const generateStory = async () => {
         if (!imageFile) return;
@@ -156,12 +142,14 @@ export const AudioStoryPage: React.FC = () => {
         setStep('generating');
         try {
             const formData = new FormData();
-            formData.append('image', imageFile);
-            formData.append('voiceText', transcript || "A fun story about this drawing.");
-            formData.append('userId', user?.uid || 'demo-user');
+            // Append fields BEFORE file to ensure they are available in some multer configurations
             formData.append('lang', lang);
+            formData.append('userId', user?.uid || 'demo-user');
+            formData.append('voiceText', "A wonderful, creative story based on this drawing.");
+            formData.append('image', imageFile);
 
-            const res = await fetch('/api/media/image-to-voice', {
+            // Send lang in Query AND Body for maximum reliability
+            const res = await fetch(`/api/media/image-to-voice?lang=${lang}`, {
                 method: 'POST',
                 body: formData
             });
@@ -184,16 +172,16 @@ export const AudioStoryPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background pb-24">
-            <div className="p-4">
-                <header className="flex items-center gap-4 mb-8">
+        <div className="h-screen w-full bg-background overflow-hidden flex flex-col relative">
+            <div className="flex-1 overflow-y-auto p-4 pb-24 scrollbar-hide">
+                <header className="flex items-center gap-4 mb-8 shrink-0">
                     <button onClick={() => navigate('/generate')} className="p-2 bg-white rounded-full shadow-sm">
                         <ArrowLeft className="w-6 h-6 text-slate-600" />
                     </button>
-                    <h1 className="text-2xl font-bold text-slate-800">Audio Story</h1>
+                    <h1 className="text-2xl font-bold text-slate-800">Audio Story (v3)</h1>
                 </header>
 
-                <div className="max-w-2xl mx-auto">
+                <div className="max-w-2xl mx-auto h-full flex flex-col justify-center">
                     <AnimatePresence mode="wait">
                         {step === 'upload' && (
                             <motion.div
@@ -208,26 +196,14 @@ export const AudioStoryPage: React.FC = () => {
                                     <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 relative hover:bg-slate-50 transition-colors">
                                         <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                                         {imagePreview ? (
-                                            <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+                                            <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded-lg object-contain" />
                                         ) : (
                                             <Upload className="w-12 h-12 text-slate-400 mx-auto" />
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="text-center">
-                                    <h2 className="text-xl font-bold mb-4">2. Tell us about it!</h2>
-                                    <button
-                                        onClick={toggleRecording}
-                                        className={cn(
-                                            "w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg mx-auto",
-                                            isListening ? "bg-red-500 animate-pulse" : "bg-primary hover:bg-primary-hover"
-                                        )}
-                                    >
-                                        {isListening ? <MicOff className="w-8 h-8 text-white" /> : <Mic className="w-8 h-8 text-white" />}
-                                    </button>
-                                    {transcript && <p className="mt-4 text-slate-600 italic">"{transcript}"</p>}
-                                </div>
+                                {/* Voice Input Removed */}
 
                                 <button
                                     onClick={generateStory}
@@ -238,18 +214,30 @@ export const AudioStoryPage: React.FC = () => {
                                 </button>
 
                                 {/* Language Selector */}
-                                <div className="flex justify-center gap-4 mt-4">
+                                <div className="flex justify-center gap-2 mt-4 flex-wrap">
                                     <button
                                         onClick={() => setLang('en')}
                                         className={cn("px-4 py-2 rounded-full text-sm font-bold transition-all", lang === 'en' ? "bg-blue-500 text-white shadow-md" : "bg-slate-100 text-slate-500")}
                                     >
-                                        English Story
+                                        English
                                     </button>
                                     <button
                                         onClick={() => setLang('zh')}
                                         className={cn("px-4 py-2 rounded-full text-sm font-bold transition-all", lang === 'zh' ? "bg-blue-500 text-white shadow-md" : "bg-slate-100 text-slate-500")}
                                     >
-                                        中文故事
+                                        中文
+                                    </button>
+                                    <button
+                                        onClick={() => setLang('fr')}
+                                        className={cn("px-4 py-2 rounded-full text-sm font-bold transition-all", lang === 'fr' ? "bg-blue-500 text-white shadow-md" : "bg-slate-100 text-slate-500")}
+                                    >
+                                        Français
+                                    </button>
+                                    <button
+                                        onClick={() => setLang('es')}
+                                        className={cn("px-4 py-2 rounded-full text-sm font-bold transition-all", lang === 'es' ? "bg-blue-500 text-white shadow-md" : "bg-slate-100 text-slate-500")}
+                                    >
+                                        Español
                                     </button>
                                 </div>
                             </motion.div>
@@ -260,21 +248,21 @@ export const AudioStoryPage: React.FC = () => {
                                 key="generating"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="text-center py-20 px-8"
+                                className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-50 text-center px-8"
                             >
-                                <div className="w-20 h-20 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-                                    <Mic className="w-10 h-10 text-secondary" />
+                                <div className="w-24 h-24 bg-secondary/20 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                                    <Play className="w-12 h-12 text-secondary animate-pulse" />
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-700 mb-4">Weaving your story...</h3>
+                                <h3 className="text-2xl font-bold text-slate-700 mb-6">Weaving your story...</h3>
 
                                 {/* Progress Bar */}
-                                <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden shadow-inner relative">
+                                <div className="w-64 bg-slate-200 rounded-full h-4 overflow-hidden shadow-inner relative">
                                     <div
                                         className="h-full bg-gradient-to-r from-secondary to-purple-400 transition-all duration-300 rounded-full"
                                         style={{ width: `${Math.min(genProgress, 100)}%` }}
                                     ></div>
                                 </div>
-                                <p className="text-sm text-slate-500 mt-2 font-medium">{Math.floor(genProgress)}% Ready</p>
+                                <p className="text-sm text-slate-500 mt-4 font-medium">{Math.floor(genProgress)}% Ready</p>
                             </motion.div>
                         )}
 
@@ -290,20 +278,22 @@ export const AudioStoryPage: React.FC = () => {
                                 </div>
                                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Story Ready!</h2>
 
+                                {/* Audio Player or Text Fallback */}
                                 {audioStoryUrl ? (
                                     <div className="bg-slate-100 rounded-xl p-4 mb-6">
                                         <CustomAudioPlayer src={audioStoryUrl} />
                                     </div>
                                 ) : (
                                     <div className="bg-slate-50 rounded-xl p-6 mb-6">
-                                        <p className="text-slate-600 mb-4 whitespace-pre-wrap max-h-60 overflow-y-auto text-left leading-relaxed">
+                                        <p className="text-slate-600 mb-4 whitespace-pre-wrap text-left leading-relaxed">
                                             {resultData?.story || "Enjoy your story!"}
                                         </p>
+                                        {/* Browser Voice Button (Fallback) */}
                                         <button
                                             onClick={() => {
                                                 if (!resultData?.story) return;
                                                 const u = new SpeechSynthesisUtterance(resultData.story);
-                                                u.lang = lang === 'zh' ? 'zh-CN' : 'en-US';
+                                                u.lang = lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : lang === 'es' ? 'es-ES' : 'en-US';
                                                 u.rate = 0.9;
                                                 window.speechSynthesis.cancel();
                                                 window.speechSynthesis.speak(u);
@@ -313,7 +303,7 @@ export const AudioStoryPage: React.FC = () => {
                                             <Play className="w-5 h-5 fill-current" />
                                             Tap to Listen
                                         </button>
-                                        <p className="text-xs text-slate-400 mt-2">(Using Browser Voice)</p>
+                                        <p className="text-xs text-slate-400 mt-2">(Using Browser Voice Fallback)</p>
                                     </div>
                                 )}
 

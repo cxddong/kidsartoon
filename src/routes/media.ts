@@ -14,23 +14,32 @@ router.post('/image-to-voice', upload.single('image'), async (req, res) => {
   try {
     const userVoiceText = req.body.voiceText ?? '';
     const userId = req.body.userId;
-    const lang = req.body.lang || 'en'; // 'en' or 'zh'
+    const lang = (req.query.lang as string) || req.body.lang || 'en'; // Param > Body > Default
     const id = uuidv4();
+
+    console.log(`[DEBUG] Image-to-Voice Request. Body:`, req.body);
+    console.log(`[DEBUG] Detected Language: ${lang}`);
 
     let imageDescription = "A creative drawing by a child.";
     if (req.file) {
       try {
         const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        // Vision Step
-        imageDescription = await doubaoService.analyzeImage(base64Image,
-          "Describe the characters, visual style, atmosphere, and key objects in this image for a children's story.");
+        // Vision Step via Gemini (Google) - Valid credentials
+        imageDescription = await geminiService.analyzeImage(base64Image,
+          "Describe everything in this image in extreme detail. Identify details, colors, characters, mood, setting, and actions.");
       } catch (err) {
-        console.error('Vision analysis failed:', err);
+        console.error('Gemini Vision analysis failed:', err);
       }
     }
 
+
+    // Log Start
+    import('fs').then(fs => fs.appendFileSync('debug_gemini.log', `[${new Date().toISOString()}] REQ: Lang=${lang} Desc=${imageDescription.substring(0, 30)}\n`));
+
     // Voice-Friendly Prompt (Strictly following user specs)
     let prompt = '';
+    console.log(`[DEBUG] Constructing prompt for language: ${lang}`);
+    console.log(`[DEBUG] Vision Description used: ${imageDescription.substring(0, 50)}...`);
 
     if (lang === 'zh') {
       prompt = `
@@ -42,16 +51,61 @@ Create a rich, imaginative story (Simplified Chinese) based strictly on these vi
 and user context: ${userVoiceText}.
 
 # Strict Creation Rules
-1. Image Alignment: The story MUST feature the specific characters, colors, and objects described above. Do not write a generic story.
+1. Image Alignment: The story MUST feature the specific characters, colors, and objects described above.
 2. Voice Adaptation Rules (Core):
 - Sentence length: Short, rhythmic sentences.
 - Language style: Warm, lively Chinese for 8-year-old children.
-- Story duration: Approximately 500 Chinese characters (rich detail).
+- Story duration: Minimum 500 Chinese characters (rich detail).
 3. Content Style: Warm, positive, child's perspective.
 
 # Output Format
 - Output plain text only, no title, no notes.
 - Continuous text (single paragraph).
+- Length: Minimum 500 characters.
+`;
+    } else if (lang === 'fr') {
+      prompt = `
+# Role Definition
+You are a professional French children's story creator (Conteur).
+
+# Core Goal
+Create a rich, imaginative story (in French) based strictly on these visual details: ${imageDescription}
+and user context: ${userVoiceText}.
+
+# Strict Creation Rules
+1. Image Alignment: The story MUST feature the specific characters, colors, and objects described above.
+2. Voice Adaptation Rules (Core):
+- Sentence length: Flowing, poetic but simple.
+- Language style: Warm, engaging French for 8-year-old children.
+- Story duration: Minimum 200 words.
+3. Content Style: Warm, positive, magical tone.
+
+# Output Format
+- Output plain text only (in French), no title, no notes.
+- Continuous text (single paragraph).
+- Length: Minimum 200 words.
+`;
+    } else if (lang === 'es') {
+      prompt = `
+# Role Definition
+You are a professional Spanish children's story creator (Cuentacuentos).
+
+# Core Goal
+Create a rich, imaginative story (in Spanish) based strictly on these visual details: ${imageDescription}
+and user context: ${userVoiceText}.
+
+# Strict Creation Rules
+1. Image Alignment: The story MUST feature the specific characters, colors, and objects described above.
+2. Voice Adaptation Rules (Core):
+- Sentence length: Rythmic and expressive.
+- Language style: Warm, lively Spanish for 8-year-old children.
+- Story duration: Minimum 200 words.
+3. Content Style: Warm, positive, adventurous tone.
+
+# Output Format
+- Output plain text only (in Spanish), no title, no notes.
+- Continuous text (single paragraph).
+- Length: Minimum 200 words.
 `;
     } else {
       prompt = `
@@ -63,35 +117,59 @@ Create a rich, imaginative story based strictly on these visual details: ${image
 and user context: ${userVoiceText}.
 
 # Strict Creation Rules
-1. Image Alignment: The story MUST feature the specific characters, colors, and objects described above. Do not write a generic story.
+1. Image Alignment: The story MUST feature the specific characters, colors, and objects described above.
 2. Voice Adaptation Rules (Core):
 - Sentence length: Standard storytelling flow.
 - Language style: Colloquial English, in line with 8-year-old children.
-- Story duration: Approximately 500 words (rich detail).
+- Story duration: Approximately 300-400 words (Minimum 300 words).
 3. Content Style: Warm, positive, child's perspective (e.g., "little cutie").
 
 # Output Format
 - Output plain text only, no title, no notes.
 - Continuous text (single paragraph).
+- Length: Minimum 300 words. Make it detailed and engaging.
 `;
     }
 
-    // 1. Generate Story
-    const story = await doubaoService.generateStory(prompt);
+    // 1. Generate Story (Switching to Gemini with Fallback)
+    console.log("Generating Story Text via Gemini...");
+    let story = "Once upon a time, there was a wonderful drawing that came to life...";
+    try {
+      story = await geminiService.generateText(prompt, userId || 'anonymous');
+      console.log(`[DEBUG] Generated Story Length: ${story.length} characters`);
+      if (story.length < 100) console.warn("[DEBUG] WARNING: Story came back suspiciously short.");
+    } catch (err: any) {
+      console.error("Story Generation Failed (Using Fallback):", err);
+      // Log to file for agent visibility
+      import('fs').then(fs => fs.appendFileSync('debug_gemini.log', `[${new Date().toISOString()}] TEXT GEN ERROR: ${err.message}\n`));
+      if (lang === 'zh') {
+        story = "很久很久以前，在一片神奇的土地上，有一幅美丽的画。画里充满了色彩和魔法，每个人都非常喜欢它。（这是系统自动生成的备用故事，因为AI生成暂时不可用）";
+      } else if (lang === 'fr') {
+        story = "Il était une fois, dans un pays magique, un beau dessin que tout le monde aimait. Il était plein de couleurs et de merveilles. (Histoire de secours générée par le système)";
+      } else if (lang === 'es') {
+        story = "Había una vez, en una tierra mágica, un hermoso dibujo que a todos les encantaba. Estaba lleno de colores y maravillas. (Historia de respaldo generada por el sistema)";
+      } else {
+        story = "Once upon a time, in a magical land, there was a beautiful picture that everyone loved. It was full of colors and wonder. (System Backup Story)";
+      }
+    }
 
     // 2. Generate Audio (Doubao TTS)
     let audioUrl = '';
-    console.log(`Generating Speech (Doubao TTS) for lang: ${lang}...`);
+    console.log(`Generating Speech for lang: ${lang}...`);
 
     try {
       let audioBuffer: Buffer;
 
       if (lang === 'zh') {
-        // Chinese: Use Doubao
-        audioBuffer = await doubaoService.generateSpeech(story, 'alloy');
+        console.log("Using Google TTS for Chinese (Reliability)...");
+        audioBuffer = await geminiService.generateSpeech(story, 'zh-CN');
+      } else if (lang === 'fr') {
+        console.log("Using Google TTS for French...");
+        audioBuffer = await geminiService.generateSpeech(story, 'fr-FR');
+      } else if (lang === 'es') {
+        console.log("Using Google TTS for Spanish...");
+        audioBuffer = await geminiService.generateSpeech(story, 'es-ES');
       } else {
-        // English: Use Google AI (Gemini/TTS) as requested
-        // Using 'en-US' by default for Google
         console.log("Using Google TTS for English...");
         audioBuffer = await geminiService.generateSpeech(story, 'en-US');
       }
@@ -116,12 +194,14 @@ and user context: ${userVoiceText}.
       audioUrl = '';
     }
 
-    if (audioUrl) {
-      try {
-        await databaseService.saveImageRecord(userId || 'anonymous', audioUrl, 'story', userVoiceText, { story });
-        if (userId) await databaseService.awardPoints(userId, 15, 'story');
-      } catch (e) { }
-    }
+    // ALWAYS SAVE (Even if audio failed, we have the story)
+    const finalMediaUrl = audioUrl || `https://placehold.co/600x600/orange/white?text=${encodeURIComponent(userVoiceText.substring(0, 10) || 'Story')}`;
+    const finalType = audioUrl ? 'story' : 'story'; // Could separate types if needed
+
+    try {
+      await databaseService.saveImageRecord(userId || 'anonymous', finalMediaUrl, finalType, userVoiceText, { story, isFallback: !audioUrl });
+      if (userId) await databaseService.awardPoints(userId, 15, 'story');
+    } catch (e) { console.error('DB Save error', e); }
 
     res.json({
       id,
