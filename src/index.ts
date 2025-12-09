@@ -60,6 +60,7 @@ import { router as subscriptionRouter } from './routes/subscriptions.js';
 import { router as apiKeyRouter } from './routes/api-keys.js';
 import { router as imageRouter } from './routes/images.js';
 import { router as authRouter } from './routes/auth.js';
+import { router as storyRouter } from './routes/story.js';
 import { optionalApiKeyAuth } from './middleware/auth.js';
 
 // ====== 新增：AI 相关最小可用路由 ======
@@ -178,6 +179,7 @@ app.use('/api/media', mediaRouter);
 app.use('/api/images', imageRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', authRouter);
+app.use('/api', storyRouter); // Mount context root for /analyze-image etc. e.g /api/create-story-from-image
 app.use('/api/community', optionalApiKeyAuth, communityRouter);
 app.use('/api/subscriptions', optionalApiKeyAuth, subscriptionRouter);
 
