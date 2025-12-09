@@ -6,6 +6,39 @@ import { cn } from '../lib/utils';
 import { BottomNav } from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
 
+const ProgressCounter = () => {
+    const [progress, setProgress] = useState(0);
+
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            setProgress((prev) => {
+                if (prev >= 98) return 98;
+                // smoother increment
+                const increment = prev < 50 ? 0.5 : prev < 80 ? 0.2 : 0.05;
+                return prev + increment;
+            });
+        }, 50); // 50ms interval for 20fps smoothness
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="flex flex-col items-center">
+            <div className="relative w-32 h-32 mb-8">
+                <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+                <div
+                    className="absolute inset-0 border-4 border-violet-500 rounded-full transition-all duration-300"
+                    style={{ clipPath: `inset(0 0 ${100 - progress}% 0)` }}
+                ></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-violet-600">{Math.floor(progress)}%</span>
+                </div>
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Creating Magic...</h3>
+            <p className="text-slate-400 text-sm">Turning your picture into a story!</p>
+        </div>
+    );
+};
+
 export const AudioStoryPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -29,6 +62,12 @@ export const AudioStoryPage: React.FC = () => {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // 10MB Limit
+            if (file.size > 10 * 1024 * 1024) {
+                alert("File too large! Please upload an image smaller than 10MB.");
+                return;
+            }
+
             setImageFile(file);
             const reader = new FileReader();
             reader.onloadend = () => setImagePreview(reader.result as string);
@@ -43,8 +82,9 @@ export const AudioStoryPage: React.FC = () => {
 
         try {
             const formData = new FormData();
-            formData.append('image', imageFile);
             formData.append('userId', user?.uid || 'anonymous');
+            formData.append('lang', lang);
+            formData.append('image', imageFile);
 
             // Using the Orchestrator for full flow
             // 1. Vision -> JSON
@@ -158,17 +198,16 @@ export const AudioStoryPage: React.FC = () => {
                             key="processing"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="flex flex-col items-center justify-center py-20 text-center"
+                            className="flex flex-col items-center justify-center py-20 text-center w-full"
                         >
-                            <div className="relative w-32 h-32 mb-8">
-                                <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-                                <div className="absolute inset-0 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <Music className="w-10 h-10 text-violet-500 animate-bounce" />
-                                </div>
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">{statusText}</h3>
-                            <p className="text-slate-400 text-sm">This can take up to 30 seconds...</p>
+                            <ProgressCounter />
+
+                            <h3 className="text-xl font-bold text-slate-800 mb-2 mt-4">
+                                {lang === 'zh' ? '请等几秒，我正自构思中' : statusText}
+                            </h3>
+                            <p className="text-slate-400 text-xs mt-2">
+                                {lang === 'zh' ? 'AI正在为您的图片创作故事...' : 'AI is working its magic... (approx 30s)'}
+                            </p>
                         </motion.div>
                     )}
 
@@ -208,13 +247,10 @@ export const AudioStoryPage: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={() => {
-                                            const u = new SpeechSynthesisUtterance(storyResult.story);
-                                            u.lang = lang === 'zh' ? 'zh-CN' : lang === 'es' ? 'es-ES' : lang === 'fr' ? 'fr-FR' : 'en-US';
-                                            window.speechSynthesis.speak(u);
+                                            // Removed Read Aloud functionality
                                         }}
-                                        className="text-violet-500 font-bold text-sm bg-violet-50 px-3 py-1 rounded-full hover:bg-violet-100"
+                                        className="hidden"
                                     >
-                                        🔊 Read Aloud
                                     </button>
                                 </div>
                                 <p className="text-lg leading-relaxed text-slate-600 font-serif whitespace-pre-wrap">

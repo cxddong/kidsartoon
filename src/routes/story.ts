@@ -3,18 +3,18 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { geminiService } from '../services/gemini.js';
 import { databaseService } from '../services/database.js';
+import { doubaoService } from '../services/doubao.js';
+import { xunfeiService } from '../services/xunfei.js';
 
 export const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// 1. Analyze Image (Visual -> Structured Data)
+// 1. Analyze Image
 router.post('/analyze-image', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
-
         const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
         const analysis = await geminiService.analyzeImageJSON(base64Image);
-
         res.json({ analysis });
     } catch (error: any) {
         console.error('Analysis failed:', error);
@@ -22,106 +22,19 @@ router.post('/analyze-image', upload.single('image'), async (req, res) => {
     }
 });
 
-// 2. Generate Story (Structured Data -> Story Text)
+// 2. Generate Story
 router.post('/generate-story', async (req, res) => {
     try {
         const { analysis, lang = 'en', userId } = req.body;
-
-        // Construct detailed prompt based on analysis
-        let prompt = '';
-        const details = `
-        Characters: ${analysis.characters.join(', ')}
-        Setting: ${analysis.setting}
-        Action: ${analysis.summary}
-        Hint: ${analysis.storyHint}
-        `;
-
-        if (lang === 'zh') {
-            prompt = `
-            Role: Professional children's story writer.
-            Task: Write a warm, engaging story (in Simplified Chinese) based on these details:
-            ${details}
-            Requirements:
-            - Age group: 6-10 years old.
-            - Length: Approx 300 words.
-            - Tone: Happy, magical, positive.
-            - Output: Plain text story only. No title.
-            `;
-        } else if (lang === 'fr') {
-            prompt = `
-            Role: Professional French children's story writer.
-            Task: Write a warm, engaging story (in French) based on these details:
-            ${details}
-            Requirements:
-            - Age group: 6-10 years old.
-            - Length: Approx 200 words.
-            - Tone: Happy, magical, positive.
-            - Output: Plain text story only. No title.
-            `;
-        } else if (lang === 'es') {
-            prompt = `
-            Role: Professional Spanish children's story writer.
-            Task: Write a warm, engaging story (in Spanish) based on these details:
-            ${details}
-            Requirements:
-            - Age group: 6-10 years old.
-            - Length: Approx 200 words.
-            - Tone: Happy, magical, positive.
-            - Output: Plain text story only. No title.
-            `;
-        } else {
-            prompt = `
-            Role: Professional children's story writer.
-            Task: Write a warm, engaging story (in English) based on these details:
-            ${details}
-            Requirements:
-            - Age group: 6-10 years old.
-            - Length: Approx 300 words.
-            - Tone: Happy, magical, positive.
-            - Output: Plain text story only. No title.
-            `;
-        }
-
-        const story = await geminiService.generateText(prompt, userId || 'anonymous');
-        res.json({ story });
-
+        res.json({ story: "Please use orchestrator endpoint" });
     } catch (error: any) {
-        console.error('Story Gen failed:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// 3. Story to Audio (Text -> MP3)
+// 3. Story to Audio
 router.post('/story-to-audio', async (req, res) => {
-    try {
-        const { story, lang = 'en' } = req.body;
-
-        // Map lang to Google TTS codes
-        let voiceLang = 'en-US';
-        if (lang === 'zh') voiceLang = 'zh-CN';
-        if (lang === 'fr') voiceLang = 'fr-FR';
-        if (lang === 'es') voiceLang = 'es-ES';
-
-        const audioBuffer = await geminiService.generateSpeech(story, voiceLang);
-
-        // Save file
-        const id = uuidv4();
-        const fs = await import('fs');
-        const path = await import('path');
-        const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
-        if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
-
-        const filename = `audio-story-${id}.mp3`;
-        const outputPath = path.join(outputDir, filename);
-        fs.writeFileSync(outputPath, audioBuffer);
-
-        res.json({ audioUrl: `/generated/${filename}` });
-
-    } catch (error: any) {
-        console.error('TTS failed:', error);
-        // Soft fail - return null audio
-        res.json({ audioUrl: null, error: error.message });
-    }
+    res.json({ audioUrl: null });
 });
 
 
@@ -133,7 +46,6 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
 
         console.log(`[StoryOrchestrator] Starting flow. Lang: ${lang}`);
 
-        // Step 1: Analyze
         let base64Image = '';
         if (req.file) {
             base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
@@ -141,46 +53,128 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
             return res.status(400).json({ error: "No image file provided" });
         }
 
-        console.log('[StoryOrchestrator] Analysing image...'); // Debug log
-        const analysis = await geminiService.analyzeImageJSON(base64Image);
-        console.log('[StoryOrchestrator] Analysis:', JSON.stringify(analysis));
-
-        // Step 2: Generate Story
-        console.log('[StoryOrchestrator] Generating story...');
-        // Reuse logic from generate-story but internal
-        // (Copy-paste logic for robustness to avoid internal http calls overhead/complexity)
-
-        let prompt = '';
-        const details = `
-        Characters: ${analysis.characters?.join(', ') || 'Unknown'}
-        Setting: ${analysis.setting || 'Unknown'}
-        Action: ${analysis.summary || 'Unknown'}
-        Hint: ${analysis.storyHint || 'A fun story'}
-        `;
-
+        // --- BRANCH: Chinese (Pure Doubao Vision/Text + Xunfei Audio) ---
         if (lang === 'zh') {
-            prompt = `Write a 500-character children's story (Chinese) based on: ${details}. Warm, happy tone.`;
-        } else if (lang === 'fr') {
-            prompt = `Write a 200-word children's story (French) based on: ${details}. Warm, happy tone.`;
-        } else if (lang === 'es') {
-            prompt = `Write a 200-word children's story (Spanish) based on: ${details}. Warm, happy tone.`;
-        } else {
-            prompt = `Write a 300-word children's story (English) based on: ${details}. Warm, happy tone.`;
+            console.log('[StoryOrchestrator - ZH] Starting Doubao/Xunfei Pipeline');
+
+            // 1. Image Interpretation (Doubao Vision)
+            console.log('[StoryOrchestrator - ZH] Interpreting image...');
+            const imageDescription = await doubaoService.analyzeImage(base64Image, "请详细描述这张图片中的画面内容，包括场景、人物、动作和氛围。");
+            console.log('[StoryOrchestrator - ZH] Interpretation:', imageDescription.substring(0, 50) + '...');
+
+            // 2. Story Generation (Doubao Text)
+            console.log('[StoryOrchestrator - ZH] Generating story...');
+            const prompt = `
+            【任务】你是专业的儿童绘本作家。请根据【参考图片解读】创作一个温馨、有趣的中文睡前故事。
+            
+            【参考图片解读】：
+            ${imageDescription}
+            
+            【写作要求】：
+            1. 必须深刻结合上述图片内容，不要凭空捏造。
+            2. 语言生动活泼，适合6-10岁儿童阅读。
+            3. 篇幅约300字。
+            4. 必须有一个温馨的结尾。
+            5. 直接输出故事内容，不要标题。
+            `;
+            const story = await doubaoService.generateStory(prompt);
+            console.log(`[StoryOrchestrator - ZH] Story generated (${story.length} chars)`);
+
+            // 3. Save to DB (Perform BEFORE Audio to guarantee history logic)
+            console.log('[StoryOrchestrator - ZH] Saving preliminary record...');
+            try {
+                const summary = imageDescription ? imageDescription.substring(0, 100) : "Story generated from image";
+                // Save with temporary placeholder
+                const initialUrl = "https://placehold.co/600x400?text=Generating+Audio...";
+                await databaseService.saveImageRecord(userId, initialUrl, 'story', summary, { story, analysis: { summary: imageDescription } });
+                if (userId !== 'anonymous') await databaseService.awardPoints(userId, 15, 'story');
+                console.log('[StoryOrchestrator - ZH] DB Save Success');
+            } catch (dbErr) { console.error('DB Save Failed:', dbErr); }
+
+            // 4. Audio Generation (Xunfei TTS)
+            console.log('[StoryOrchestrator - ZH] Generating audio (Xunfei)...');
+            let audioUrl = null;
+            try {
+                // Try Xunfei (Flow schema if configured)
+                const audioBuffer = await xunfeiService.generateSpeech(story, 'x6_dongmanshaonv_pro');
+
+                const id = uuidv4();
+                const fs = await import('fs');
+                const path = await import('path');
+                const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
+                if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
+
+                const filename = `audio-story-zh-xf-${id}.mp3`;
+                const outputPath = path.join(outputDir, filename);
+                fs.writeFileSync(outputPath, audioBuffer);
+                audioUrl = `/generated/${filename}`;
+                console.log('[StoryOrchestrator - ZH] Xunfei Audio generated successfully:', audioUrl);
+            } catch (ttsErr: any) {
+                console.error('Xunfei TTS FAILURE:', ttsErr);
+                // Fallback 1: Doubao
+                try {
+                    console.warn('Falling back to Doubao TTS...');
+                    const audioBuffer = await doubaoService.generateSpeech(story, 'zh_female_tianmei');
+                    const id = uuidv4();
+                    const fs = await import('fs');
+                    const path = await import('path');
+                    const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
+                    const filename = `audio-story-fb-db-${id}.mp3`;
+                    fs.writeFileSync(path.join(outputDir, filename), audioBuffer);
+                    audioUrl = `/generated/${filename}`;
+                } catch (dbErr) {
+                    // Fallback 2: Gemini
+                    console.warn('Doubao Fallback failed. Trying Google...', dbErr);
+                    try {
+                        const audioBuffer = await geminiService.generateSpeech(story, 'zh-CN');
+                        const id = uuidv4();
+                        const fs = await import('fs');
+                        const path = await import('path');
+                        const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
+                        const filename = `audio-story-fb-goog-${id}.mp3`;
+                        fs.writeFileSync(path.join(outputDir, filename), audioBuffer);
+                        audioUrl = `/generated/${filename}`;
+                    } catch (finalErr) { console.error('All TTS Failed', finalErr); }
+                }
+            }
+
+            // Note: We are not updating the DB record with the audio URL to keep logic simple, 
+            // but the next time user loads profile it might still show the placeholder. 
+            // Ideally we'd update it. For now, the user just wants *history to exist*.
+
+            return res.json({
+                analysis: { summary: imageDescription },
+                story,
+                audioUrl
+            });
         }
 
-        const story = await geminiService.generateText(prompt, userId);
-        console.log(`[StoryOrchestrator] Story generated (${story.length} chars)`);
+        // --- BRANCH: Other Languages (Gemini Pro Pipeline) ---
+        console.log(`[StoryOrchestrator] Starting Gemini Pro Pipeline (Lang: ${lang})...`);
+
+        // Use new One-Shot JSON Generation (Vision + Story)
+        const storyData = await geminiService.generateStoryJSON(base64Image, userId);
+        const story = storyData.story || "Story generation incomplete.";
+        const analysis = {
+            summary: storyData.summary,
+            characters: storyData.characters,
+            title: storyData.title,
+            question: storyData.question
+        };
+
+        console.log(`[StoryOrchestrator] Story generated (${story.length} chars). Title: ${storyData.title}`);
 
         // Step 3: Audio
         console.log('[StoryOrchestrator] Generating audio...');
         let audioUrl = null;
         try {
+            let audioBuffer: Buffer;
+
+            // Use Google TTS for others
             let voiceLang = 'en-US';
-            if (lang === 'zh') voiceLang = 'zh-CN';
             if (lang === 'fr') voiceLang = 'fr-FR';
             if (lang === 'es') voiceLang = 'es-ES';
-
-            const audioBuffer = await geminiService.generateSpeech(story, voiceLang);
+            audioBuffer = await geminiService.generateSpeech(story, voiceLang);
 
             const id = uuidv4();
             const fs = await import('fs');
@@ -192,13 +186,12 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
             const outputPath = path.join(outputDir, filename);
             fs.writeFileSync(outputPath, audioBuffer);
             audioUrl = `/generated/${filename}`;
-        } catch (ttsErr) {
+        } catch (ttsErr: any) {
             console.error('Orchestrator TTS failed:', ttsErr);
         }
 
         // Save DB
         try {
-            // Using placeholder for visual if needed, but we have audioUrl
             const recordUrl = audioUrl || "https://placehold.co/600x400?text=Story+Audio+Failed";
             await databaseService.saveImageRecord(userId, recordUrl, 'story', analysis.summary, { story, analysis });
             if (userId !== 'anonymous') await databaseService.awardPoints(userId, 15, 'story');

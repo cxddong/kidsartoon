@@ -125,25 +125,30 @@ export class DoubaoService {
     /**
      * Vision Analysis (Image-to-Text)
      */
-    async analyzeImage(imageUrl: string, prompt: string = "Describe this image for a children's story."): Promise<string> {
+    async analyzeImage(imageInput: string, prompt: string = "Describe this image for a children's story."): Promise<string> {
         try {
             const model = process.env.DOUBAO_VISION_MODEL || 'ep-20241201-xxxxx';
-            console.log(`[Doubao] Analyzing image with model: ${model}`); // Debug Log
+            console.log(`[Doubao] Analyzing image with model: ${model}`);
+
+            const messages: any[] = [
+                {
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: prompt },
+                        { type: 'image_url', image_url: { url: imageInput } }
+                    ]
+                }
+            ];
+
+            // If it's a base64 string without prefix, ensure it's formatted correct or if the model expects just the url.
+            // Volcengine usually expects standard URL or data URI. 'imageInput' comes as Data URI from frontend.
 
             const response = await fetch(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
                     model: model,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: [
-                                { type: 'text', text: prompt },
-                                { type: 'image_url', image_url: { url: imageUrl } }
-                            ]
-                        }
-                    ]
+                    messages: messages
                 })
             });
 
@@ -250,9 +255,12 @@ Rules:
     /**
      * Text Generation (Story Creation) - Legacy
      */
+    /**
+     * Text Generation (Story Creation) - Legacy
+     */
     async generateStory(prompt: string): Promise<string> {
         try {
-            const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20241201-xxxxx'; // Use correct env var
+            const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20241201-xxxxx';
             console.log(`[Doubao] Generating text story with model: ${model}`);
 
             const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -261,7 +269,7 @@ Rules:
                 body: JSON.stringify({
                     model: model,
                     messages: [
-                        { role: 'system', content: 'You are a creative children\'s story teller. Write a vivid, engaging story based EXACTLY on the provided prompt.' },
+                        { role: 'system', content: 'You are a professional children\'s story writer. Write a warm, engaging story strictly based on the user\'s prompt.' },
                         { role: 'user', content: prompt }
                     ]
                 })
@@ -270,15 +278,14 @@ Rules:
             if (!response.ok) {
                 const errorText = await response.text();
                 console.warn(`Text Generation API failed (Status ${response.status}): ${errorText}. Falling back to mock.`);
-                // Return a story that at least admits failure if possible, or the generic one.
-                return "I'm having trouble seeing the image clearly right now, so I'll tell you a story about a magical cloud instead. Once upon a time, a fluffy cloud named Nimbus wanted to learn how to rain rainbow colors...";
+                throw new Error(`Doubao Text Error: ${response.status}`);
             }
 
             const data = await response.json();
             return data.choices?.[0]?.message?.content || '';
         } catch (error) {
             console.error('generateStory failed:', error);
-            return "Once upon a time, in a magical land, a brave little hero went on a great adventure. They met many friends and solved fun puzzles. In the end, they learned that kindness is the greatest magic of all.";
+            throw error;
         }
     }
 
@@ -290,24 +297,25 @@ Rules:
     /**
      * Text-to-Speech (Audio Generation)
      */
-    /**
-     * Text-to-Speech (Audio Generation)
-     */
-    async generateSpeech(text: string, voice: string = 'alloy'): Promise<Buffer> {
+    async generateSpeech(text: string, voice: string = 'zh_female_tianmei'): Promise<Buffer> {
         try {
-            // Using OpenAI-compatible endpoint structure
+            // Try standard endpoint first
+            // For Volcengine/Doubao, the endpoint for OpenAI compatibility is sometimes strictly /api/v3/audio/speech
             const response = await fetch(`${this.baseUrl}/audio/speech`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
-                    model: 'doubao-tts-1.0', // Using generic 'doubao-tts-1.0' as placeholder for compatible gateway
+                    model: 'doubao-tts-1.0',
                     input: text,
-                    voice: voice
+                    voice: voice, // 'zh_female_tianmei'
+                    speed: 1.0
                 })
             });
 
             if (!response.ok) {
+                // Try legacy/alternative endpoint or model if 400/404
                 const errorText = await response.text();
+                // Throw error so orchestrator catches it for fallback
                 throw new Error(`TTS API Error: ${response.status} - ${errorText}`);
             }
 
