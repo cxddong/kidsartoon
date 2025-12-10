@@ -24,5 +24,5 @@ RUN npm run build
 ENV PORT=8080
 EXPOSE 8080
 
-# 启动 Express 服务
-CMD ["node", "server.js"]
+# 启动 Express 服务 (Use npm start to run compiled dist/index.js)
+CMD ["npm", "start"]
