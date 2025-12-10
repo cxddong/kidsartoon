@@ -21,7 +21,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "start": "node server.js"
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
