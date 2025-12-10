@@ -9,8 +9,8 @@ const XUNFEI_CONFIG = {
     appId: 'ga85af02',
     apiKey: 'fc83e65202c91a3962e91e4dd9371a25',
     apiSecret: '50d4411a19f6082e3a2aeab99136de7b',
-    // Using 'xiaoyan' as requested/default, can be parameterized later
-    voiceName: 'xiaoyan',
+    // Using 'x_xiaoyang_story' for better storytelling (machine sound fix)
+    voiceName: 'x_xiaoyang_story',
     // requesting mp3 for direct playback in browser
     aue: 'lame',
     sfl: 1,
