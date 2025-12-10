@@ -195,6 +195,16 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 const port = Number(process.env.PORT) || 3000;
 app.listen(port, () => {
   console.log(`\n🎨 Kids Art Tales App is running!`);
+
+  // DEBUG: Check files
+  const fs = require('fs');
+  if (fs.existsSync(clientDist)) {
+    console.log(`[DEBUG] Client Dist exists at: ${clientDist}`);
+    console.log(`[DEBUG] Files: ${fs.readdirSync(clientDist).join(', ')}`);
+  } else {
+    console.log(`[DEBUG] Client Dist NOT FOUND at: ${clientDist}`);
+  }
+
   console.log(`\n📱 Main App:  http://localhost:${port}/`);
   console.log(`📚 API Docs:  http://localhost:${port}/docs`);
   console.log(`🧪 Demo Page: http://localhost:${port}/demo`);
