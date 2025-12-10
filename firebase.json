@@ -19,7 +19,6 @@
   "hosting": {
     "public": "client/dist",
     "ignore": [
-      //"firebase.json", <--- 删除或注释掉这一行!
       "**/.*",
       "**/node_modules/**"
     ],
