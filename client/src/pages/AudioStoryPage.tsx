@@ -247,10 +247,14 @@ export const AudioStoryPage: React.FC = () => {
                                     </div>
                                     <button
                                         onClick={() => {
-                                            // Removed Read Aloud functionality
+                                            const u = new SpeechSynthesisUtterance(storyResult.story);
+                                            u.lang = lang === 'zh' ? 'zh-CN' : 'en-US';
+                                            window.speechSynthesis.speak(u);
                                         }}
-                                        className="hidden"
+                                        className="p-2 rounded-full bg-violet-100 text-violet-600 hover:bg-violet-200 transition-colors"
+                                        title="Read Aloud"
                                     >
+                                        <Play className="w-5 h-5" />
                                     </button>
                                 </div>
                                 <p className="text-lg leading-relaxed text-slate-600 font-serif whitespace-pre-wrap">

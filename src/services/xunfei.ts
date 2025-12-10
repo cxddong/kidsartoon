@@ -1,123 +1,122 @@
-import WebSocket from 'ws';
+import WebSocket from 'ws'; // 现在有类型声明，不会报错
+import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
-import { URL } from 'url';
+import fs from 'fs';
+import path from 'path';
 
-export class XunfeiService {
-    private appId: string;
-    private apiSecret: string;
-    private apiKey: string;
-    private hostUrl = 'wss://cbm01.cn-huabei-1.xf-yun.com/v1/private/mcd9m97e6';
+// 讯飞超拟人语音合成配置（替换为你的实际配置）
+const XUNFEI_CONFIG = {
+    appId: '你的APPID',
+    apiKey: '你的APIKey',
+    apiSecret: '你的APISecret',
+    voiceName: 'xiaoyan', // 童声音色标识
+    audioFormat: 'raw' // raw=WAV，lame=MP3
+};
 
-    constructor() {
-        this.appId = process.env.XUNFEI_APP_ID || '';
-        this.apiSecret = process.env.XUNFEI_API_SECRET || '';
-        this.apiKey = process.env.XUNFEI_API_KEY || '';
+/**
+ * 生成讯飞WebSocket鉴权URL
+ */
+function generateAuthUrl(): string {
+    const { apiKey, apiSecret } = XUNFEI_CONFIG;
+    const host = 'tts-api.xfyun.cn';
+    const date = new Date().toUTCString();
+    const signatureOrigin = `host: ${host}\ndate: ${date}\nGET /v2/tts HTTP/1.1`;
 
-        if (!this.appId || !this.apiSecret || !this.apiKey) {
-            console.warn('Xunfei API credentials missing!');
-        }
-    }
+    // HMAC-SHA256签名
+    const signatureSha = crypto.createHmac('sha256', apiSecret)
+        .update(signatureOrigin)
+        .digest();
+    const signature = Buffer.from(signatureSha).toString('base64');
 
-    private getAuthUrl(): string {
-        const url = new URL(this.hostUrl);
-        const date = new Date().toUTCString();
-        const host = url.host;
-        const path = url.pathname;
+    // 构造授权头
+    const authorizationOrigin = `api_key="${apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signature}"`;
+    const authorization = Buffer.from(authorizationOrigin).toString('base64');
 
-        // Signature must match the request line path
-        const builder = `host: ${host}\ndate: ${date}\nGET ${path} HTTP/1.1`;
+    // 拼接URL参数
+    const params = new URLSearchParams({
+        authorization,
+        date,
+        host
+    });
 
-        const hmac = crypto.createHmac('sha256', this.apiSecret);
-        const signature = hmac.update(builder).digest('base64');
-
-        const authorizationOrigin = `api_key="${this.apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signature}"`;
-        const authorization = Buffer.from(authorizationOrigin).toString('base64');
-
-        return `${this.hostUrl}?authorization=${authorization}&date=${encodeURIComponent(date)}&host=${host}`;
-    }
-
-    async generateSpeech(text: string, vcn: string = 'xiaoyan'): Promise<Buffer> {
-        return new Promise((resolve, reject) => {
-            const authUrl = this.getAuthUrl();
-            const ws = new WebSocket(authUrl);
-            const audioChunks: Buffer[] = [];
-
-            ws.on('open', () => {
-                console.log('[Xunfei] WebSocket Connected (Private Endpoint)');
-                const frame = {
-                    header: {
-                        app_id: this.appId,
-                        status: 2
-                    },
-                    parameter: {
-                        tts: {
-                            vcn: "x6_dongmanshaonv_pro",
-                            speed: 50,
-                            volume: 50,
-                            pitch: 50,
-                            bgs: 0,
-                            reg: 0,
-                            rdn: 0,
-                            rhy: 0,
-                            audio: {
-                                encoding: "lame",
-                                sample_rate: 16000, // Usually 16k or 24k for mp3
-                                channels: 1,
-                                bit_depth: 16,
-                                frame_size: 0
-                            }
-                        }
-                    },
-                    payload: {
-                        text: {
-                            encoding: "utf8",
-                            compress: "raw",
-                            format: "plain",
-                            status: 2,
-                            seq: 0,
-                            text: Buffer.from(text).toString('base64')
-                        }
-                    }
-                };
-                console.log('[Xunfei] Sending frame:', JSON.stringify(frame));
-                ws.send(JSON.stringify(frame));
-            });
-
-            ws.on('message', (data, isBinary) => {
-                const response = JSON.parse(data.toString());
-                // console.log('[Xunfei] Received message:', JSON.stringify(response).substring(0, 100));
-
-                if (response.code !== 0) {
-                    console.error('Xunfei WS Error Code:', response.code);
-                    console.error('Xunfei WS Error Message:', response.message);
-                    ws.close();
-                    reject(new Error(`Xunfei API Error: ${response.code} - ${response.message}`));
-                    return;
-                }
-
-                if (response.data) {
-                    const audio = Buffer.from(response.data.audio, 'base64');
-                    // console.log(`[Xunfei] Received audio chunk: ${audio.length} bytes`);
-                    audioChunks.push(audio);
-
-                    if (response.data.status === 2) {
-                        // Completed
-                        ws.close();
-                        resolve(Buffer.concat(audioChunks));
-                    }
-                }
-            });
-
-            ws.on('close', (code, reason) => {
-                // console.log('Xunfei WS Closed:', code, reason.toString());
-            });
-
-            ws.on('error', (error) => {
-                console.error('Xunfei WS Connection Error:', error);
-                reject(error);
-            });
-        });
-    }
+    return `wss://${host}/v2/tts?${params.toString()}`;
 }
 
-export const xunfeiService = new XunfeiService();
+/**
+ * 讯飞语音合成核心方法
+ * @param text 要合成的文本
+ * @param outputPath 音频输出路径
+ * @returns Promise<string> 音频文件路径
+ */
+export async function xunfeiTTS(text: string, outputPath: string = path.join(__dirname, '../audio', `${uuidv4()}.wav`)): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const authUrl = generateAuthUrl();
+        const ws = new WebSocket(authUrl);
+
+        // 创建音频文件目录（若不存在）
+        const audioDir = path.dirname(outputPath);
+        if (!fs.existsSync(audioDir)) {
+            fs.mkdirSync(audioDir, { recursive: true });
+        }
+
+        // 监听连接成功
+        ws.on('open', () => {
+            console.log('讯飞TTS WebSocket连接成功');
+            // 构造发送给讯飞的请求数据
+            const requestData = {
+                common: {
+                    app_id: XUNFEI_CONFIG.appId
+                },
+                business: {
+                    aue: XUNFEI_CONFIG.audioFormat,
+                    vcn: XUNFEI_CONFIG.voiceName,
+                    speed: 60, // 语速（0-100）
+                    pitch: 55, // 语调（0-100）
+                    volume: 50, // 音量（0-100）
+                    rdn: 0 // 关闭随机断句
+                },
+                data: {
+                    status: 2,
+                    text: Buffer.from(text).toString('base64') // 文本Base64编码
+                }
+            };
+            ws.send(JSON.stringify(requestData));
+        });
+
+        // 监听消息（核心：接收音频数据）
+        // 修复：指定data为Buffer，isBinary为boolean
+        ws.on('message', (data: Buffer, isBinary: boolean) => {
+            if (isBinary) {
+                // 音频数据是二进制，直接写入文件
+                fs.appendFileSync(outputPath, data);
+            } else {
+                // 非二进制是讯飞的状态消息
+                const msg = JSON.parse(data.toString());
+                if (msg.code !== 0) {
+                    reject(new Error(`讯飞TTS错误：${msg.code} - ${msg.message}`));
+                    ws.close();
+                }
+            }
+        });
+
+        // 监听连接关闭
+        // 修复：指定code为number，reason为Buffer
+        ws.on('close', (code: number, reason: Buffer) => {
+            console.log(`WebSocket连接关闭：code=${code}, reason=${reason.toString()}`);
+            if (code === 1000) {
+                // 正常关闭，返回音频文件路径
+                resolve(outputPath);
+            } else {
+                reject(new Error(`连接异常关闭：${reason.toString()}`));
+            }
+        });
+
+        // 监听错误
+        // 修复：指定error为Error
+        ws.on('error', (error: Error) => {
+            console.error('讯飞TTS WebSocket错误：', error);
+            reject(new Error(`WebSocket错误：${error.message}`));
+            ws.close();
+        });
+    });
+}

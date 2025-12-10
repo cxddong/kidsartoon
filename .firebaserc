@@ -1,5 +1,14 @@
+// firebase.json
 {
-  "projects": {
-    "default": "kat-antigravity"
+  "apphosting": {
+    "backends": {
+      "kidsartoon": { // 替换为您的后端名称 (kidsartoon)
+        "env": {
+          // 解决构建失败的关键变量
+          "GOOGLE_NODE_RUN_SCRIPTS": "" 
+        }
+      }
+    }
   }
+  // 如果您的文件里已经有 "hosting" 部分，不要删除它，只需添加或修改 "apphosting" 即可。
 }

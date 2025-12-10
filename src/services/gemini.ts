@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import fetch from 'node-fetch';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 
 interface RateLimit {
     date: string;
@@ -12,7 +11,7 @@ export class GeminiService {
     private genAI: GoogleGenerativeAI;
     private apiKey: string;
     private rateLimits: Map<string, RateLimit> = new Map();
-    private proxyAgent: HttpsProxyAgent<string> | undefined;
+    // private proxyAgent: HttpsProxyAgent<string> | undefined;
 
     // Configuration
     private readonly TEXT_MODEL = 'gemini-1.5-pro';
@@ -27,12 +26,8 @@ export class GeminiService {
             console.warn('GOOGLE_API_KEY is missing!');
         }
 
-        // Proxy Configuration
-        const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-        if (proxyUrl) {
-            console.log(`[Gemini] Using Proxy: ${proxyUrl}`);
-            this.proxyAgent = new HttpsProxyAgent(proxyUrl);
-        }
+        // Proxy Configuration removed for direct connection
+
 
         this.genAI = new GoogleGenerativeAI(this.apiKey);
     }
@@ -120,8 +115,10 @@ export class GeminiService {
         Return JSON only: { "title": "", "characters": [], "story": "", "question": "" }
         `;
 
-        // CORRECTED URL: AI Studio Endpoint, valid model name (no -latest)
-        const url = `https://aistudio.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${this.apiKey}`;
+        // Standard API Endpoint (generativelanguage)
+        // User recommended using standard endpoint + header auth + v1 (not v1beta)
+        const baseUrl = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
+        const url = `${baseUrl}/v1/models/gemini-1.5-pro:generateContent`;
 
         try {
             const mimeType = base64Image.substring(base64Image.indexOf(':') + 1, base64Image.indexOf(';')) || 'image/png';
@@ -142,7 +139,6 @@ export class GeminiService {
                     }
                 ],
                 generationConfig: {
-                    responseMimeType: "application/json",
                     maxOutputTokens: 1024,
                     temperature: 0.8,
                     topP: 0.9
@@ -152,9 +148,11 @@ export class GeminiService {
             console.log(`[Gemini REST] Posting to ${url}...`);
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                agent: this.proxyAgent // Inject Proxy Agent
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': this.apiKey
+                },
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
@@ -263,7 +261,7 @@ export class GeminiService {
         try {
             const visionModel = this.genAI.getGenerativeModel({
                 model: 'gemini-1.5-flash',
-                generationConfig: { responseMimeType: "application/json" }
+                // generationConfig: { responseMimeType: "application/json" } // Removed unsupported field
             });
 
             const mimeType = base64Image.substring(base64Image.indexOf(':') + 1, base64Image.indexOf(';')) || 'image/png';
@@ -305,9 +303,6 @@ export class GeminiService {
         console.log(`[Gemini Cloud TTS] Starting generation for text length: ${text.length}`);
         const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${this.apiKey}`;
 
-        // Create a new Agent for TTS if needed, using the same proxy
-        const ttsAgent = this.proxyAgent ? new HttpsProxyAgent(process.env.HTTPS_PROXY || process.env.HTTP_PROXY || '') : undefined;
-
         try {
             // User requested en-US-Wavenet-D
             let voiceName = 'en-US-Wavenet-D';
@@ -327,8 +322,7 @@ export class GeminiService {
                         speakingRate: 1.0,
                         pitch: 0
                     }
-                }),
-                agent: ttsAgent
+                })
             });
 
             if (!response.ok) {

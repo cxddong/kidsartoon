@@ -169,8 +169,20 @@ export class DoubaoService {
     /**
      * Generate Story with JSON Output (New System Prompt)
      */
-    async generateStoryJSON(userPrompt: string, imageUrl?: string): Promise<any> {
-        const systemPrompt = `
+    async generateStoryJSON(userPrompt: string, imageUrl?: string, targetLang: 'zh' | 'en' = 'zh'): Promise<any> {
+        let systemPrompt = '';
+
+        if (targetLang === 'en') {
+            systemPrompt = `
+Role: A warm story creator for 6-10 year old children.
+Rules:
+1. Create a 4-panel story strictly based on the core elements of the reference image.
+2. Structure: Panel 1 (Start), Panel 2 (Development), Panel 3 (Climax), Panel 4 (Warm Ending).
+3. Each panel's text must be 30-50 English words, simple vocabulary suitable for kids.
+4. Output format: JSON only. Keys: "scenes" (array of strings), "scenes_detail" (array of strings for illustration). No markdown.
+`;
+        } else {
+            systemPrompt = `
 Role: A warm story creator for 8-year-old children
 Rules:
 1. Create a 4-panel story strictly based on the core elements (characters/scenes/objects/atmosphere) of the reference image;
@@ -178,10 +190,11 @@ Rules:
 3. Each panel's text is 20-30 words, easy for children to understand, no complex vocabulary;
 4. Output format: Only return JSON of "scenes" (array of strings) and "scenes_detail" (array of strings for illustration), no extra content.
 `;
+        }
 
         try {
             const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20241201-xxxxx';
-            console.log(`[Doubao] Generating story with model: ${model}`);
+            console.log(`[Doubao] Generating ${targetLang} story with model: ${model}`);
 
             let finalUserPrompt = userPrompt;
 
@@ -189,7 +202,11 @@ Rules:
             if (imageUrl) {
                 try {
                     console.log('[Doubao] Analyzing reference image for story context...');
-                    const imageDesc = await this.analyzeImage(imageUrl, "Describe the characters, visual style, atmosphere, and key objects in this image for a children's story.");
+                    const prompt = targetLang === 'en'
+                        ? "Describe the characters, visual style, atmosphere, and key objects in this image for a children's story."
+                        : "请详细描述这张图片中的画面内容，包括场景、人物、动作和氛围。";
+
+                    const imageDesc = await this.analyzeImage(imageUrl, prompt);
                     finalUserPrompt = `${userPrompt}\n\nReference Image Context: ${imageDesc}`;
                     console.log('[Doubao] Image analysis complete. Context added.');
                 } catch (visionErr) {
@@ -240,9 +257,11 @@ Rules:
                 console.error('Failed to parse Story JSON or Invalid Structure. Raw content:', content);
                 // Fallback structure
                 return {
-                    title: 'My Story',
-                    summary: 'A generated story.',
-                    scenes: ['Scene 1', 'Scene 2', 'Scene 3', 'Scene 4'],
+                    title: targetLang === 'en' ? 'My Story' : '我的故事',
+                    summary: targetLang === 'en' ? 'A generated story.' : '生成的故事',
+                    scenes: targetLang === 'en'
+                        ? ['Scene 1', 'Scene 2', 'Scene 3', 'Scene 4']
+                        : ['场景1', '场景2', '场景3', '场景4'],
                     scenes_detail: ['Cute cartoon scene', 'Cute cartoon scene', 'Cute cartoon scene', 'Cute cartoon scene']
                 };
             }
