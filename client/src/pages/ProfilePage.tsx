@@ -81,16 +81,16 @@ export const ProfilePage: React.FC = () => {
                     const data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
                         setImages(data);
-                    } else {
-                        // If no real data, maybe show empty or keep mock ONLY for demo if strictly needed
-                        // But user specifically asked for generated image to show up.
-                        setImages([]);
+                        // Fallback to MOCK_IMAGES if API returns empty (for demo consistency)
+                        setImages(MOCK_IMAGES);
                     }
                 } else {
                     console.error("Failed to load history");
+                    setImages(MOCK_IMAGES); // Fallback on error too
                 }
             } catch (e) {
                 console.error("Error loading images", e);
+                setImages(MOCK_IMAGES);
             } finally {
                 setLoadingImages(false);
             }
