@@ -1,5 +1,5 @@
 import express from 'express';
-import { databaseService } from '../services/database';
+import { databaseService } from '../services/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();

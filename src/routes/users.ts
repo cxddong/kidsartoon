@@ -1,5 +1,5 @@
 import express from 'express';
-import { databaseService } from '../services/database';
+import { databaseService } from '../services/database.js';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
