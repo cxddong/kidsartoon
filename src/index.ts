@@ -1,5 +1,6 @@
 // src/index.ts
 import 'dotenv/config'; // 读取 .env（必须放最顶）
+import fs from 'fs'; // For checking clientDist
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
@@ -197,7 +198,6 @@ app.listen(port, () => {
   console.log(`\n🎨 Kids Art Tales App is running!`);
 
   // DEBUG: Check files
-  const fs = require('fs');
   if (fs.existsSync(clientDist)) {
     console.log(`[DEBUG] Client Dist exists at: ${clientDist}`);
     console.log(`[DEBUG] Files: ${fs.readdirSync(clientDist).join(', ')}`);
