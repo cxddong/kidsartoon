@@ -130,17 +130,18 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
             const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
             if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
 
-            // New Xunfei implementation uses WAV by default (raw)
-            const filename = `audio-story-${lang}-${id}.wav`;
+            // Google TTS returns MP3
+            const filename = `audio-story-${lang}-${id}.mp3`;
             const outputPath = path.join(outputDir, filename);
 
             if (lang === 'zh') {
-                console.log('[TTS] Using Xunfei (ZH)');
-                // Pass text and outputPath
-                audioPath = await xunfeiTTS(story, outputPath);
+                console.log('[TTS] Using Google TTS (ZH)');
+                const audioBuffer = await geminiService.generateSpeech(story, 'zh-CN');
+                fs.writeFileSync(outputPath, audioBuffer);
             } else {
-                console.log('[TTS] Using Xunfei (EN)');
-                audioPath = await xunfeiTTS(story, outputPath);
+                console.log('[TTS] Using Google TTS (EN)');
+                const audioBuffer = await geminiService.generateSpeech(story, 'en-US');
+                fs.writeFileSync(outputPath, audioBuffer);
             }
 
             audioUrl = `/generated/${filename}`;
