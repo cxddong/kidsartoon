@@ -6,13 +6,20 @@
   },
   "dataconnect": {
     "source": "dataconnect"
-  }
-}
-{
+  },
+  "apphosting": {
+    "backends": {
+      "kidsartoon": {
+        "env": {
+          "GOOGLE_NODE_RUN_SCRIPTS": "" // 保持这个关键的绕过脚本
+        }
+      }
+    }
+  },
   "hosting": {
     "public": "client/dist",
     "ignore": [
-      "firebase.json",
+      //"firebase.json", <--- 删除或注释掉这一行!
       "**/.*",
       "**/node_modules/**"
     ],
