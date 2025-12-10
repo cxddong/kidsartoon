@@ -23,8 +23,10 @@ const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 
 // Serve React Frontend (Production)
+// Serve React Frontend (Production)
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
-if (process.env.NODE_ENV === 'production' || process.argv.includes('--serve-client')) {
+// Always serve client if it exists, since we build it in Docker
+if (true) {
   app.use(express.static(clientDist));
   // Catch-all for SPA routing
   app.get('*', (req, res, next) => {
