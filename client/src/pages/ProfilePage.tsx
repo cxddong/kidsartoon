@@ -164,38 +164,37 @@ export const ProfilePage: React.FC = () => {
         <div className="h-screen w-full flex relative overflow-hidden bg-[#F0F4F8]">
             {/* Fixed Background */}
             <div
-                className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20"
+                className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-40"
                 style={{ backgroundImage: "url('/profile_page_bg.jpg')" }}
             />
 
-            {/* Left Panel - Fixed Info - STATIC, no scroll */}
-            <div className="w-[280px] h-full flex-shrink-0 relative z-10 flex flex-col items-center pt-4 pb-4 px-3 border-r border-white/30 bg-white/40 backdrop-blur-xl shadow-2xl overflow-hidden text-sm">
+            {/* Left Panel - Fixed Info - Transparent glass effect */}
+            <div className="w-[280px] h-full flex-shrink-0 relative z-10 flex flex-col items-center pt-4 pb-4 px-3 border-r border-white/10 bg-white/10 backdrop-blur-sm shadow-xl overflow-hidden text-sm">
 
                 {/* Logo Area */}
                 <div className="w-full flex justify-center mb-2 cursor-pointer" onClick={() => navigate('/home')}>
                     <img src="/logo_header.png" alt="KidsARToon" className="h-16 object-contain drop-shadow-md hover:scale-105 transition-transform" />
                 </div>
 
-                {/* Avatar & User Info - Scaled down */}
-                <div className="flex flex-col items-center gap-2 w-full flex-1 overflow-hidden mt-2">
+                {/* Avatar & User Info - Compact Mode */}
+                <div className="flex flex-col items-center gap-1 w-full flex-1 overflow-hidden mt-1">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
                         className="relative group shrink-0"
                     >
-                        {/* Avatar */}
-                        <div className="w-24 h-24 rounded-full bg-yellow-200 border-[4px] border-white shadow-lg overflow-hidden relative">
+                        {/* Avatar - Smaller */}
+                        <div className="w-20 h-20 rounded-full bg-yellow-200 border-[3px] border-white shadow-md overflow-hidden relative">
                             <img src={user?.photoURL || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} alt="Avatar" className="w-full h-full object-cover" />
                         </div>
-                        {/* Floating animation wrapper could be complex, keeping it simple spring above */}
 
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
-                            className="absolute bottom-1 right-1 p-1.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 hover:scale-110 transition-all cursor-pointer border-2 border-white disabled:opacity-50"
+                            className="absolute bottom-0 right-0 p-1 bg-blue-500 text-white rounded-full shadow-md hover:bg-blue-600 hover:scale-110 transition-all cursor-pointer border-[1.5px] border-white disabled:opacity-50"
                         >
-                            {isUploading ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Edit2 className="w-3 h-3" />}
+                            {isUploading ? <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Edit2 className="w-2.5 h-2.5" />}
                         </button>
                         <input
                             type="file"
@@ -207,39 +206,32 @@ export const ProfilePage: React.FC = () => {
                     </motion.div>
 
                     <div className="text-center w-full shrink-0">
-                        <h2 className="text-xl font-black text-slate-800 drop-shadow-sm truncate px-2">{user?.name || 'Artist'}</h2>
-                        <p className="text-slate-600 text-xs font-bold mb-3 bg-white/50 inline-block px-2 py-0.5 rounded-full">{user?.age || 7} Years • {user?.language || 'English'}</p>
+                        <h2 className="text-lg font-black text-slate-800 drop-shadow-sm truncate px-1 leading-tight">{user?.name || 'Artist'}</h2>
+                        <p className="text-[10px] text-slate-600 font-bold mb-2 bg-white/50 inline-block px-2 py-0.5 rounded-full mt-1">{user?.age || 7} Years • {user?.language || 'English'}</p>
 
-                        <div className="flex justify-center gap-4 mb-4">
-                            <div className="flex items-center gap-1.5 bg-yellow-400 px-4 py-1.5 rounded-full border-[3px] border-white shadow-md transform hover:scale-105 transition-transform">
-                                <Star className="w-4 h-4 text-white fill-current" />
-                                <span className="text-base font-black text-white">{user?.points || 0}</span>
+                        <div className="flex justify-center gap-2 mb-2">
+                            <div className="flex items-center gap-1 bg-yellow-400 px-3 py-1 rounded-full border-2 border-white shadow-sm transform hover:scale-105 transition-transform">
+                                <Star className="w-3 h-3 text-white fill-current" />
+                                <span className="text-sm font-black text-white">{user?.points || 0}</span>
                             </div>
                         </div>
 
-                        <div className="space-y-2 w-full max-w-[200px] mx-auto">
-                            <button onClick={() => navigate('/subscription')} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-xl text-sm font-black shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all">
-                                <Crown className="w-4 h-4 fill-current" />
+                        <div className="w-full max-w-[180px] mx-auto mt-1">
+                            <button onClick={() => navigate('/subscription')} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-xl text-xs font-black shadow-md hover:shadow-orange-500/30 hover:scale-[1.02] transition-all">
+                                <Crown className="w-3.5 h-3.5 fill-current" />
                                 Premium
-                            </button>
-
-                            <button onClick={() => navigate('/profile/history')} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-700 rounded-xl text-sm font-black shadow-md hover:bg-slate-50 hover:scale-[1.02] transition-all border-2 border-slate-100">
-                                <Clock className="w-4 h-4 text-blue-500" />
-                                Full Gallery
                             </button>
                         </div>
                     </div>
                 </div>
 
                 {/* Settings & Logout - Bottom */}
-                <div className="w-full flex justify-between mt-auto pt-4 border-t border-white/20 shrink-0">
-                    <button onClick={() => navigate('/settings')} className="p-2.5 bg-white/50 backdrop-blur-sm rounded-xl hover:bg-white transition-all flex items-center gap-2 text-slate-700 font-bold shadow-sm">
-                        <Settings className="w-4 h-4" />
-                        <span className="text-xs">Settings</span>
+                <div className="w-full flex justify-center gap-4 mt-auto pt-4 border-t border-white/20 shrink-0">
+                    <button onClick={() => navigate('/settings')} className="p-3 bg-white/50 backdrop-blur-sm rounded-xl hover:bg-white transition-all flex items-center justify-center text-slate-700 shadow-sm" title="Settings">
+                        <Settings className="w-5 h-5" />
                     </button>
-                    <button onClick={() => { logout(); navigate('/login'); }} className="p-2.5 bg-red-100/50 backdrop-blur-sm rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 text-red-600 font-bold shadow-sm">
-                        <LogOut className="w-4 h-4" />
-                        <span className="text-xs">Sign Out</span>
+                    <button onClick={() => { logout(); navigate('/login'); }} className="p-3 bg-red-100/50 backdrop-blur-sm rounded-xl hover:bg-red-100 transition-all flex items-center justify-center text-red-600 shadow-sm" title="Sign Out">
+                        <LogOut className="w-5 h-5" />
                     </button>
                 </div>
             </div>
