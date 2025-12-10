@@ -15,12 +15,12 @@
     "dev:client": "cd client && npm run dev",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:client\"",
     "build:client": "cd client && npm run build",
-    "start": "node --enable-source-maps dist/index.js",
     "build": "tsc -p tsconfig.json && npm run build:client",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "start": "node server.js"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
