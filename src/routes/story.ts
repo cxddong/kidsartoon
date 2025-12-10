@@ -135,13 +135,12 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
             const outputPath = path.join(outputDir, filename);
 
             if (lang === 'zh') {
-                console.log('[TTS] Using Google TTS (ZH)');
-                const audioBuffer = await geminiService.generateSpeech(story, 'zh-CN');
-                fs.writeFileSync(outputPath, audioBuffer);
+                console.log('[TTS] Using Xunfei (ZH)');
+                // xunfeiTTS writes to outputPath
+                audioPath = await xunfeiTTS(story, outputPath);
             } else {
-                console.log('[TTS] Using Google TTS (EN)');
-                const audioBuffer = await geminiService.generateSpeech(story, 'en-US');
-                fs.writeFileSync(outputPath, audioBuffer);
+                console.log('[TTS] Using Xunfei (EN)');
+                audioPath = await xunfeiTTS(story, outputPath);
             }
 
             audioUrl = `/generated/${filename}`;

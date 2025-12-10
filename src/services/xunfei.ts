@@ -1,122 +1,163 @@
-import WebSocket from 'ws'; // 现在有类型声明，不会报错
+import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-// 讯飞超拟人语音合成配置（替换为你的实际配置）
+// Xunfei Configuration (From User)
 const XUNFEI_CONFIG = {
-    appId: '你的APPID',
-    apiKey: '你的APIKey',
-    apiSecret: '你的APISecret',
-    voiceName: 'xiaoyan', // 童声音色标识
-    audioFormat: 'raw' // raw=WAV，lame=MP3
+    appId: 'ga85af02',
+    apiKey: 'fc83e65202c91a3962e91e4dd9371a25',
+    apiSecret: '50d4411a19f6082e3a2aeab99136de7b',
+    // Using 'xiaoyan' as requested/default, can be parameterized later
+    voiceName: 'xiaoyan',
+    // requesting mp3 for direct playback in browser
+    aue: 'lame',
+    sfl: 1,
+    hostUrl: 'wss://tts-api-sg.xf-yun.com/v2/tts'
 };
 
 /**
- * 生成讯飞WebSocket鉴权URL
+ * Generate Auth URL with HMAC-SHA256 Signature
  */
 function generateAuthUrl(): string {
-    const { apiKey, apiSecret } = XUNFEI_CONFIG;
-    const host = 'tts-api.xfyun.cn';
+    const { apiKey, apiSecret, hostUrl } = XUNFEI_CONFIG;
+    const urlObj = new URL(hostUrl);
+    const host = urlObj.host;
     const date = new Date().toUTCString();
-    const signatureOrigin = `host: ${host}\ndate: ${date}\nGET /v2/tts HTTP/1.1`;
 
-    // HMAC-SHA256签名
+    // Signature Origin format: "host: $host\ndate: $date\n$request-line"
+    const signatureOrigin = `host: ${host}\ndate: ${date}\nGET ${urlObj.pathname} HTTP/1.1`;
+
+    // HMAC-SHA256
     const signatureSha = crypto.createHmac('sha256', apiSecret)
         .update(signatureOrigin)
-        .digest();
-    const signature = Buffer.from(signatureSha).toString('base64');
+        .digest('base64');
 
-    // 构造授权头
-    const authorizationOrigin = `api_key="${apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signature}"`;
+    // Authorization Header
+    const authorizationOrigin = `api_key="${apiKey}", algorithm="hmac-sha256", headers="host date request-line", signature="${signatureSha}"`;
     const authorization = Buffer.from(authorizationOrigin).toString('base64');
 
-    // 拼接URL参数
+    // Construct Final URL
     const params = new URLSearchParams({
         authorization,
         date,
         host
     });
 
-    return `wss://${host}/v2/tts?${params.toString()}`;
+    return `${hostUrl}?${params.toString()}`;
 }
 
 /**
- * 讯飞语音合成核心方法
- * @param text 要合成的文本
- * @param outputPath 音频输出路径
- * @returns Promise<string> 音频文件路径
+ * Perform TTS via Xunfei WebSocket
+ * @param text Text to synthesize
+ * @param outputPath Optional output path (must end in .mp3 for mp3 format)
  */
-export async function xunfeiTTS(text: string, outputPath: string = path.join(__dirname, '../audio', `${uuidv4()}.wav`)): Promise<string> {
+export async function xunfeiTTS(text: string, outputPath: string = path.join(__dirname, '../audio', `${uuidv4()}.mp3`)): Promise<string> {
     return new Promise((resolve, reject) => {
         const authUrl = generateAuthUrl();
         const ws = new WebSocket(authUrl);
+        const audioData: Buffer[] = [];
 
-        // 创建音频文件目录（若不存在）
+        // Ensure directory exists
         const audioDir = path.dirname(outputPath);
         if (!fs.existsSync(audioDir)) {
             fs.mkdirSync(audioDir, { recursive: true });
         }
 
-        // 监听连接成功
         ws.on('open', () => {
-            console.log('讯飞TTS WebSocket连接成功');
-            // 构造发送给讯飞的请求数据
-            const requestData = {
+            console.log(`[XunfeiTTS] Connected to ${XUNFEI_CONFIG.hostUrl}`);
+
+            // Build Request Frame
+            const frame = {
                 common: {
                     app_id: XUNFEI_CONFIG.appId
                 },
                 business: {
-                    aue: XUNFEI_CONFIG.audioFormat,
+                    aue: XUNFEI_CONFIG.aue,
+                    sfl: XUNFEI_CONFIG.sfl, // 1 for streaming mp3
                     vcn: XUNFEI_CONFIG.voiceName,
-                    speed: 60, // 语速（0-100）
-                    pitch: 55, // 语调（0-100）
-                    volume: 50, // 音量（0-100）
-                    rdn: 0 // 关闭随机断句
+                    speed: 50,
+                    volume: 50,
+                    pitch: 50,
+                    tte: 'UTF8' // Text encoding
                 },
                 data: {
-                    status: 2,
-                    text: Buffer.from(text).toString('base64') // 文本Base64编码
+                    status: 2, // Fixed for text transmission
+                    text: Buffer.from(text).toString('base64')
                 }
             };
-            ws.send(JSON.stringify(requestData));
+
+            ws.send(JSON.stringify(frame));
         });
 
-        // 监听消息（核心：接收音频数据）
-        // 修复：指定data为Buffer，isBinary为boolean
-        ws.on('message', (data: Buffer, isBinary: boolean) => {
-            if (isBinary) {
-                // 音频数据是二进制，直接写入文件
-                fs.appendFileSync(outputPath, data);
-            } else {
-                // 非二进制是讯飞的状态消息
-                const msg = JSON.parse(data.toString());
-                if (msg.code !== 0) {
-                    reject(new Error(`讯飞TTS错误：${msg.code} - ${msg.message}`));
+        ws.on('message', (data: WebSocket.Data) => {
+            try {
+                // The doc says server returns TextMessage (JSON string)
+                const response = JSON.parse(data.toString());
+
+                if (response.code !== 0) {
+                    console.error(`[XunfeiTTS] Server Error: code=${response.code}, message=${response.message}`);
                     ws.close();
+                    reject(new Error(`Xunfei TTS Error: ${response.message}`));
+                    return;
+                }
+
+                if (response.data) {
+                    // response.data.audio is base64 string
+                    if (response.data.audio) {
+                        const buffer = Buffer.from(response.data.audio, 'base64');
+                        audioData.push(buffer);
+                    }
+
+                    // status 2 means end of synthesis
+                    if (response.data.status === 2) {
+                        console.log('[XunfeiTTS] Synthesis Complete');
+                        ws.close(); // Close initiates the 'close' event
+                    }
+                }
+            } catch (err) {
+                console.error('[XunfeiTTS] Message Parsing Failed:', err);
+                ws.close();
+                reject(err);
+            }
+        });
+
+        ws.on('close', () => {
+            console.log('[XunfeiTTS] Connection Closed');
+            if (audioData.length > 0) {
+                const finalBuffer = Buffer.concat(audioData);
+                fs.writeFileSync(outputPath, finalBuffer);
+                resolve(outputPath);
+            } else {
+                // Determine if it was an error close or just empty (likely rejected already if error)
+                // If we have no data but promise pending, assume failure if not handled
+                // But we can check if file exists or just reject if empty
+                if (audioData.length === 0) {
+                    // Sometimes close happens before message if auth fails
+                    // Usually rejected in message handler or open
                 }
             }
         });
 
-        // 监听连接关闭
-        // 修复：指定code为number，reason为Buffer
-        ws.on('close', (code: number, reason: Buffer) => {
-            console.log(`WebSocket连接关闭：code=${code}, reason=${reason.toString()}`);
-            if (code === 1000) {
-                // 正常关闭，返回音频文件路径
-                resolve(outputPath);
-            } else {
-                reject(new Error(`连接异常关闭：${reason.toString()}`));
-            }
+        ws.on('error', (err) => {
+            console.error('[XunfeiTTS] WebSocket Error:', err);
+            reject(err);
         });
 
-        // 监听错误
-        // 修复：指定error为Error
-        ws.on('error', (error: Error) => {
-            console.error('讯飞TTS WebSocket错误：', error);
-            reject(new Error(`WebSocket错误：${error.message}`));
-            ws.close();
-        });
+        // Safety timeout
+        setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                console.warn('[XunfeiTTS] Timeout - Closing Connection');
+                ws.close();
+                if (audioData.length > 0) {
+                    const finalBuffer = Buffer.concat(audioData);
+                    fs.writeFileSync(outputPath, finalBuffer);
+                    resolve(outputPath);
+                } else {
+                    reject(new Error("Timeout without audio data"));
+                }
+            }
+        }, 15000); // 15s timeout
     });
 }
