@@ -77,9 +77,9 @@ export async function xunfeiTTS(text: string, outputPath: string = path.join(__d
                     aue: XUNFEI_CONFIG.aue,
                     sfl: XUNFEI_CONFIG.sfl, // 1 for streaming mp3
                     vcn: XUNFEI_CONFIG.voiceName,
-                    speed: 50,
+                    speed: 40, // Slower speed for storytelling
                     volume: 50,
-                    pitch: 50,
+                    pitch: 45, // Slightly lower pitch for warmth
                     tte: 'UTF8' // Text encoding
                 },
                 data: {
