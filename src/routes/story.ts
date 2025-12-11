@@ -137,10 +137,10 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
             if (lang === 'zh') {
                 console.log('[TTS] Using Xunfei (ZH)');
                 // xunfeiTTS writes to outputPath
-                audioPath = await xunfeiTTS(story, outputPath);
+                audioPath = await xunfeiTTS(story, outputPath, 'zh');
             } else {
                 console.log('[TTS] Using Xunfei (EN)');
-                audioPath = await xunfeiTTS(story, outputPath);
+                audioPath = await xunfeiTTS(story, outputPath, 'en');
             }
 
             audioUrl = `/generated/${filename}`;

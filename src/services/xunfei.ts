@@ -53,11 +53,15 @@ function generateAuthUrl(): string {
  * @param text Text to synthesize
  * @param outputPath Optional output path (must end in .mp3 for mp3 format)
  */
-export async function xunfeiTTS(text: string, outputPath: string = path.join(__dirname, '../audio', `${uuidv4()}.mp3`)): Promise<string> {
+// Update signature to accept lang
+export async function xunfeiTTS(text: string, outputPath: string = path.join(__dirname, '../audio', `${uuidv4()}.mp3`), lang: string = 'en'): Promise<string> {
     return new Promise((resolve, reject) => {
         const authUrl = generateAuthUrl();
         const ws = new WebSocket(authUrl);
         const audioData: Buffer[] = [];
+
+        // Select voice based on lang
+        const voiceName = lang === 'en' ? 'x_Catherine' : 'x_xiaoyang_story';
 
         // Ensure directory exists
         const audioDir = path.dirname(outputPath);
@@ -66,7 +70,7 @@ export async function xunfeiTTS(text: string, outputPath: string = path.join(__d
         }
 
         ws.on('open', () => {
-            console.log(`[XunfeiTTS] Connected to ${XUNFEI_CONFIG.hostUrl}`);
+            console.log(`[XunfeiTTS] Connected to ${XUNFEI_CONFIG.hostUrl} (Voice: ${voiceName})`);
 
             // Build Request Frame
             const frame = {
@@ -76,8 +80,9 @@ export async function xunfeiTTS(text: string, outputPath: string = path.join(__d
                 business: {
                     aue: XUNFEI_CONFIG.aue,
                     sfl: XUNFEI_CONFIG.sfl, // 1 for streaming mp3
-                    vcn: XUNFEI_CONFIG.voiceName,
+                    vcn: voiceName, // Dynamic voice selection
                     speed: 40, // Slower speed for storytelling
+
                     volume: 50,
                     pitch: 45, // Slightly lower pitch for warmth
                     tte: 'UTF8' // Text encoding
