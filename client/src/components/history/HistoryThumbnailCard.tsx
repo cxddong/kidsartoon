@@ -9,6 +9,7 @@ interface HistoryThumbnailCardProps {
 }
 
 const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onClick }) => {
+    // v2.2 Force Rebuild
 
     const getTypeConfig = () => {
         switch (image.type) {

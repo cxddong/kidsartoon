@@ -84,11 +84,11 @@ if (fs.existsSync(clientDist)) {
   });
 
 } else {
-  // Dev Mode or Build Missing
-  console.log(`[SERVER-START] clientDist NOT found. Running in Dev Mode (redirecting to 5173).`);
+  // Production Safety: Do NOT redirect to localhost. Fail loudly if build is missing.
+  console.error(`[SERVER-START] FATAL: clientDist NOT found at ${clientDist}`);
 
-  app.get('/', (_req, res) => {
-    res.redirect('http://localhost:5173');
+  app.get('*', (_req, res) => {
+    res.status(500).send('<h1>500 Server Error</h1><p>Frontend Build Artifacts are missing on the server.</p>');
   });
 }
 
