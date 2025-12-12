@@ -8,8 +8,7 @@ interface HistoryThumbnailCardProps {
     onClick: () => void;
 }
 
-const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onClick }) => {
-    // v2.2 Force Rebuild
+const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onClick, viewMode = 'grid' }) => {
 
     const getTypeConfig = () => {
         switch (image.type) {
@@ -28,6 +27,43 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
 
     const typeConfig = getTypeConfig();
 
+    if (viewMode === 'list') {
+        return (
+            <motion.div
+                layout
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="group w-full flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer"
+                onClick={onClick}
+            >
+                {/* Image Thumbnail */}
+                <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 relative bg-slate-100">
+                    <img src={image.imageUrl} alt={image.prompt} className="w-full h-full object-cover" loading="lazy" />
+                    {/* Tiny type indicator on image */}
+                    <div className={`absolute top-0 left-0 w-full h-full ${typeConfig.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold text-white ${typeConfig.color} flex items-center gap-1`}>
+                            {typeConfig.icon} {typeConfig.label}
+                        </span>
+                        <span className="text-xs text-slate-400">{new Date(image.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="font-bold text-slate-800 text-sm truncate">{image.prompt || "Untitled Artwork"}</p>
+                </div>
+
+                {/* Actions */}
+                <div className="shrink-0 pr-2">
+                    {image.favorite && <Heart size={16} className="text-rose-500 fill-rose-500" />}
+                </div>
+            </motion.div>
+        );
+    }
+
+    // Grid View (Default)
     return (
         <motion.div
             layout

@@ -6,9 +6,10 @@ import type { ImageRecord } from './ImageModal';
 interface HistoryGridProps {
     images: ImageRecord[];
     onImageClick: (image: ImageRecord) => void;
+    viewMode?: 'grid' | 'list';
 }
 
-const HistoryGrid: React.FC<HistoryGridProps> = ({ images, onImageClick }) => {
+const HistoryGrid: React.FC<HistoryGridProps> = ({ images, onImageClick, viewMode = 'grid' }) => {
     if (images.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -24,7 +25,10 @@ const HistoryGrid: React.FC<HistoryGridProps> = ({ images, onImageClick }) => {
     return (
         <motion.div
             layout
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 p-1 pb-20"
+            className={viewMode === 'grid'
+                ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 p-1 pb-20"
+                : "flex flex-col gap-3 p-1 pb-20 max-w-3xl mx-auto"
+            }
         >
             <AnimatePresence mode='popLayout'>
                 {images.map((image) => (
@@ -32,6 +36,7 @@ const HistoryGrid: React.FC<HistoryGridProps> = ({ images, onImageClick }) => {
                         key={image.id}
                         image={image}
                         onClick={() => onImageClick(image)}
+                        viewMode={viewMode}
                     />
                 ))}
             </AnimatePresence>

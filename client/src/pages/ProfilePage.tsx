@@ -272,6 +272,7 @@ export const ProfilePage: React.FC = () => {
                             <HistoryGrid
                                 images={images}
                                 onImageClick={setSelectedImage}
+                                viewMode={viewMode}
                             />
                         )}
                         {!loadingImages && images.length === 0 && (
