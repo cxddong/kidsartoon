@@ -18,62 +18,67 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.disable('x-powered-by'); // Security
 
-// 静态资源：让 /public 下文件可访问 (Legacy)
-// 静态资源：让 /public 下文件可访问 (Legacy)
-const publicDir = path.join(__dirname, '..', 'public');
+// ===== Static Files & Frontend Serving =====
+
+// Resolve paths relative to process.cwd() for container safety
+const rootDir = process.cwd();
+const publicDir = path.join(rootDir, 'public'); // Backend public (legacy)
+const clientPublicDir = path.join(rootDir, 'client', 'public'); // Generated content (e.g. comics)
+const clientDist = path.join(rootDir, 'client', 'dist'); // Frontend Build
+
+console.log(`[SERVER-START] Root: ${rootDir}`);
+console.log(`[SERVER-START] clientDist Target: ${clientDist}`);
+
+// 1. Serve Backend Public Assets
 app.use(express.static(publicDir));
 
-// 关键修正：让 client/public 下文件（如 generated）也可访问
-const clientPublicDir = path.join(__dirname, '..', 'client', 'public');
-app.use(express.static(clientPublicDir));
-
-// Serve React Frontend (Production)
-// Serve React Frontend (Production)
-// Serve React Frontend (Production)
-const clientDist = path.join(__dirname, '..', 'client', 'dist');
-
-console.log(`[SERVER-START] Configured clientDist: ${clientDist}`);
-if (fs.existsSync(clientDist)) {
-  console.log(`[SERVER-START] clientDist exists. Contents:`, fs.readdirSync(clientDist));
-  const assetsDir = path.join(clientDist, 'assets');
-  if (fs.existsSync(assetsDir)) {
-    console.log(`[SERVER-START] Assets dir exists. Contents (first 5):`, fs.readdirSync(assetsDir).slice(0, 5));
-  } else {
-    console.log(`[SERVER-START] WARNING: Assets dir NOT found at ${assetsDir}`);
-  }
-} else {
-  console.log(`[SERVER-START] CRITICAL: clientDist NOT found at ${clientDist}`);
+// 2. Serve Client Generated Assets (Runtime)
+// Must be before build static to ensure new files are served
+if (fs.existsSync(clientPublicDir)) {
+  app.use(express.static(clientPublicDir));
 }
 
-// Request Logger
-app.use((req, res, next) => {
-  if (req.path.includes('/assets/')) {
-    console.log(`[ASSET-REQ] ${req.method} ${req.path}`);
-  }
-  next();
-});
+// 3. Serve Frontend Build (Production)
+if (fs.existsSync(clientDist)) {
+  console.log(`[SERVER-START] clientDist found. Serving production frontend.`);
+  console.log(`[SERVER-START] Assets check:`, fs.existsSync(path.join(clientDist, 'assets')) ? 'Found' : 'MISSING');
 
-if (true) {
-  app.use(express.static(clientDist));
+  // Serve static assets with index.html caching disabled
+  app.use(express.static(clientDist, {
+    setHeaders: (res, filePath) => {
+      // Vital: Disable caching for index.html to ensure new deployment hashes are loaded immediately
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
 
-  // Catch-all: Explicitly 404 on missing assets rather than serving HTML
+  // SPA Catch-All Handler
   app.get('*', (req, res, next) => {
+    // Skip API and Docs
     if (req.path.startsWith('/api') || req.path.startsWith('/docs')) return next();
 
-    // crucial: if it looks like a file (has extension) and wasn't handled by static, it's missing.
+    // Trap missing assets: Return 404 instead of HTML to prevent MIME errors
     if (req.path.includes('.') && !req.path.includes('.html')) {
-      console.warn(`[404-ASSET] Missing file requested: ${req.path}`);
+      // console.warn(`[404-ASSET] Missing file: ${req.path}`); // Commented to reduce log noise
       return res.status(404).send('Not Found');
     }
 
+    // Serve HTML for all other routes (SPA)
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(clientDist, 'index.html'));
   });
+
 } else {
-  // Dev mode: Redirect root to Vite dev server if accessed directly (optional convenience)
+  // Dev Mode or Build Missing
+  console.log(`[SERVER-START] clientDist NOT found. Running in Dev Mode (redirecting to 5173).`);
+
   app.get('/', (_req, res) => {
     res.redirect('http://localhost:5173');
   });
+});
 }
 
 // Demo 页面仍然可用 (Legacy)
