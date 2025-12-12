@@ -26,10 +26,22 @@ app.disable('x-powered-by'); // Security
 const rootDir = process.cwd();
 const publicDir = path.join(rootDir, 'public'); // Backend public (legacy)
 const clientPublicDir = path.join(rootDir, 'client', 'public'); // Generated content (e.g. comics)
-const clientDist = path.join(rootDir, 'client', 'dist'); // Frontend Build
+
+// Frontend Build Location Strategies
+const strategySource = path.join(rootDir, 'client', 'dist'); // Standard Dev/Local
+const strategyBundled = path.join(rootDir, 'dist', 'public'); // Bundled for Cloud
+let clientDist = strategySource;
+
+if (fs.existsSync(strategyBundled)) {
+  console.log(`[SERVER-START] Found Bundled Frontend at: ${strategyBundled}`);
+  clientDist = strategyBundled;
+} else {
+  console.log(`[SERVER-START] Bundled Frontend not found. Trying Source at: ${strategySource}`);
+  clientDist = strategySource;
+}
 
 console.log(`[SERVER-START] Root: ${rootDir}`);
-console.log(`[SERVER-START] clientDist Target: ${clientDist}`);
+console.log(`[SERVER-START] Final clientDist Target: ${clientDist}`);
 
 // 1. Serve Backend Public Assets
 app.use(express.static(publicDir));

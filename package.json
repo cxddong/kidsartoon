@@ -15,7 +15,7 @@
     "dev:client": "cd client && npm run dev",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:client\"",
     "build:client": "cd client && npm run build",
-    "build": "cd client && npm install --include=dev && npm run build && cd .. && npm install && tsc -p tsconfig.json",
+    "build": "cd client && npm install --include=dev && npm run build && cd .. && npm install && tsc -p tsconfig.json && node scripts/postbuild.js",
     "gcp-build": "npm run build",
     "test": "vitest",
     "test:ui": "vitest --ui",
