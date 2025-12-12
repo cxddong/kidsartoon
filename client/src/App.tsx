@@ -97,11 +97,6 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div style={{
-          position: 'fixed', bottom: 12, right: 12, zIndex: 9999,
-          background: 'rgba(0,0,0,0.7)', color: 'lime', padding: '4px 8px',
-          borderRadius: '4px', fontSize: '10px', pointerEvents: 'none'
-        }}>v2.2 PROD</div>
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>
