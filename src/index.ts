@@ -30,13 +30,43 @@ app.use(express.static(clientPublicDir));
 
 // Serve React Frontend (Production)
 // Serve React Frontend (Production)
+// Serve React Frontend (Production)
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
-// Always serve client if it exists, since we build it in Docker
+
+console.log(`[SERVER-START] Configured clientDist: ${clientDist}`);
+if (fs.existsSync(clientDist)) {
+  console.log(`[SERVER-START] clientDist exists. Contents:`, fs.readdirSync(clientDist));
+  const assetsDir = path.join(clientDist, 'assets');
+  if (fs.existsSync(assetsDir)) {
+    console.log(`[SERVER-START] Assets dir exists. Contents (first 5):`, fs.readdirSync(assetsDir).slice(0, 5));
+  } else {
+    console.log(`[SERVER-START] WARNING: Assets dir NOT found at ${assetsDir}`);
+  }
+} else {
+  console.log(`[SERVER-START] CRITICAL: clientDist NOT found at ${clientDist}`);
+}
+
+// Request Logger
+app.use((req, res, next) => {
+  if (req.path.includes('/assets/')) {
+    console.log(`[ASSET-REQ] ${req.method} ${req.path}`);
+  }
+  next();
+});
+
 if (true) {
   app.use(express.static(clientDist));
-  // Catch-all for SPA routing
+
+  // Catch-all: Explicitly 404 on missing assets rather than serving HTML
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/docs')) return next();
+
+    // crucial: if it looks like a file (has extension) and wasn't handled by static, it's missing.
+    if (req.path.includes('.') && !req.path.includes('.html')) {
+      console.warn(`[404-ASSET] Missing file requested: ${req.path}`);
+      return res.status(404).send('Not Found');
+    }
+
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 } else {
