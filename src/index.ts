@@ -78,7 +78,6 @@ if (fs.existsSync(clientDist)) {
   app.get('/', (_req, res) => {
     res.redirect('http://localhost:5173');
   });
-});
 }
 
 // Demo 页面仍然可用 (Legacy)
