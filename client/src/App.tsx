@@ -70,9 +70,6 @@ const AppRoutes = () => {
           <Route path="/edit-profile" element={<EditProfilePage />} />
 
           {/* Generation sub-routes */}
-          <Route path="/generate/audio" element={<AudioStoryPage />} />
-          <Route path="/audio" element={<AudioStoryPage />} />
-
           <Route path="/generate/picture" element={<PictureBookPage />} />
           <Route path="/picture-story" element={<PictureBookPage />} />
 
@@ -85,6 +82,8 @@ const AppRoutes = () => {
 
         {/* Standalone Protected Routes (Custom Layouts) */}
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/generate/audio" element={<AudioStoryPage />} />
+        <Route path="/audio" element={<AudioStoryPage />} />
 
       </Route>
 

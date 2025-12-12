@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Play, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import type { ImageRecord } from '../history/ImageModal';
 
 interface ContentGridProps {
@@ -9,6 +10,8 @@ interface ContentGridProps {
 }
 
 export const ContentGrid: React.FC<ContentGridProps> = ({ items, onItemClick }) => {
+    const { user } = useAuth();
+
     if (items.length === 0) {
         return (
             <div className="text-center py-12 px-6 bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-slate-200 mx-6">
@@ -45,14 +48,18 @@ export const ContentGrid: React.FC<ContentGridProps> = ({ items, onItemClick }) 
                         <div className="p-2 flex items-center gap-2 border-b border-slate-50">
                             <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden border border-white shadow-sm">
                                 <img
-                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.userId}`}
+                                    src={item.userId === user?.uid ? (user?.photoURL || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix") : `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.userId}`}
                                     alt="User"
                                     className="w-full h-full object-cover"
                                 />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-slate-700 truncate">Artist {item.userId.slice(0, 4)}</p>
-                                <p className="text-[10px] text-slate-400">2 hours ago</p>
+                                <p className="text-xs font-bold text-slate-700 truncate">
+                                    {item.userId === user?.uid ? (user?.name || "Me") : `Artist ${item.userId.slice(0, 4)}`}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                    {new Date(item.createdAt).toLocaleDateString()}
+                                </p>
                             </div>
                         </div>
 

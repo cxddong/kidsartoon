@@ -81,8 +81,7 @@ export const ProfilePage: React.FC = () => {
                     const data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
                         setImages(data);
-                        // Fallback to MOCK_IMAGES if API returns empty (for demo consistency)
-                        setImages(MOCK_IMAGES);
+
                     }
                 } else {
                     console.error("Failed to load history");

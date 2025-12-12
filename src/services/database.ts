@@ -84,17 +84,21 @@ export class DatabaseService {
 
     public async getUserImages(userId: string): Promise<ImageRecord[]> {
         try {
+            // REMOVED orderBy to avoid needing a composite index (userId + createdAt)
             const q = query(
                 collection(db, "images"),
                 where("userId", "==", userId),
-                orderBy("createdAt", "desc"),
                 limit(50)
             );
             const snapshot = await getDocs(q);
-            return snapshot.docs.map(d => {
+            const results = snapshot.docs.map(d => {
                 const data = d.data() as ImageRecord;
-                return { ...data, id: d.id }; // Use Firestore ID or internal ID? Let's genericize
+                return { ...data, id: d.id };
             });
+            // Sort in memory
+            return results.sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
         } catch (e) {
             console.error('[Database] Failed to get user images:', e);
             return [];

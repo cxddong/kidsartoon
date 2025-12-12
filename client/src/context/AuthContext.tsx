@@ -44,6 +44,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('AuthProvider: Initializing...');
 
     useEffect(() => {
+        // Safety check for backend/deployment config issues
+        if (!auth || !auth.onAuthStateChanged) {
+            console.error("AuthContext: Firebase Auth is not initialized. Check your environment variables.");
+            setLoading(false);
+            return;
+        }
+
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
                 // Subscribe to real-time updates of user profile from Firestore
@@ -59,13 +66,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             age: userData.age,
                             gender: userData.gender,
                             points: userData.points || 0,
-
                             language: userData.language || 'English',
                             interests: userData.interests || [],
                             profileCompleted: userData.profileCompleted || false
                         });
                     } else {
-                        // User authenticated but no profile doc exists yet
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,

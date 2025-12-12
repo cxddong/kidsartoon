@@ -36,7 +36,7 @@ export const HomePage: React.FC = () => {
     const { user } = useAuth();
     const [publicItems, setPublicItems] = useState<ImageRecord[]>([]);
     const [filteredItems, setFilteredItems] = useState<ImageRecord[]>([]);
-    const [selectedItem, setSelectedItem] = useState<ImageRecord | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -88,7 +88,10 @@ export const HomePage: React.FC = () => {
     }, [activeFilter, publicItems]);
 
     const handleToggleFavorite = async (id: string) => {
-        if (!user) return; // Prompt login if needed
+        if (!user) {
+            alert("Please sign in to collect your favorite artworks!");
+            return;
+        }
         // Optimistic update
         setPublicItems(prev => prev.map(item => item.id === id ? { ...item, favorite: !item.favorite } : item));
         try {
@@ -138,7 +141,7 @@ export const HomePage: React.FC = () => {
                                     <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
                                 </div>
                             ) : (
-                                <ContentGrid items={filteredItems} onItemClick={setSelectedItem} />
+                                <ContentGrid items={filteredItems} onItemClick={(item) => setSelectedId(item.id)} />
                             )}
                         </div>
                     </div>
@@ -146,13 +149,13 @@ export const HomePage: React.FC = () => {
             </div>
 
             <DetailModal
-                item={selectedItem}
-                onClose={() => setSelectedItem(null)}
+                item={publicItems.find(i => i.id === selectedId) || null}
+                onClose={() => setSelectedId(null)}
                 onToggleFavorite={handleToggleFavorite}
             />
 
             {/* 4. Bottom Nav (Explicitly added since we are outside Layout) */}
             <BottomNav />
-        </div>
+        </div >
     );
 };

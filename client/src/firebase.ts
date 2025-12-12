@@ -14,15 +14,35 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase safely
+let app;
+let authExports: any = {};
+let dbExports: any = {};
+let storageExports: any = {};
+let googleProviderExports: any = {};
+let appleProviderExports: any = {};
 
-// Initialize Services
-export const auth = getAuth(app);
-export const db = initializeFirestore(app, { experimentalForceLongPolling: true });
-export const storage = getStorage(app);
+if (!firebaseConfig.apiKey) {
+    console.error("🚨 CRITICAL: Firebase API Keys are missing!");
+    console.error("Please add VITE_FIREBASE_API_KEY and other variables to your .env file or deployment configuration.");
+    // Mock to prevent immediate crash, app will fail gracefully later or show error
+} else {
+    try {
+        app = initializeApp(firebaseConfig);
+        authExports = getAuth(app);
+        dbExports = initializeFirestore(app, { experimentalForceLongPolling: true });
+        storageExports = getStorage(app);
+        googleProviderExports = new GoogleAuthProvider();
+        appleProviderExports = new OAuthProvider('apple.com');
+    } catch (e) {
+        console.error("Firebase Initialization Error:", e);
+    }
+}
 
-// Auth Providers
-export const googleProvider = new GoogleAuthProvider();
-export const appleProvider = new OAuthProvider('apple.com');
+export const auth = authExports;
+export const db = dbExports;
+export const storage = storageExports;
+export const googleProvider = googleProviderExports;
+export const appleProvider = appleProviderExports;
 
 export default app;

@@ -20,8 +20,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // 静态资源：让 /public 下文件可访问 (Legacy)
+// 静态资源：让 /public 下文件可访问 (Legacy)
 const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
+
+// 关键修正：让 client/public 下文件（如 generated）也可访问
+const clientPublicDir = path.join(__dirname, '..', 'client', 'public');
+app.use(express.static(clientPublicDir));
 
 // Serve React Frontend (Production)
 // Serve React Frontend (Production)

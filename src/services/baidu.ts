@@ -8,8 +8,8 @@ export class BaiduService {
     private tokenExpiresAt: number = 0;
 
     constructor() {
-        this.apiKey = process.env.BAIDU_TTS_API_KEY || '';
-        this.secretKey = process.env.BAIDU_TTS_SECRET_KEY || '';
+        this.apiKey = process.env.BAIDU_TTS_API_KEY || 'EtMKYITxAwM1tOpDYttKS60N';
+        this.secretKey = process.env.BAIDU_TTS_SECRET_KEY || '1TQL2IjaiKGhRUxb4VgbKjKJOZr7H3RV';
 
         if (!this.apiKey || !this.secretKey) {
             console.warn('Baidu TTS credentials missing (BAIDU_TTS_API_KEY, BAIDU_TTS_SECRET_KEY). Audio generation may fail.');
@@ -47,17 +47,17 @@ export class BaiduService {
         if (!token) return null;
 
         // Params per user guide
-        // per: 5 (Children Female), spd: 5, pit: 6, vol: 7, aue: 3 (mp3)
+        // per: 6221 (Slightly emotional/story), spd: 4 (Slower), pit: 6 (Higher pitch), vol: 5
         const params = new URLSearchParams({
             tex: text,
             tok: token,
             cuid: uuidv4(), // Unique user ID
             ctp: '1',
             lan: lang,
-            per: '5',
-            spd: '5',
+            per: '6221',
+            spd: '4',
             pit: '6',
-            vol: '7',
+            vol: '5',
             aue: '3'
         });
 
