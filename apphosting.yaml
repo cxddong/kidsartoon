@@ -1,17 +1,40 @@
 env:
   - variable: VITE_FIREBASE_API_KEY
-    value: AIzaSyAPiovapSN9I5o56rJRrDwKiY-wWeHdY7I
+    value: "AIzaSyAPiovapSN9I5o56rJRrDwKiY-wWeHdY7I"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_FIREBASE_AUTH_DOMAIN
-    value: kat-antigravity.firebaseapp.com
+    value: "kat-antigravity.firebaseapp.com"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_FIREBASE_PROJECT_ID
-    value: kat-antigravity
+    value: "kat-antigravity"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_FIREBASE_STORAGE_BUCKET
-    value: kat-antigravity.firebasestorage.app
+    value: "kat-antigravity.firebasestorage.app"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_FIREBASE_MESSAGING_SENDER_ID
-    value: 1045560094198
+    value: "1045560094198"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_FIREBASE_APP_ID
-    value: 1:1045560094198:web:8c0186f65ab1ddbab3ebd7
+    value: "1:1045560094198:web:8c0186f65ab1ddbab3ebd7"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_FIREBASE_MEASUREMENT_ID
-    value: G-Y4M4VX7B5Q
+    value: "G-Y4M4VX7B5Q"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: GOOGLE_NODE_RUN_SCRIPTS
     value: ""
+    availability:
+      - BUILD
