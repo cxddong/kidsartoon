@@ -9,7 +9,7 @@ export const BottomNav: React.FC = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    const isActive = (path: string) => currentPath === path;
+    const isActive = (path: string) => currentPath === path || (path === '/home' && currentPath === '/');
 
     return (
         <nav className="fixed bottom-4 right-4 bg-white/50 backdrop-blur-lg border border-slate-200/60 py-2 px-4 rounded-full flex justify-center gap-4 items-center z-50 shadow-2xl h-14">

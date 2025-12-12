@@ -53,8 +53,9 @@ const AppRoutes = () => {
       <Route path="/onboarding/start" element={<OnboardingStartPage />} />
 
       {/* Public Pages (No Layout Wrapper to prevent double scrollbar) */}
-      <Route path="/" element={<SplashPage />} />
+      <Route path="/" element={<HomePage />} />
       <Route path="/home" element={<HomePage />} />
+      <Route path="/splash" element={<SplashPage />} />
 
       {/* Protected Routes */}
       <Route element={<RequireAuth />}>
