@@ -200,7 +200,7 @@ export const GeneratePage: React.FC = () => {
                                     {/* Overlay Text inside the circle */}
                                     <div className="absolute inset-x-0 bottom-6 flex justify-center">
                                         <span className="text-xl md:text-2xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,1)] tracking-wider">
-                                            MAGIC LAB
+                                            MAGIC LAB ✨
                                         </span>
                                     </div>
                                 </div>
