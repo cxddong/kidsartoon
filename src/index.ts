@@ -90,7 +90,7 @@ import { router as videoRouter } from './routes/video.js';
 import { optionalApiKeyAuth } from './middleware/auth.js';
 
 // --- Health Check (Highest Priority for load balancers) ---
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', version: '0.1.1', timestamp: new Date().toISOString() }));
 
 // --- API Routes ---
 app.use('/api/media', mediaRouter);
