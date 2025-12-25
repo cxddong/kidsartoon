@@ -1,6 +1,7 @@
 
 import express from 'express';
 import { geminiService } from '../services/gemini.js';
+import { openAIService } from '../services/openai.js'; // Import OpenAI
 import { databaseService } from '../services/database.js'; // Import database
 import { optionalApiKeyAuth } from '../middleware/auth.js';
 
@@ -41,7 +42,9 @@ router.post('/chat', optionalApiKeyAuth, async (req, res) => {
             ];
         }
 
-        const response = await geminiService.chatWithSparkle(finalHistory, imageContext);
+        // Use OpenAI for smarter analysis and JSON tags
+        const response = await openAIService.chatWithSparkle(finalHistory, imageContext);
+        // Fallback or validation? OpenAIService guarantees JSON struct or error.
 
         // Log transaction if successful
         // Deduct was already done transactionally. 
@@ -132,8 +135,9 @@ router.post('/speak', optionalApiKeyAuth, async (req, res) => {
             return res.status(400).json({ error: 'Text required' });
         }
 
-        // Use Google Cloud TTS via GeminiService
-        const audioBuffer = await geminiService.generateSpeech(text, lang || 'en-US');
+        // Use OpenAI TTS (Nova Voice)
+        // Only text needed, voice is fixed to 'nova'
+        const audioBuffer = await openAIService.generateSpeech(text);
 
         res.set('Content-Type', 'audio/mp3');
         res.send(audioBuffer);

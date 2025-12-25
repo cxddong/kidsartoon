@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import { Mic, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
+import hark from 'hark'; // Voice Activity Detection
+import { playUiSound } from '../../utils/SoundSynth'; // Sound Effects
 
 export interface SparkleVoiceRef {
     triggerSpeak: (text?: string, key?: string) => void;
@@ -35,86 +37,100 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
 
-    // Audio Context for Server TTS
+    // Refs for VAD and Audio
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const abortAudioRef = useRef(false); // New flag to kill pending audio
-
+    const abortAudioRef = useRef(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Stop all audio
+    // VAD Refs
+    const streamRef = useRef<MediaStream | null>(null);
+    const harkRef = useRef<any>(null);
+    const recognitionRef = useRef<any>(null);
+    const transcriptRef = useRef<string>('');
+
+    // Stop all audio & recognition
     const stopEverything = () => {
-        abortAudioRef.current = true; // Signal to abort any pending plays
+        console.log("Sparkle: stopping everything.");
+        abortAudioRef.current = true;
+
+        // Stop Audio Playback
         if (audioRef.current) {
             audioRef.current.pause();
-            audioRef.current.currentTime = 0; // Reset
             audioRef.current = null;
         }
         window.speechSynthesis.cancel();
         setIsSpeaking(false);
+
+        // Stop VAD & Recognition
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        if (harkRef.current) {
+            harkRef.current.stop();
+            harkRef.current = null;
+        }
+        if (recognitionRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+            recognitionRef.current = null;
+        }
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+        setIsRecording(false);
     };
 
-    // Expose methods to parent
     useImperativeHandle(ref, () => ({
         triggerSpeak: (textOverride, scriptKey) => {
-            stopEverything(); // Ensure clean slate
-            abortAudioRef.current = false; // Reset flag for new speech
+            stopEverything();
+            abortAudioRef.current = false;
 
-            const lang = 'en-US'; // Force English
-            const key = 'en-US';
-            let text = textOverride;
-
-            if (!text && scriptKey === 'UPLOAD') {
-                // @ts-ignore
-                text = UPLOAD_SCRIPTS[key] || UPLOAD_SCRIPTS['en-US'];
-            }
-
-            if (text) {
-                speak(text, key, () => {
-                    // After greeting, maybe listen?
-                    startListening();
-                });
+            // Logic for 'UPLOAD' event
+            if (scriptKey === 'UPLOAD') {
+                // "Wow! I see your picture..."
+                // Handled by generic speak
+                const text = UPLOAD_SCRIPTS['en-US'];
+                speak(text, 'en-US', () => startListening());
+            } else if (textOverride) {
+                speak(textOverride, 'en-US', () => startListening()); // Always listen after speak
             }
         }
     }));
 
+    // Auto-Greeting on Mount
     useEffect(() => {
-        // Auto-Start logic
-        if (autoStart && !hasStarted) {
+        // Only if autoStart is requested (or default behavior for Magic Lab)
+        // User asked: "进场自动说话" (Auto speak on enter)
+        if (!hasStarted) {
             setHasStarted(true);
+            playUiSound('pop');
             speakWelcome();
         }
-        return () => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            stopEverything();
-        };
-    }, [autoStart, hasStarted]);
+        return () => stopEverything();
+    }, []);
 
     const speakWelcome = () => {
-        // Detect Browser Language or Default to English
-        // Always English
-        const lang = 'en-US';
-        const targetLang = 'en-US';
         const text = WELCOME_SCRIPTS['en-US'];
-
-        // Speak welcome, but do NOT start listening immediately. 
-        // We want the user to Upload the image first as per instruction.
-        speak(text, targetLang);
+        speak(text, 'en-US', () => {
+            // User journey: "Auto listen after welcome"
+            // check req: "播放完后自动开启麦克风监听 (开启 VAD)"
+            startListening();
+        });
     };
 
     const speak = async (text: string, lang: string, onEnd?: () => void) => {
-        stopEverything(); // Priority: Stop previous speech
-        abortAudioRef.current = false; // Allow this new speech
+        stopEverything();
+        abortAudioRef.current = false;
 
-        // 1. Try Server TTS (Google Cloud via Backend) for "Emotional" Voice
+        // Server TTS (OpenAI Nova)
         try {
-            console.log("Sparkle: Fetching emotional voice...");
+            console.log("Sparkle: Speaking (Nova)...");
             const response = await fetch('/api/sparkle/speak', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text, lang })
             });
 
-            if (abortAudioRef.current) return; // Abort if user interrupted during fetch
+            if (abortAudioRef.current) return;
 
             if (response.ok) {
                 const blob = await response.blob();
@@ -122,206 +138,134 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
                 const audio = new Audio(url);
                 audioRef.current = audio;
 
-                audio.onplay = () => {
-                    setIsSpeaking(true);
-                    window.speechSynthesis.cancel(); // Paranoia: Ensure browser TTS is dead
-                };
+                audio.onplay = () => setIsSpeaking(true);
                 audio.onended = () => {
                     setIsSpeaking(false);
                     if (onEnd && !abortAudioRef.current) onEnd();
                     URL.revokeObjectURL(url);
                 };
 
-                if (!abortAudioRef.current) {
-                    window.speechSynthesis.cancel(); // Cancel before play
-                    audio.play().catch(e => console.warn("Audio play interrupted", e));
-                }
-                return; // Server TTS success - EXIT FUNCTION
+                audio.play().catch(e => console.warn("Audio play error", e));
+                return;
             }
         } catch (e) {
-            console.warn("Server TTS failed, falling back to Browser", e);
+            console.warn("TTS failed", e);
         }
 
-        if (abortAudioRef.current) return; // Abort
-
-        // 2. Fallback to Browser TTS
+        // Fallback Browser TTS
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang;
-
-        // Try to find a good voice
-        const setVoice = () => {
-            const voices = window.speechSynthesis.getVoices();
-            console.log("Sparkle Voices available:", voices.length);
-
-            // Priority: Google US -> Microsoft US -> Any US -> Any English
-            let voice = voices.find(v => v.name === "Google US English");
-            if (!voice) voice = voices.find(v => v.name.includes("Microsoft Zira") || v.name.includes("Microsoft David"));
-            if (!voice) voice = voices.find(v => v.lang === 'en-US' && !v.name.includes("CN") && !v.name.includes("China"));
-            if (!voice) voice = voices.find(v => v.lang.startsWith('en'));
-
-            if (voice) {
-                console.log("Selected Browser Voice:", voice.name);
-                utterance.voice = voice;
-            }
-
-            if (!abortAudioRef.current) {
-                window.speechSynthesis.speak(utterance);
-            }
-        };
-
-        if (window.speechSynthesis.getVoices().length === 0) {
-            window.speechSynthesis.onvoiceschanged = setVoice;
-        } else {
-            setVoice();
-        }
-
-        utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => {
             setIsSpeaking(false);
             if (onEnd && !abortAudioRef.current) onEnd();
         };
-
-        // Fallback for immediate state update
-        if (!abortAudioRef.current) {
-            setIsSpeaking(true);
-        }
+        setIsSpeaking(true);
+        window.speechSynthesis.speak(utterance);
     };
 
     const startListening = async () => {
-        // Interrupt generic speech if user forces listening
         stopEverything();
+        setIsRecording(true);
+        transcriptRef.current = '';
 
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            console.warn("Voice recognition not supported");
-            alert("Your browser does not support voice recognition. Please try Chrome.");
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+
+            // Initialize Hark (VAD)
+            // @ts-ignore
+            const speechEvents = hark(stream, { threshold: -60, interval: 100 });
+            harkRef.current = speechEvents;
+
+            speechEvents.on('speaking', () => {
+                console.log('VAD: Speaking...');
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            });
+
+            speechEvents.on('stopped_speaking', () => {
+                console.log('VAD: Silence...');
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                // 1.5s Silence -> Submit
+                timeoutRef.current = setTimeout(() => {
+                    console.log('VAD: Auto-Submit!', transcriptRef.current);
+                    stopAndSubmit();
+                }, 1500);
+            });
+
+            // Initialize Recognition
+            const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (e: any) => {
+                let interim = '';
+                let final = '';
+                for (let i = e.resultIndex; i < e.results.length; ++i) {
+                    if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                    else interim += e.results[i][0].transcript;
+                }
+                transcriptRef.current = final + interim; // Keep updating
+            };
+
+            recognition.onerror = (e: any) => {
+                console.warn("Recognition error", e.error);
+                if (e.error === 'not-allowed') stopEverything();
+            };
+
+            recognitionRef.current = recognition;
+            recognition.start();
+
+        } catch (e) {
+            console.error("Mic Error", e);
+            setIsRecording(false);
+            speak("I can't hear you. Check your mic!", 'en-US');
+        }
+    };
+
+    const stopAndSubmit = async () => {
+        const text = transcriptRef.current;
+        stopEverything(); // Stops mic, hark, streams
+
+        if (!text || text.trim().length < 2) {
+            console.log("No valid speech heard.");
+            // Maybe nudge? "I didn't catch that."
+            // For now, silent fail implies re-listen or idle.
             return;
         }
 
-        // 1. Explicitly Request Microphone Permission FIRST
-        try {
-            console.log("Requesting microphone permission...");
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            // If successful, stop the tracks to release the stream (SpeechRecognition will open its own)
-            // This step ensures the browser permission prompt appears if not already granted.
-            stream.getTracks().forEach(track => track.stop());
-            console.log("Microphone permission granted.");
-
-        } catch (err) {
-            console.error("Microphone access denied:", err);
-
-            // HTTPS Check
-            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                alert("Error: Voice features require HTTPS. Please use a secure connection or localhost.");
-            } else {
-                alert("Please allow microphone access to talk to Sparkle! (Click the lock icon in your address bar)");
-            }
-            return; // Stop here
-        }
-
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'en-US'; // Strict English Input
-        recognition.continuous = false;
-        recognition.interimResults = false;
-
-        recognition.onstart = () => {
-            setIsRecording(true);
-            // Set Nudge Timeout (Increased to 8 seconds silence)
-            timeoutRef.current = setTimeout(() => {
-                recognition.stop();
-                // Play Nudge
-                // const lang = 'en-US'; 
-                // @ts-ignore
-                // const nudgeText = NUDGE_SCRIPTS['en-US'];
-                // speak(nudgeText, lang, () => {}); 
-                // Silent stop is better UX than repeated nudging sometimes, or just close mic.
-                setIsRecording(false);
-            }, 8000);
-        };
-
-        recognition.onresult = async (event: any) => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            const transcript = event.results[0][0].transcript;
-            console.log("Sparkle Heard:", transcript);
-            await handleChat(transcript);
-        };
-
-        recognition.onerror = (event: any) => {
-            console.error("Speech Error:", event.error);
-
-            if (event.error === 'not-allowed' || event.error === 'permission-denied') {
-                setIsRecording(false);
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                alert("Microphone permission denied. Please enable it in your browser settings (Click the lock icon).");
-            } else if (event.error === 'no-speech') {
-                // User's Fix: Don't error immediately on silence. 
-                // Instead, we can try to restart or just notify gently.
-                // For now, let's NOT speak an error, just stop and maybe show a subtle visual cue or retry.
-                console.log("No speech detected - effectively a timeout or low volume.");
-                // Option: Auto-retry once?
-                // For now, let's just close cleanly without scolding the user.
-                setIsRecording(false);
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                // speak("I didn't catch that. Tap to try again!", 'en-US'); // Gentle prompt
-            } else {
-                setIsRecording(false);
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                speak("Oh, connection issue. Please try again.", 'en-US');
-            }
-        };
-
-        recognition.onend = () => {
-            // If we just had 'no-speech', we're already handling it.
-            // If it was a normal end, we just stop recording state.
-            if (isRecording) { // If it ended unexpectedly
-                setIsRecording(false);
-            }
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        };
-
-        try {
-            recognition.start();
-        } catch (e) {
-            console.error("Mic start failed", e);
-            speak("I can't start the microphone.", 'en-US');
-        }
+        await handleChat(text);
     };
 
     const handleChat = async (text: string) => {
         setIsProcessing(true);
         try {
+            // Send to Backend
             const payload: any = {
                 message: text,
-                userId: user?.uid
+                userId: user?.uid,
+                imageContext: imageContext
             };
-            if (imageContext) {
-                payload.imageContext = imageContext;
-            }
 
             const response = await fetch('/api/sparkle/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-
             const data = await response.json();
 
-            if (data.tags) {
-                onTagsExtracted(data.tags);
-            }
-
+            if (data.tags) onTagsExtracted(data.tags);
             if (data.sparkleTalk) {
                 speak(data.sparkleTalk, 'en-US', () => {
-                    // After answering, listen again? 
-                    // Usually yes for conversation
+                    // Loop: Always listen after responding
                     startListening();
                 });
             }
+
         } catch (err) {
-            console.error("Sparkle Error", err);
-            speak("Oops, something went wrong. Can you say that again?", 'en-US');
+            console.error("Chat Error", err);
+            speak("My magic wand is glitching. One moment!", 'en-US');
         } finally {
             setIsProcessing(false);
         }
@@ -330,27 +274,10 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
     return (
         <button
             onClick={() => {
-                if (isSpeaking) {
-                    if (audioRef.current) audioRef.current.pause();
-                    window.speechSynthesis.cancel();
-                    setIsSpeaking(false);
-                } else if (isRecording) {
-                    // Allow manual stop
-                    if (window.speechSynthesis) window.speechSynthesis.cancel();
-                    setIsRecording(false);
-                    console.log("User manually stopped recording");
+                if (isSpeaking || isRecording) {
+                    stopEverything();
                 } else {
-                    // CHECK ACCESS BEFORE STARTING
-                    if (accessCheck && !accessCheck()) {
-                        return; // Blocked by parent (e.g. Low Credits)
-                    }
-
-                    if (!hasStarted) {
-                        setHasStarted(true);
-                        speakWelcome();
-                    } else {
-                        startListening();
-                    }
+                    startListening();
                 }
             }}
             className={cn(
@@ -366,9 +293,7 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
                 <Loader2 className="w-8 h-8 text-white animate-spin" />
             ) : isRecording ? (
                 <div className="flex flex-col items-center relative">
-                    {/* Ripple Effect for Recording */}
                     <div className="absolute inset-0 rounded-full border-4 border-white opacity-0 animate-ping"></div>
-                    <div className="absolute inset-0 rounded-full border-4 border-white opacity-0 animate-ping delay-75"></div>
                     <Mic className="w-8 h-8 text-white relative z-10" />
                     <span className="text-[10px] uppercase font-bold text-white tracking-widest absolute -bottom-10 bg-red-500 px-3 py-1 rounded-full shadow-md whitespace-nowrap animate-bounce">Listening...</span>
                 </div>
