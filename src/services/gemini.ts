@@ -147,7 +147,7 @@ Current Context: ${JSON.stringify(imageContext || {})}
         return { character_description: "A cute magical character", art_style: "cartoon" };
     }
 
-    async generateCreativeContent(type: any, input: any) {
+    async generateCreativeContent(type: any, input: any): Promise<any> {
         return {};
     }
 
@@ -161,6 +161,37 @@ Current Context: ${JSON.stringify(imageContext || {})}
 
     async generateImageFromImage(prompt: string, base64: string, userId: string) {
         return "https://via.placeholder.com/300?text=Magic+Transform";
+    }
+    async generateText(prompt: string, userId?: string): Promise<string> {
+        console.log(`[Gemini] Generating Text...`);
+        try {
+            const response = await fetch(GEMINI_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
+                })
+            });
+            if (!response.ok) throw new Error(`Gemini Text Gen Error: ${response.status}`);
+            const data: any = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } catch (e: any) {
+            console.error("[Gemini] generateText failed:", e.message);
+            throw e;
+        }
+    }
+
+    async analyzeImageJSON(base64Image: string, prompt: string): Promise<any> {
+        const text = await this.analyzeImage(base64Image, prompt + " Output strict JSON.");
+        try {
+            // Clean markdown json codes
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(jsonStr);
+        } catch (e) {
+            console.warn("Failed to parse JSON from vision:", text);
+            return { raw: text };
+        }
     }
 }
 

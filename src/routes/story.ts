@@ -15,7 +15,7 @@ router.post('/analyze-image', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
         const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        const analysis = await geminiService.analyzeImageJSON(base64Image);
+        const analysis = await geminiService.analyzeImageJSON(base64Image, "Describe this image in detail for story generation.");
         res.json({ analysis });
     } catch (error: any) {
         console.error('Analysis failed:', error);

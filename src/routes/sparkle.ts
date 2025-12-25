@@ -1,7 +1,7 @@
 
 import express from 'express';
 import { geminiService } from '../services/gemini.js';
-import { openAIService } from '../services/openai.js'; // Import OpenAI
+import { openAIService } from '../services/openai.js'; // Keep for now, verifying file existence first
 import { databaseService } from '../services/database.js'; // Import database
 import { optionalApiKeyAuth } from '../middleware/auth.js';
 

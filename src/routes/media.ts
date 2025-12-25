@@ -441,7 +441,7 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
       // CRITICAL: Refund logic should be here if we consider fallback a failure?
       // Spec: "API failed -> Full Refund... Partial success -> Deduct".
       // Here, we have a fallback to placeholder.
-      // If we show placeholder, user pays 15 pts? User won't like that.
+      // If we show Placeholder, user pays 15 pts? User won't like that.
       // I will refund.
       await pointsService.refundPoints(userId, 'generate_image', 'gen_failed');
       cartoonImageUrl = `https://placehold.co/1024x1024/FF6B6B/white?text=Cartoon+Generation+Failed`;
@@ -1114,7 +1114,7 @@ router.post('/generate-picture-book', upload.single('cartoonImage'), async (req,
     const isVIP = plan === 'pro' || plan === 'yearly_pro' || plan === 'admin';
 
     // 1. Points (Cost: Differentiate by mode)
-    const cost = mode === 'picture_book' ? POINT_COSTS.PICTURE_BOOK : POINT_COSTS.COMIC_STRIP;
+    const cost = mode === 'picture_book' ? POINT_COSTS.PICTURE_BOOK_4 : POINT_COSTS.COMIC_STRIP;
     const action = 'generate_comic_book';
 
     const deduction = await pointsService.consumePoints(userId, action, cost);
@@ -1667,7 +1667,7 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
       };
 
       creativeContent = await geminiService.generateCreativeContent('Comic_4_Panel', userInput);
-      console.log('[MagicComic] Creative Brief:', creativeContent.theme);
+      console.log('[MagicComic] Creative Brief:', (creativeContent as any).theme);
 
     } catch (brainErr) {
       console.error('[MagicComic] Brain Freeze (Gemini Failed), using Doubao fallback:', brainErr);
@@ -1698,7 +1698,7 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
     }
 
     // 4. Execution: Generate Visuals (Parallel)
-    const episodes = creativeContent.content || []; // New Schema: "content" array
+    const episodes = (creativeContent as any).content || []; // New Schema: "content" array
     console.log(`[MagicComic] Generating ${episodes.length} panels via Doubao...`);
 
     const imagePromises = episodes.slice(0, 4).map((episode: any, i: number) => {
@@ -1735,12 +1735,12 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
         const sharp = (await import('sharp')).default;
 
         // Fetch buffers
-        const bufs = await Promise.all(panelImages.map(async url => {
+        const bufs = await Promise.all(panelImages.map(async (url: any) => {
           const r = await fetch(url);
           return Buffer.from(await r.arrayBuffer());
         }));
 
-        const resized = await Promise.all(bufs.map(b => sharp(b).resize(512, 512).toBuffer()));
+        const resized = await Promise.all(bufs.map((b: any) => sharp(b).resize(512, 512).toBuffer()));
 
         // Create Text Overlays (Architecture C: "Burn-in")
         // Create Text Overlays (Architecture C: "Burn-in") - DISABLED FOR V2 SPEC (Frontend Overlay)
@@ -1790,8 +1790,8 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
     await databaseService.saveImageRecord(
       userId, finalUrl, 'comic', userPrompt,
       {
-        title: creativeContent.theme || userPrompt || "Untitled Comic",
-        character_lock: creativeContent.character_lock || "Original",
+        title: (creativeContent as any).theme || userPrompt || "Untitled Comic",
+        character_lock: (creativeContent as any).character_lock || "Original",
         bookData: {
           pages: episodes.map((e: any, i: number) => ({
             imageUrl: panelImages[i],
@@ -1814,7 +1814,7 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
 
     res.json({
       id,
-      title: creativeContent.theme,
+      title: (creativeContent as any).theme,
       pages: episodes.map((e: any, i: number) => ({
         imageUrl: panelImages[i],
         text: e.text_overlay
