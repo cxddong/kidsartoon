@@ -62,12 +62,18 @@ export const MagicLabPage: React.FC = () => {
             setImagePreview(url);
             setMagicResult(null);
 
-            // Trigger Sparkle Greeting (Free!)
-            if (sparkleRef.current) {
-                setTimeout(() => {
-                    sparkleRef.current.triggerSpeak(null, 'UPLOAD');
-                }, 500);
-            }
+            // Trigger Vision Analysis (Vision Capability)
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = () => {
+                const base64 = reader.result?.toString().split(',')[1];
+                if (base64 && sparkleRef.current) {
+                    // Auto-Trigger AI Analysis (Hands-Free)
+                    setTimeout(() => {
+                        sparkleRef.current.triggerAnalysis(base64);
+                    }, 500);
+                }
+            };
         }
     };
 
@@ -224,7 +230,7 @@ export const MagicLabPage: React.FC = () => {
                         <SparkleVoiceFab
                             ref={sparkleRef}
                             className={cn("w-16 h-16 md:w-20 md:h-20 text-xl relative transform-none shadow-xl", isSpeaking && "sparkle-talking")}
-                            autoStart={false} // Don't auto-start to avoid credit lock loop on load
+                            autoStart={true} // Auto-Start Greeting as requested
                             onTagsExtracted={handleSparkleTags}
                             imageContext={imageFile ? { hasImage: true, description: "User has uploaded a drawing to the canvas." } : null}
                             // @ts-ignore - Will update component to accept this shortly

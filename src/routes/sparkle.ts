@@ -15,7 +15,7 @@ export const router = express.Router();
 router.post('/chat', optionalApiKeyAuth, async (req, res) => {
     try {
         console.log("➡️ Sparkle Chat Request Received:", JSON.stringify(req.body).substring(0, 200));
-        const { history, message, imageContext, audioBase64, userId } = req.body;
+        const { history, message, image, userId } = req.body;
 
         let finalHistory = history;
 
@@ -29,9 +29,6 @@ router.post('/chat', optionalApiKeyAuth, async (req, res) => {
                 });
             }
         } else {
-            // Warn but proceed if no userId (Legacy/Dev mode)? 
-            // Or Strict? Requirement says ensure backend verifies.
-            // For now, allow loopback if no user, but prod requires user.
             console.warn("Sparkle Chat: No userId provided for credit check.");
         }
 
@@ -42,8 +39,8 @@ router.post('/chat', optionalApiKeyAuth, async (req, res) => {
             ];
         }
 
-        // Use OpenAI for smarter analysis and JSON tags
-        const response = await openAIService.chatWithSparkle(finalHistory, imageContext);
+        // Use OpenAI for smarter analysis and JSON tags (Pass Image if available)
+        const response = await openAIService.chatWithSparkle(finalHistory, image);
         // Fallback or validation? OpenAIService guarantees JSON struct or error.
 
         // Log transaction if successful

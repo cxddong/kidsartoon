@@ -8,18 +8,19 @@ import { playUiSound } from '../../utils/SoundSynth'; // Sound Effects
 
 export interface SparkleVoiceRef {
     triggerSpeak: (text?: string, key?: string) => void;
+    triggerAnalysis: (base64Image: string) => void;
 }
 
 interface SparkleVoiceFabProps {
     onTagsExtracted: (tags: any) => void;
     className?: string;
     autoStart?: boolean;
-    imageContext?: any; // Start sending context!
-    accessCheck?: () => boolean; // New: Check permission (credits) before starting
+    imageContext?: any; // Now expects Base64 if meaningful, or just description
+    accessCheck?: () => boolean;
 }
 
 const WELCOME_SCRIPTS = {
-    'en-US': "Welcome to the Magic Lab! I'm Sparkle. To start the magic, please click the button to upload your drawing!",
+    'en-US': "Hi! I'm Sparkle. Upload your drawing, and I'll tell you what I see!",
 };
 
 const UPLOAD_SCRIPTS = {
@@ -86,13 +87,16 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
 
             // Logic for 'UPLOAD' event
             if (scriptKey === 'UPLOAD') {
-                // "Wow! I see your picture..."
-                // Handled by generic speak
                 const text = UPLOAD_SCRIPTS['en-US'];
                 speak(text, 'en-US', () => startListening());
             } else if (textOverride) {
                 speak(textOverride, 'en-US', () => startListening()); // Always listen after speak
             }
+        },
+        triggerAnalysis: (base64Image: string) => {
+            console.log("Sparkle: Auto-Analyzing Image...");
+            // Trigger chat with Image + Empty Text
+            handleChat("", base64Image);
         }
     }));
 
@@ -238,14 +242,14 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
         await handleChat(text);
     };
 
-    const handleChat = async (text: string) => {
+    const handleChat = async (text: string, imageOverride?: string) => {
         setIsProcessing(true);
         try {
             // Send to Backend
             const payload: any = {
                 message: text,
                 userId: user?.uid,
-                imageContext: imageContext
+                image: imageOverride || imageContext
             };
 
             const response = await fetch('/api/sparkle/chat', {
