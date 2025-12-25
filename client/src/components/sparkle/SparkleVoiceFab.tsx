@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Mic, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useAuth } from '../../context/AuthContext';
 
 export interface SparkleVoiceRef {
     triggerSpeak: (text?: string, key?: string) => void;
@@ -28,6 +29,7 @@ const NUDGE_SCRIPTS = {
 };
 
 export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>(({ onTagsExtracted, className, autoStart, imageContext, accessCheck }, ref) => {
+    const { user } = useAuth();
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -290,7 +292,10 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
     const handleChat = async (text: string) => {
         setIsProcessing(true);
         try {
-            const payload: any = { message: text };
+            const payload: any = {
+                message: text,
+                userId: user?.uid
+            };
             if (imageContext) {
                 payload.imageContext = imageContext;
             }
