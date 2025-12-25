@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Loader2, Play, RefreshCw, Video } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -28,6 +28,18 @@ export const AnimationPage: React.FC = () => {
     const [progress, setProgress] = useState(0);
     const [statusMessage, setStatusMessage] = useState('Initializing...');
     const [galleryImages, setGalleryImages] = useState<any[]>([]);
+
+    const bgVideoRef = useRef<HTMLVideoElement>(null);
+
+    // Safe Autoplay for Background
+    React.useEffect(() => {
+        const video = bgVideoRef.current;
+        if (video) {
+            video.play().catch((e: any) => {
+                if (e.name !== 'AbortError') console.warn("Background video autoplay suppressed:", e);
+            });
+        }
+    }, []);
 
     const location = useLocation();
 
@@ -191,8 +203,8 @@ export const AnimationPage: React.FC = () => {
             {/* Background Video (Audio Page Style) */}
             <div className="fixed inset-0 z-0">
                 <video
+                    ref={bgVideoRef}
                     src={genVideo}
-                    autoPlay
                     loop
                     muted
                     playsInline
@@ -245,7 +257,14 @@ export const AnimationPage: React.FC = () => {
                                             <RefreshCw className="w-3 h-3" /> New
                                         </button>
                                     </div>
-                                    {/* Download Button REMOVED */}
+                                    {/* Download Button */}
+                                    <button
+                                        onClick={() => window.open(resultData.videoUrl, '_blank')}
+                                        className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-white font-bold flex items-center justify-center gap-2 transition-colors border border-white/10"
+                                    >
+                                        <ArrowRight className="w-5 h-5 rotate-90" /> {/* Down Arrow */}
+                                        Download Video
+                                    </button>
                                 </div>
                             </motion.div>
                         ) : (

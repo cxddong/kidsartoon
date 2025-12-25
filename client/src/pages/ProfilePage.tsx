@@ -33,6 +33,18 @@ export const ProfilePage: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    // Safe Autoplay for Background Video
+    useEffect(() => {
+        const video = videoRef.current;
+        if (video) {
+            video.play().catch(e => {
+                // Ignore AbortError (happens on unmount/navigation)
+                if (e.name !== 'AbortError') console.warn("Profile video autoplay suppressed:", e);
+            });
+        }
+    }, []);
 
     // Helper: Compress Image
     const compressImage = (file: File): Promise<Blob> => {
@@ -223,9 +235,9 @@ export const ProfilePage: React.FC = () => {
             {/* Left Panel - Fixed Info - Custom Background */}
             <div className="w-[280px] h-full flex-shrink-0 relative z-10 flex flex-col items-center pt-2 pb-4 px-3 border-r border-white/10 shadow-xl overflow-hidden text-sm">
                 <video
+                    ref={videoRef}
                     src={profileLeftVideo}
                     className="absolute inset-0 w-full h-full object-cover opacity-90"
-                    autoPlay
                     loop
                     muted
                     playsInline

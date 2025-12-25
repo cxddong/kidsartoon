@@ -23,32 +23,20 @@ export const PureVideoPlayer: React.FC<PureVideoPlayerProps> = ({ src, className
     };
 
     return (
-        <div className={`relative group cursor-pointer overflow-hidden ${className || ''}`} onClick={togglePlay}>
+        <div className={`relative overflow-hidden bg-black rounded-lg ${className || ''}`}>
             <video
                 ref={videoRef}
                 src={src}
-                className="w-full h-full object-cover pointer-events-none" // Block all mouse events on video to hide browser overlays
+                className="w-full h-full object-contain" // Allow interaction, contain to see full video
                 playsInline
                 loop
+                autoPlay
+                muted // Essential for autoplay
+                controls // Native controls
                 disablePictureInPicture
-                controlsList="nodownload noremoteplayback"
-                // onContextMenu is now redundant on video but good safety
-                onContextMenu={(e) => e.preventDefault()}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
+                controlsList="noremoteplayback" // Allow download
+                onContextMenu={(e) => e.stopPropagation()} // Allow context menu
             />
-
-            {/* Click Capture Overlay (Transparent) */}
-            <div className="absolute inset-0 z-10" />
-
-            {/* Custom Play Button Overlay */}
-            {!isPlaying && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[1px] transition-all hover:bg-black/40">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg border border-white/30">
-                        <Play className="w-8 h-8 text-white fill-current ml-1" />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
