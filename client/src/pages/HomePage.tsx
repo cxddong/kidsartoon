@@ -20,6 +20,21 @@ const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
 
 const PROMO_SLIDES = [
     {
+        id: 99,
+        title: "MAGIC LAB ✨",
+        subtitle: 'Talk to Sparkle & Animate!',
+        gradient: "from-purple-600 to-indigo-600",
+        link: '/magic-lab',
+        decor: (
+            <>
+                <div className="absolute top-0 right-0 w-full h-full bg-[url('https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM/3o7aD2saalBwwftBIY/giphy.gif')] opacity-20 bg-cover grayscale mix-blend-overlay" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <Sparkles className="w-32 h-32 text-yellow-300 animate-pulse drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]" />
+                </div>
+            </>
+        )
+    },
+    {
         id: 1,
         title: "",
         subtitle: '',
