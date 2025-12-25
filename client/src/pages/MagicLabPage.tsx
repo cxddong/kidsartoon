@@ -247,7 +247,13 @@ export const MagicLabPage: React.FC = () => {
                         Magic Movie 🎬 (10 <Zap className="inline w-3 h-3 fill-white text-white" />)
                     </div>
 
-                    <div className={cn("image-preview-box transition-all duration-500", magicResult ? "border-yellow-400 shadow-[0_0_30px_rgba(255,215,0,0.3)]" : "border-purple-300")}>
+                    <div
+                        onClick={!isTransforming ? handleTransform : undefined}
+                        className={cn(
+                            "image-preview-box transition-all duration-500 cursor-pointer hover:scale-[1.02] active:scale-95 relative group",
+                            magicResult ? "border-yellow-400 shadow-[0_0_30px_rgba(255,215,0,0.3)]" : "border-purple-300 hover:border-purple-100 shadow-lg"
+                        )}
+                    >
                         {isTransforming ? (
                             <div className="flex flex-col items-center text-center p-4">
                                 <div className="text-4xl animate-bounce mb-2">🖌️</div>
@@ -260,13 +266,13 @@ export const MagicLabPage: React.FC = () => {
                             /* Before & After Demo State */
                             <div className="flex flex-col items-center justify-center w-full h-full relative overflow-hidden">
                                 <div className="absolute inset-0 opacity-20 bg-[url('https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM/3o7aD2saalBwwftBIY/giphy.gif')] bg-cover bg-center grayscale" />
-                                <div className="z-10 bg-white/80 backdrop-blur-sm p-4 rounded-2xl flex flex-col items-center border border-purple-200 shadow-xl">
+                                <div className="z-10 bg-white/80 backdrop-blur-sm p-4 rounded-2xl flex flex-col items-center border border-purple-200 shadow-xl group-hover:bg-white group-hover:scale-110 transition-all">
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center text-xl">🖼️</div>
                                         <ArrowLeft className="w-4 h-4 text-purple-400 rotate-180" />
                                         <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-xl animate-pulse">🎬</div>
                                     </div>
-                                    <span className="font-bold text-purple-800">Watch it Move!</span>
+                                    <span className="font-bold text-purple-800">Tap to Animate!</span>
                                     <p className="text-[10px] text-purple-600 font-bold mt-1">10s to animate</p>
                                 </div>
                             </div>
@@ -277,37 +283,7 @@ export const MagicLabPage: React.FC = () => {
             </main>
 
             {/* --- Bottom Controls --- */}
-            <footer className="p-6 pb-12 flex items-end justify-between md:justify-center md:gap-20 z-20">
-
-                {/* Left: Upload Button */}
-                <button
-                    onClick={() => document.getElementById('magic-upload')?.click()}
-                    className="px-6 py-3 bg-white text-purple-600 rounded-full shadow-lg hover:scale-105 transition-transform font-bold flex items-center gap-2"
-                >
-                    <Upload className="w-5 h-5" />
-                    <span className="hidden md:inline">Pick a Picture</span>
-                </button>
-
-                {/* Center: Placeholder */}
-                <div className="w-20"></div>
-
-                {/* Right: Magic Button */}
-                <button
-                    onClick={handleTransform}
-                    disabled={!imageFile || isTransforming}
-                    className="magic-transform-btn flex items-center gap-2 disabled:opacity-50 disabled:grayscale"
-                >
-                    {isTransforming ? (
-                        <RefreshCw className="w-6 h-6 animate-spin" />
-                    ) : (
-                        <div className="w-6 h-6 bg-black rounded-sm flex items-center justify-center">
-                            <div className="w-0 h-0 border-l-[6px] border-l-white border-y-[4px] border-y-transparent ml-0.5"></div>
-                        </div>
-                    )}
-                    <span className="hidden md:inline">Action!</span>
-                </button>
-
-            </footer>
+            {/* --- Bottom Controls REMOVED user request --- */}
 
             <BottomNav />
         </div>
