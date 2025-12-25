@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import genBtnVideo from '../assets/genbtn.mp4';
 import homeVideo from '../assets/home.mp4';
 import profileVideo from '../assets/profile.mp4';
+import { SparkleVoiceFab } from './sparkle/SparkleVoiceFab';
 
 export const BottomNav: React.FC = () => {
     const navigate = useNavigate();
@@ -122,6 +123,18 @@ export const BottomNav: React.FC = () => {
                                 </div>
                             </button>
                         </div>
+
+                        {/* Sparkle Voice - Global Helper (Hidden in Magic Lab) */}
+                        {!currentPath.startsWith('/magic-lab') && (
+                            <SparkleVoiceFab
+                                className={cn(
+                                    "relative bottom-auto right-auto transform-none shadow-md z-10", // Override fixed pos
+                                    isVisual ? "w-14 h-14" : "w-10 h-10"
+                                )}
+                                autoStart={false}
+                                onTagsExtracted={() => { }} // No-op for global chat
+                            />
+                        )}
 
                         <button
                             onClick={() => navigate('/profile')}
