@@ -1,0 +1,315 @@
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Upload, Wand2, RefreshCw, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SparkleVoiceFab } from '../components/sparkle/SparkleVoiceFab';
+import { cn } from '../lib/utils';
+import { RechargeModal } from '../components/payment/RechargeModal';
+import { MagicFireworks } from '../components/effects/MagicFireworks';
+import { useAuth } from '../context/AuthContext'; // Making sure we have auth
+import { getAuth } from 'firebase/auth'; // Direct auth fallback
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore'; // Direct firestore for speed or use service
+import { db } from '../firebase'; // Assuming export
+import { BottomNav } from '../components/BottomNav';
+
+// Fallback scripts
+const VICTORY_SCRIPTS = {
+    'en-US': "Yippee! Magic energy full! I feel so strong, I could turn the moon pink! Come on, let's keep making magic!",
+};
+
+export const MagicLabPage: React.FC = () => {
+    const navigate = useNavigate();
+
+    // State
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [extractedTags, setExtractedTags] = useState<any>(null);
+    const [magicResult, setMagicResult] = useState<string | null>(null);
+    const [isTransforming, setIsTransforming] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+
+    // Credit System
+    // Credit System
+    // const [credits, setCredits] = useState<number>(0); // Removed local state
+    // const [showRecharge, setShowRecharge] = useState(false); // Removed Recharge
+    const [showFireworks, setShowFireworks] = useState(false);
+
+    // Ref for controlling Sparkle
+    const sparkleRef = React.useRef<any>(null);
+    const { user } = useAuth(); // Use Extended User
+    // const auth = getAuth(); // Not needed 
+
+    // Fetch Credits - NO LONGER NEEDED as we use user.points directly
+    /*
+    useEffect(() => {
+    */ // Use global points from AuthContext
+    const credits = user?.points || 0;
+
+    const handleRechargeClick = () => {
+        // Redirect to Subscription Page instead of Modal
+        navigate('/subscription');
+    };
+
+    // Replaces handleRechargeSuccess - removed localized logic here as it moves to SubscriptionPage
+
+    // Handlers
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImageFile(file);
+            const url = URL.createObjectURL(file);
+            setImagePreview(url);
+            setMagicResult(null);
+
+            // Trigger Sparkle Greeting (Free!)
+            if (sparkleRef.current) {
+                setTimeout(() => {
+                    sparkleRef.current.triggerSpeak(null, 'UPLOAD');
+                }, 500);
+            }
+        }
+    };
+
+    const handleSparkleTags = (tags: any) => {
+        console.log("Magic Lab caught tags:", tags);
+        setExtractedTags(tags);
+    };
+
+    const handleTransform = async () => {
+        if (!imageFile || !extractedTags) {
+            alert("Please upload an image and tell Sparkle what you want first!");
+            return;
+        }
+
+        // CHECK CREDITS: Cost 10
+        // CHECK CREDITS: Cost 10
+        if (credits < 10) {
+            navigate('/subscription');
+            return;
+        }
+
+        setIsTransforming(true);
+        // Deduct handled by backend or optimistic update via AuthContext? 
+        // AuthContext updates are realtime via snapshot, so we don't need manual deduction here unless for speed.
+        // We'll rely on backend deduction which triggers Firestore update.
+
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(imageFile);
+            reader.onloadend = async () => {
+                const base64Part = reader.result?.toString().split(',')[1];
+                try {
+                    const response = await fetch('/api/sparkle/transform', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image: base64Part,
+                            tags: extractedTags,
+                            userId: user?.uid // Ensure backend logs transaction
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.imageUrl) {
+                        setMagicResult(data.imageUrl);
+                    } else if (data.error) {
+                        throw new Error(data.error);
+                    }
+                } catch (err: any) {
+                    console.error("Transform error", err);
+                    alert("Sparkle got dizzy! Please try again.");
+                    // Credits are managed by backend transaction normally.
+                } finally {
+                    setIsTransforming(false);
+                }
+            };
+        } catch (e) {
+            console.error(e);
+            setIsTransforming(false);
+        }
+    };
+
+    // Intercept Sparkle Voice (Cost 1 per turn, but 'check 1' required to start)
+    const canStartSparkle = () => {
+        if (credits < 1) {
+            navigate('/subscription');
+            return false;
+        }
+        return true;
+    };
+
+    return (
+        <div className="magic-lab-container w-full h-screen overflow-y-auto flex flex-col relative text-white font-sans bg-slate-900">
+
+            {/* Calibration / Fireworks Overlay */}
+            <MagicFireworks isVisible={showFireworks} onComplete={() => setShowFireworks(false)} />
+
+            {/* --- Header --- */}
+            <header className="p-4 flex items-center justify-between gap-4 z-10">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/home')}
+                        className="p-2 bg-white/20 backdrop-blur-md rounded-full hover:bg-white/40 transition-all"
+                    >
+                        <ArrowLeft className="w-8 h-8 text-black" />
+                    </button>
+                    <div className="flex flex-col">
+                        <h1 className="text-2xl md:text-3xl font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
+                            Magic Cinema 🎬
+                        </h1>
+                        <p className="text-white/80 text-sm font-bold">Let's make a Movie!</p>
+                    </div>
+                </div>
+
+                {/* Magic Bubble (Balance) */}
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-lg cursor-pointer hover:scale-105 transition-transform" onClick={handleRechargeClick}>
+                    <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">
+                        <Zap className="w-5 h-5 text-purple-600 fill-purple-600" />
+                    </div>
+                    <span className="text-2xl font-black text-yellow-300 drop-shadow-md">{credits}</span>
+                </div>
+            </header>
+
+            {/* --- Main Content (Split View) --- */}
+            <main className="flex-1 flex flex-col md:flex-row items-center justify-center p-4 gap-4 md:gap-8 z-10">
+
+                {/* Left: Original Drawing */}
+                <div className="flex flex-col items-center gap-2 w-full max-w-lg md:w-1/2 h-full justify-center">
+                    <div className="bg-white/90 text-purple-600 px-4 py-1 rounded-full font-bold text-sm shadow-md">
+                        Your Drawing 📝
+                    </div>
+
+                    <div className="image-preview-box relative group cursor-pointer" onClick={() => document.getElementById('magic-upload')?.click()}>
+                        {imagePreview ? (
+                            <img src={imagePreview} alt="Original" className="w-full h-full object-contain" />
+                        ) : (
+                            <div className="flex flex-col items-center text-purple-800/50">
+                                <Upload className="w-12 h-12 mb-2" />
+                                <span className="font-bold text-lg">Pick a Picture</span>
+                            </div>
+                        )}
+                        <input
+                            type="file"
+                            id="magic-upload"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                        />
+                        {/* Hover Overlay */}
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white font-bold bg-black/50 px-3 py-1 rounded-full">Change</span>
+                        </div>
+                    </div>
+
+                    {/* Tags Display (Feedback) */}
+                    {extractedTags && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex flex-wrap gap-2 justify-center"
+                        >
+                            {Object.entries(extractedTags).map(([k, v]: any) => (
+                                <span key={k} className="bg-yellow-400 text-purple-900 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                                    {v}
+                                </span>
+                            ))}
+                        </motion.div>
+                    )}
+                </div>
+
+                {/* Center: Sparkle FAB */}
+                <div className="flex flex-col items-center justify-center z-20">
+                    <div className="relative">
+                        <SparkleVoiceFab
+                            ref={sparkleRef}
+                            className={cn("w-16 h-16 md:w-20 md:h-20 text-xl relative transform-none shadow-xl", isSpeaking && "sparkle-talking")}
+                            autoStart={false} // Don't auto-start to avoid credit lock loop on load
+                            onTagsExtracted={handleSparkleTags}
+                            imageContext={imageFile ? { hasImage: true, description: "User has uploaded a drawing to the canvas." } : null}
+                            // @ts-ignore - Will update component to accept this shortly
+                            accessCheck={canStartSparkle}
+                        />
+
+                        {/* Helper Text Bubble */}
+                        {!extractedTags && (
+                            <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white text-purple-600 px-4 py-2 rounded-xl text-sm font-bold shadow-lg animate-bounce border-2 border-purple-200 z-50 pointer-events-none">
+                                Talk to Sparkle (1 <Zap className="inline w-3 h-3 fill-yellow-500 text-yellow-500" />)
+                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-b-2 border-r-2 border-purple-200 transform rotate-45"></div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right: Magic Result */}
+                <div className="flex flex-col items-center gap-2 w-full max-w-lg md:w-1/2 h-full justify-center">
+                    <div className="bg-gradient-to-r from-yellow-400 to-pink-500 text-white px-4 py-1 rounded-full font-bold text-sm shadow-md flex items-center gap-1">
+                        Magic Movie 🎬 (10 <Zap className="inline w-3 h-3 fill-white text-white" />)
+                    </div>
+
+                    <div className={cn("image-preview-box transition-all duration-500", magicResult ? "border-yellow-400 shadow-[0_0_30px_rgba(255,215,0,0.3)]" : "border-purple-300")}>
+                        {isTransforming ? (
+                            <div className="flex flex-col items-center text-center p-4">
+                                <div className="text-4xl animate-bounce mb-2">🖌️</div>
+                                <span className="font-bold text-purple-800 text-lg">Making Magic...</span>
+                                <p className="text-purple-600/70 text-xs mt-1">The magic painters are drawing frame by frame...</p>
+                            </div>
+                        ) : magicResult ? (
+                            <img src={magicResult} alt="Magic" className="w-full h-full object-contain" />
+                        ) : (
+                            /* Before & After Demo State */
+                            <div className="flex flex-col items-center justify-center w-full h-full relative overflow-hidden">
+                                <div className="absolute inset-0 opacity-20 bg-[url('https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM/3o7aD2saalBwwftBIY/giphy.gif')] bg-cover bg-center grayscale" />
+                                <div className="z-10 bg-white/80 backdrop-blur-sm p-4 rounded-2xl flex flex-col items-center border border-purple-200 shadow-xl">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center text-xl">🖼️</div>
+                                        <ArrowLeft className="w-4 h-4 text-purple-400 rotate-180" />
+                                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-xl animate-pulse">🎬</div>
+                                    </div>
+                                    <span className="font-bold text-purple-800">Watch it Move!</span>
+                                    <p className="text-[10px] text-purple-600 font-bold mt-1">10s to animate</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+            </main>
+
+            {/* --- Bottom Controls --- */}
+            <footer className="p-6 pb-12 flex items-end justify-between md:justify-center md:gap-20 z-20">
+
+                {/* Left: Upload Button */}
+                <button
+                    onClick={() => document.getElementById('magic-upload')?.click()}
+                    className="px-6 py-3 bg-white text-purple-600 rounded-full shadow-lg hover:scale-105 transition-transform font-bold flex items-center gap-2"
+                >
+                    <Upload className="w-5 h-5" />
+                    <span className="hidden md:inline">Pick a Picture</span>
+                </button>
+
+                {/* Center: Placeholder */}
+                <div className="w-20"></div>
+
+                {/* Right: Magic Button */}
+                <button
+                    onClick={handleTransform}
+                    disabled={!imageFile || isTransforming}
+                    className="magic-transform-btn flex items-center gap-2 disabled:opacity-50 disabled:grayscale"
+                >
+                    {isTransforming ? (
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                    ) : (
+                        <div className="w-6 h-6 bg-black rounded-sm flex items-center justify-center">
+                            <div className="w-0 h-0 border-l-[6px] border-l-white border-y-[4px] border-y-transparent ml-0.5"></div>
+                        </div>
+                    )}
+                    <span className="hidden md:inline">Action!</span>
+                </button>
+
+            </footer>
+
+            <BottomNav />
+        </div>
+    );
+};

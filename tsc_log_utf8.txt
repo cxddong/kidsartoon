@@ -1,0 +1,21 @@
+﻿src/routes/media.ts(56,45): error TS2367: This comparison appears to be unintentional because the types '"basic" | undefined' and '"yearly_pro"' have no overlap.
+src/routes/media.ts(56,82): error TS2367: This comparison appears to be unintentional because the types '"basic" | undefined' and '"admin"' have no overlap.
+src/routes/media.ts(812,11): error TS2451: Cannot redeclare block-scoped variable 'fs'.
+src/routes/media.ts(813,11): error TS2451: Cannot redeclare block-scoped variable 'path'.
+src/routes/media.ts(903,11): error TS2451: Cannot redeclare block-scoped variable 'fs'.
+src/routes/media.ts(904,11): error TS2451: Cannot redeclare block-scoped variable 'path'.
+src/routes/media.ts(1036,49): error TS2367: This comparison appears to be unintentional because the types '"basic" | undefined' and '"yearly_pro"' have no overlap.
+src/routes/media.ts(1036,86): error TS2367: This comparison appears to be unintentional because the types '"basic" | undefined' and '"admin"' have no overlap.
+src/routes/media.ts(1101,30): error TS2339: Property 'scenes' does not exist on type 'any[] | { title: string; summary: any; scenes: string[]; scenes_detail: any[]; }'.
+  Property 'scenes' does not exist on type 'any[]'.
+src/routes/media.ts(1102,36): error TS2339: Property 'scenes_detail' does not exist on type 'any[] | { title: string; summary: any; scenes: string[]; scenes_detail: any[]; }'.
+  Property 'scenes_detail' does not exist on type 'any[]'.
+src/routes/media.ts(1275,28): error TS2339: Property 'title' does not exist on type 'any[] | { title: string; summary: any; scenes: string[]; scenes_detail: any[]; }'.
+  Property 'title' does not exist on type 'any[]'.
+src/routes/media.ts(1279,30): error TS2339: Property 'title' does not exist on type 'any[] | { title: string; summary: any; scenes: string[]; scenes_detail: any[]; }'.
+  Property 'title' does not exist on type 'any[]'.
+src/routes/media.ts(1290,24): error TS2339: Property 'title' does not exist on type 'any[] | { title: string; summary: any; scenes: string[]; scenes_detail: any[]; }'.
+  Property 'title' does not exist on type 'any[]'.
+src/routes/media.ts(1291,26): error TS2339: Property 'summary' does not exist on type 'any[] | { title: string; summary: any; scenes: string[]; scenes_detail: any[]; }'.
+  Property 'summary' does not exist on type 'any[]'.
+src/services/gemini.ts(4,73): error TS2307: Cannot find module './gemini_prompts.js' or its corresponding type declarations.

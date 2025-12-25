@@ -6,7 +6,17 @@ export const router = Router();
 // GET /api/images/public (Mock public feed)
 router.get('/public', async (req, res) => {
     try {
-        const images = await databaseService.getPublicImages();
+        const type = req.query.type as string | undefined;
+        // Map frontend types to DB types if needed, but assuming consistency for now
+        // Frontend might send 'image', 'audio', 'animation'
+        // DB stores 'generated' (image), 'story' (audio), 'animation' (video), 'comic'
+
+        let dbType = type;
+        if (type === 'image') dbType = 'generated';
+        if (type === 'audio') dbType = 'story';
+        if (type === 'video') dbType = 'animation';
+
+        const images = await databaseService.getPublicImages(dbType);
         res.json(images);
     } catch (error) {
         console.error("Public Images Error:", error);

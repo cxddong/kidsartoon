@@ -61,13 +61,13 @@ export const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onToggl
                             </h2>
                         </div>
 
-                        {/* Scrollable Content (Story/Audio/Desc) */}
+                        {/* Scrollable Content (Story/Audio/Tags - No Prompt) */}
                         <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar mb-6">
                             {item.type === 'story' && item.meta ? (
                                 <div className="flex flex-col gap-4">
                                     {/* Audio Player */}
                                     {item.meta.audioUrl && (
-                                        <div className="bg-violet-50 p-3 rounded-2xl border border-violet-100 flex items-center gap-3 shadow-sm">
+                                        <div className="bg-violet-50 p-3 rounded-2xl border border-violet-100 flex items-center gap-3 shadow-sm shrink-0">
                                             <div className="w-10 h-10 bg-violet-500 rounded-full flex items-center justify-center shadow-md shrink-0 animate-pulse">
                                                 <Music className="text-white w-5 h-5" />
                                             </div>
@@ -75,10 +75,10 @@ export const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onToggl
                                         </div>
                                     )}
 
-                                    {/* Story Text */}
+                                    {/* Story Text - Full Display */}
                                     {item.meta.story && (
                                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 sticky top-0 bg-slate-50">The Story</h4>
+                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 sticky top-0 bg-slate-50 z-10">The Story</h4>
                                             <p className="text-slate-700 text-sm leading-relaxed font-serif whitespace-pre-wrap break-words">
                                                 {item.meta.story}
                                             </p>
@@ -86,11 +86,21 @@ export const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onToggl
                                     )}
                                 </div>
                             ) : (
-                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 sticky top-0 bg-slate-50">Prompt</h4>
-                                    <p className="text-slate-700 text-sm leading-relaxed font-medium whitespace-pre-wrap break-words">
-                                        {item.prompt || "No description available."}
-                                    </p>
+                                <div className="space-y-4">
+                                    {/* Tags Display Only */}
+                                    <div>
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tags</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(Array.isArray(item.meta?.tags) ? item.meta.tags : []).map((tag: string, i: number) => (
+                                                <span key={i} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                            {(!item.meta?.tags || item.meta.tags.length === 0) && (
+                                                <span className="text-slate-400 text-xs italic">No tags</span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

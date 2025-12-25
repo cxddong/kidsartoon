@@ -1,0 +1,4 @@
+﻿[DoubaoService] Key Loaded. Length: 36. Ends with: ...55ec
+=== Testing Doubao Img2Img ===
+FULL ERROR MESSAGE:
+Doubao Img2Img Error: 400 - {"error":{"code":"InvalidParameter","message":"expected the width to be at least 14px, but received a 1x1px image instead. Request id: 021766389056782b4543f29784db6c502b1df8375311b09bc464d","param":"","type":""}}

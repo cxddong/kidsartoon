@@ -12,7 +12,7 @@ export const LogoArea: React.FC = () => {
                 <img
                     src="/new_logo.png"
                     alt="KidsArToon"
-                    className="h-32 md:h-40 object-contain relative z-10 drop-shadow-2xl hover:scale-105 transition-transform duration-500"
+                    className="h-20 md:h-24 object-contain relative z-10 drop-shadow-2xl hover:scale-105 transition-transform duration-500"
                     onError={(e) => {
                         // Fallback if logo.png missing
                         e.currentTarget.style.display = 'none';

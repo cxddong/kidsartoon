@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, User, Globe, CreditCard, Info, LogOut, Star, X } from 'lucide-react';
+import { ArrowLeft, User, Globe, CreditCard, Info, LogOut, Star, X, History, ScrollText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Mock Interests List (Ideally shared)
@@ -23,6 +23,10 @@ const SettingsPage: React.FC = () => {
     const [showInterests, setShowInterests] = useState(false);
     const [tempInterests, setTempInterests] = useState<string[]>([]);
 
+    // Parent Center State
+    const [showHistory, setShowHistory] = useState(false);
+    const [logs, setLogs] = useState<any[]>([]);
+
     // Protection check
     useEffect(() => {
         if (!user) navigate('/login');
@@ -32,17 +36,19 @@ const SettingsPage: React.FC = () => {
         }
     }, [user, navigate]);
 
+    // Fetch Logs
+    useEffect(() => {
+        if (showHistory && user) {
+            fetch(`/api/points/logs?userId=${user.uid}`)
+                .then(r => r.json())
+                .then(d => setLogs(d.logs || []))
+                .catch(console.error);
+        }
+    }, [showHistory, user]);
+
     const handleLogout = async () => {
         await logout();
         navigate('/login');
-    };
-
-    const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newLang = e.target.value;
-        setLanguage(newLang);
-        if (user) {
-            await updateProfile({ language: newLang });
-        }
     };
 
     const saveInterests = async () => {
@@ -59,7 +65,7 @@ const SettingsPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F0F4F8] flex flex-col items-center pt-8">
+        <div className="h-screen overflow-y-auto bg-[#F0F4F8] flex flex-col items-center pt-8 pb-20">
             <div className="w-full max-w-md px-6">
                 <div className="flex items-center gap-4 mb-8">
                     <button
@@ -73,6 +79,32 @@ const SettingsPage: React.FC = () => {
 
                 <div className="bg-white rounded-3xl shadow-xl overflow-hidden mb-6">
                     <div className="p-2 space-y-2">
+                        {/* Language Selector */}
+                        <div className="w-full flex flex-col gap-3 p-4 rounded-2xl hover:bg-slate-50 transition-colors text-left group relative bg-purple-50">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+                                    <Globe className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-slate-700 text-lg">Language</h3>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 pl-16 flex-wrap">
+                                {['English', 'Spanish', 'French', 'Japanese'].map(lang => (
+                                    <button
+                                        key={lang}
+                                        onClick={() => {
+                                            setLanguage(lang);
+                                            if (user) updateProfile({ language: lang });
+                                        }}
+                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${language === lang ? 'bg-purple-500 text-white shadow-md scale-105 ring-2 ring-purple-200' : 'bg-white text-slate-400 hover:bg-slate-100 border border-slate-200'}`}
+                                    >
+                                        {lang}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Edit Profile */}
                         <button
                             onClick={() => navigate('/edit-profile')}
@@ -103,26 +135,21 @@ const SettingsPage: React.FC = () => {
                             </div>
                         </button>
 
-                        {/* Language Selector */}
-                        <div className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors text-left group relative">
-                            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
-                                <Globe className="w-6 h-6" />
+                        {/* Parent Center (Points History) */}
+                        <button
+                            onClick={() => setShowHistory(true)}
+                            className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors text-left group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 group-hover:scale-110 transition-transform">
+                                <History className="w-6 h-6" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="font-bold text-slate-700 text-lg">Language</h3>
-                                <p className="text-slate-400 text-sm">{language}</p>
+                                <h3 className="font-bold text-slate-700 text-lg">History</h3>
+                                <p className="text-slate-400 text-sm">
+                                    View your activity & points
+                                </p>
                             </div>
-                            {/* Hidden Select Overlay */}
-                            <select
-                                value={language}
-                                onChange={handleLanguageChange}
-                                className="absolute inset-0 opacity-0 cursor-pointer"
-                            >
-                                <option value="English">English</option>
-                                <option value="French">French</option>
-                                <option value="Spanish">Spanish</option>
-                            </select>
-                        </div>
+                        </button>
 
                         {/* Subscription */}
                         <button onClick={() => navigate('/subscription')} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors text-left group">
@@ -145,66 +172,119 @@ const SettingsPage: React.FC = () => {
                                 <p className="text-slate-400 text-sm">Version 1.0.0</p>
                             </div>
                         </button>
-                    </div>
 
-                    <div className="h-px bg-slate-100 mx-6 my-2" />
+                        <div className="h-px bg-slate-100 mx-6 my-2" />
 
-                    <div className="p-4 pb-6">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-3 p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 font-black text-lg transition-colors"
-                        >
-                            <LogOut className="w-6 h-6" />
-                            Sign Out
-                        </button>
+                        <div className="p-4 pb-6">
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center justify-center gap-3 p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 font-black text-lg transition-colors"
+                            >
+                                <LogOut className="w-6 h-6" />
+                                Sign Out
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Interest Edit Modal */}
-            <AnimatePresence>
-                {showInterests && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-                    >
+                {/* Interest Edit Modal */}
+                <AnimatePresence>
+                    {showInterests && (
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl relative"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
                         >
-                            <button onClick={() => setShowInterests(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200">
-                                <X className="w-5 h-5" />
-                            </button>
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl relative"
+                            >
+                                <button onClick={() => setShowInterests(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200">
+                                    <X className="w-5 h-5" />
+                                </button>
 
-                            <h2 className="text-2xl font-black text-slate-800 mb-2">Edit Interests</h2>
-                            <p className="text-slate-400 text-sm mb-6">What do you love?</p>
+                                <h2 className="text-2xl font-black text-slate-800 mb-2">Edit Interests</h2>
+                                <p className="text-slate-400 text-sm mb-6">What do you love?</p>
 
-                            <div className="grid grid-cols-2 gap-3 mb-8 max-h-[300px] overflow-y-auto">
-                                {INTERESTS_LIST.map(item => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => toggleInterest(item.id)}
-                                        className={`p-3 rounded-xl font-bold text-sm border-2 transition-all ${tempInterests.includes(item.id)
+                                <div className="grid grid-cols-2 gap-3 mb-8 max-h-[300px] overflow-y-auto">
+                                    {INTERESTS_LIST.map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => toggleInterest(item.id)}
+                                            className={`p-3 rounded-xl font-bold text-sm border-2 transition-all ${tempInterests.includes(item.id)
                                                 ? 'bg-pink-50 border-pink-400 text-pink-600'
                                                 : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                                            }`}
-                                    >
-                                        {item.label}
-                                    </button>
-                                ))}
-                            </div>
+                                                }`}
+                                        >
+                                            {item.label}
+                                        </button>
+                                    ))}
+                                </div>
 
-                            <button onClick={saveInterests} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200">
-                                Save Changes
-                            </button>
+                                <button onClick={saveInterests} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200">
+                                    Save Changes
+                                </button>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>
+
+                {/* Parent Center Modal */}
+                <AnimatePresence>
+                    {showHistory && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white w-full max-w-md rounded-[32px] p-6 shadow-2xl relative h-[80vh] flex flex-col"
+                            >
+                                <button onClick={() => setShowHistory(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200">
+                                    <X className="w-5 h-5" />
+                                </button>
+
+                                <h2 className="text-2xl font-black text-slate-800 mb-1">History</h2>
+                                <p className="text-slate-400 text-sm mb-4">Your creative journey</p>
+
+                                <div className="bg-slate-50 rounded-2xl p-4 mb-4 flex justify-between items-center">
+                                    <span className="text-slate-600 font-bold">Points Balance</span>
+                                    <span className="text-2xl font-black text-purple-600">{user?.points || 0}</span>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto space-y-3">
+                                    {logs.length === 0 ? (
+                                        <div className="text-center text-slate-400 py-10">No history yet</div>
+                                    ) : (
+                                        logs.map(log => (
+                                            <div key={log.logId} className="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                <div>
+                                                    <div className="font-bold text-slate-700 text-sm capitalize">
+                                                        {log.action.replace(/_/g, ' ').replace('generation', '').trim() || 'Activity'}
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 font-medium">
+                                                        {new Date(log.createdAt).toLocaleDateString()} • {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                </div>
+                                                <div className={`font-black text-sm ${log.pointsChange > 0 ? 'text-green-500' : 'text-slate-400'}`}>
+                                                    {log.pointsChange > 0 ? '+' : ''}{log.pointsChange} pts
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 };

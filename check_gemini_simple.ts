@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const API_KEY = 'AIzaSyCvy_90ga9nVN0316J1cwXoRbPHp7vkhqY'; // Backup Key
+const API_KEY = 'AIzaSyAp0VLb84S3yRK8J5Exh41_RX3eAxWb31A'; // Final Key
 
 async function testGen() {
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;

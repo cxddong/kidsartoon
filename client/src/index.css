@@ -1,56 +1,93 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #FF6B6B;
-  --color-primary-hover: #FF5252;
-  --color-primary-light: #FF8787;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Outfit', sans-serif;
+}
 
-  --color-secondary: #4ECDC4;
-  --color-secondary-hover: #45B7AF;
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-  --color-accent-yellow: #FFE66D;
-  --color-accent-purple: #6C5CE7;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-  --color-background: #F7F9FC;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
 
-  --font-sans: "Comic Neue", cursive, sans-serif;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 
-  --animate-bounce-slow: bounce 3s infinite;
-  --animate-float: float 6s ease-in-out infinite;
+/* HIDE SCROLLBAR UTILITY */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
 
-  @keyframes float {
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
 
-    0%,
-    100% {
-      transform: translateY(0);
-    }
+/* Float Animation */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
 
-    50% {
-      transform: translateY(-20px);
-    }
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
   }
 }
 
-@layer base {
-  body {
-    @apply bg-background text-slate-800 antialiased;
-  }
+.animate-float {
+  animation: float 4s ease-in-out infinite;
 }
 
-/* Custom Scrollbar for a playful feel */
-::-webkit-scrollbar {
-  width: 10px;
+/* HIDE DOWNLOAD/CAST CONTROLS IN EDGE/CHROME */
+/* Specific for Edge's extra buttons */
+video::-internal-media-controls-download-button {
+  display: none;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+video::-webkit-media-controls-enclosure {
+  overflow: hidden;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #FF6B6B;
-  border-radius: 5px;
+video::-webkit-media-controls-panel {
+  width: calc(100% + 30px);
+  /* Push menu off screen */
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #FF5252;
+/* Hide Picture in Picture Button */
+video::-webkit-media-controls-picture-in-picture-button {
+  display: none;
+}
+
+/* Hide Remote Playback (Cast) Button */
+video::-webkit-media-controls-toggle-closed-captions-button {
+  display: none;
+}
+
+video::-internal-media-controls-cast-button {
+  display: none !important;
+}
+
+video::-webkit-media-controls {
+  display: none !important;
+}
+
+video::-webkit-media-controls-enclosure {
+  display: none !important;
 }

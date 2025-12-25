@@ -7,7 +7,7 @@ describe('API Key Authentication', () => {
   let testApiKey: string;
 
   beforeEach(async () => {
-    // 使用默认 API key 进行测试
+    // Use default API key for testing
     testApiKey = 'dev-key-12345';
   });
 
@@ -99,7 +99,7 @@ describe('API Key Authentication', () => {
 
   describe('Optional Authentication', () => {
     it('should allow requests without API key (optional auth)', async () => {
-      // 这些路由使用 optionalApiKeyAuth，所以不需要 API key
+      // These routes use optionalApiKeyAuth, so API key is not required
       const response = await request(app)
         .get('/health')
         .expect(200);
@@ -108,7 +108,7 @@ describe('API Key Authentication', () => {
     });
 
     it('should track usage when API key is provided', async () => {
-      // 先获取当前请求计数
+      // Get current request count first
       const beforeResponse = await request(app)
         .get('/api/api-keys/current')
         .set('X-API-Key', testApiKey)
@@ -116,14 +116,14 @@ describe('API Key Authentication', () => {
 
       const beforeCount = beforeResponse.body.requestsCount;
 
-      // 发送一个请求
+      // Send a request
       await request(app)
         .get('/health')
         .set('X-API-Key', testApiKey)
         .expect(200);
 
-      // 检查计数是否增加（注意：可选认证可能不会增加计数）
-      // 这取决于实现细节
+      // Check if count increased (Note: optional auth might not increment count)
+      // Depends on implementation details
     });
   });
 });

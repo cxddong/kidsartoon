@@ -1,0 +1,10 @@
+Testing Comic Generation Story Quality...
+API Key present: true
+Key starts with: AIzaSyAp...
+=== THEME ===
+Magic Adventure (Fallback)
+=== CONTENT ===
+Panel 1: Story part 1
+Panel 2: Story part 2
+Panel 3: Story part 3
+Panel 4: Story part 4

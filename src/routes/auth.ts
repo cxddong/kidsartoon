@@ -21,7 +21,7 @@ router.post('/signup', async (req, res) => {
         const newUser = await databaseService.createUser({
             uid: uuidv4(),
             email,
-            password, // ⚠️ 原型阶段直接存储，生产环境必须加密
+            password, // ⚠️ Stored directly in prototype stage, MUST be encrypted in production
             name: name || 'New User'
         });
 

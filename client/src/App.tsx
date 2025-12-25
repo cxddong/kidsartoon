@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
+// import { SoundManager } from './components/SoundManager'; // SUSPECT 1
 
 // Existing Pages
 import { SplashPage } from './pages/SplashPage';
@@ -14,18 +15,21 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AudioStoryPage } from './pages/AudioStoryPage';
 import { AnimationPage } from './pages/AnimationPage';
+import { GreetingCardPage } from './pages/GreetingCardPage';
 
 // New Pages
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
-import StartupPage from './pages/StartupPage';
+import { MagicLabPage } from './pages/MagicLabPage'; // SUSPECT 2
+// import StartupPage from './pages/StartupPage'; // SUSPECT 3
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
-import EditProfilePage from './pages/EditProfilePage'; // Placeholder import, will create next
+import EditProfilePage from './pages/EditProfilePage';
 import OnboardingPage1 from './pages/onboarding/OnboardingPage1';
 import OnboardingPage2 from './pages/onboarding/OnboardingPage2';
 import OnboardingPage3 from './pages/onboarding/OnboardingPage3';
 import OnboardingStartPage from './pages/onboarding/OnboardingStartPage';
+import { MakeCartoonPage } from './pages/MakeCartoonPage';
 
 // Protected Route Wrapper
 const RequireAuth = () => {
@@ -52,16 +56,22 @@ const AppRoutes = () => {
       <Route path="/onboarding/page3" element={<OnboardingPage3 />} />
       <Route path="/onboarding/start" element={<OnboardingStartPage />} />
 
-      {/* Public Pages (No Layout Wrapper to prevent double scrollbar) */}
+      {/* Public Pages */}
       <Route path="/" element={<HomePage />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/splash" element={<SplashPage />} />
 
       {/* Protected Routes */}
       <Route element={<RequireAuth />}>
-        <Route path="/startup" element={<StartupPage />} />
+
+        {/* <Route path="/startup" element={<StartupPage />} /> */}
         <Route path="/comic" element={<ComicPage />} />
         <Route path="/generate/comic" element={<ComicPage />} />
+        <Route path="/make-cartoon" element={<MakeCartoonPage />} />
+
+        {/* Fullscreen Generation Pages */}
+        <Route path="/generate/picture" element={<PictureBookPage />} />
+        <Route path="/picture-story" element={<PictureBookPage />} />
 
         {/* Protected Layout Routes */}
         <Route element={<Layout />}>
@@ -69,14 +79,8 @@ const AppRoutes = () => {
           <Route path="/camera" element={<CameraPage />} />
           <Route path="/generate" element={<GeneratePage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
-
-          {/* Generation sub-routes */}
-          <Route path="/generate/picture" element={<PictureBookPage />} />
-          <Route path="/picture-story" element={<PictureBookPage />} />
-
           <Route path="/generate/video" element={<AnimationPage />} />
           <Route path="/animation" element={<AnimationPage />} />
-
           <Route path="/profile/history" element={<HistoryPage />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
         </Route>
@@ -85,6 +89,8 @@ const AppRoutes = () => {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/generate/audio" element={<AudioStoryPage />} />
         <Route path="/audio" element={<AudioStoryPage />} />
+        <Route path="/magic-lab" element={<MagicLabPage />} />
+        <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
 
       </Route>
 
@@ -98,6 +104,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        {/* <SoundManager /> */}
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>

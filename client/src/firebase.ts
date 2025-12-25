@@ -4,13 +4,13 @@ import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+    apiKey: "AIzaSyAPiovapSN9I5o56rJRrDwKiY-wWeHdY7I",
+    authDomain: "kat-antigravity.firebaseapp.com",
+    projectId: "kat-antigravity",
+    storageBucket: "kat-antigravity.firebasestorage.app",
+    messagingSenderId: "1045560094198",
+    appId: "1:1045560094198:web:8c0186f65ab1ddbab3ebd7",
+    measurementId: "G-Y4M4VX7B5Q"
 };
 
 // Initialize Firebase

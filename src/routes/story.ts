@@ -33,6 +33,58 @@ router.post('/generate-story', async (req, res) => {
     }
 });
 
+// 2.5 Creative Director Mode (Gemini 3/1.5 Flash)
+router.post('/generate-creative', async (req, res) => {
+    try {
+        const { request_type, user_input } = req.body;
+        // Expected: request_type: "Comic_4_Panel" | "Picturebook_4_Page"
+
+        console.log(`[CreativeDirector] Received request: ${request_type}`);
+        const result = await geminiService.generateCreativeContent(request_type, user_input);
+
+        res.json(result);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 3. Refine Greeting (Voice -> Text Card)
+// 3. Refine Greeting (Voice -> Text Card)
+router.post('/refine-greeting', async (req, res) => {
+    let lang = 'zh';
+    let festival = 'Festival';
+    let recipient = 'Friend';
+
+    try {
+        const { text } = req.body;
+        lang = req.body.lang || 'en';
+        festival = req.body.festival || 'Festival';
+        recipient = req.body.recipient || 'Friend';
+
+        console.log(`[Greeting] Refine text for ${recipient} on ${festival}: ${text}`);
+
+        const prompt = `
+        Rewrite the following voice input into a warm, concise, and child-friendly greeting card message.
+        Festival: ${festival}
+        Recipient: ${recipient}
+        Input: "${text}"
+        Requirements:
+        1. Keep it short (under 50 words).
+        2. Make it warm, cute, and sincere.
+        3. Language: English.
+        4. Output ONLY the greeting text, no other commentary.
+        `.trim();
+
+        const refinedText = await doubaoService.generateStory(prompt);
+        res.json({ text: refinedText });
+    } catch (error: any) {
+        console.error('Greeting refinement failed:', error);
+        // Fallback to prevent blocking user flow
+        const fallback = `Happy ${festival}! Wishing you lots of love and joy, my dear ${recipient}. Have a wonderful day!`;
+        res.json({ text: fallback });
+    }
+});
+
 // 3. Story to Audio
 router.post('/story-to-audio', async (req, res) => {
     res.json({ audioUrl: null });
@@ -49,51 +101,80 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
 
         let base64Image = '';
         if (req.file) {
-            base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+            try {
+                // 1. Optimize Image: Resize to max 800px & Compress to JPEG
+                const sharp = (await import('sharp')).default;
+                const resizedBuffer = await sharp(req.file.buffer)
+                    .resize(800, 800, { fit: 'inside' })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+
+                base64Image = `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
+                console.log(`[StoryOrchestrator] Image resized. Original: ${req.file.size}b -> Compressed: ${resizedBuffer.length}b`);
+            } catch (resizeErr) {
+                console.warn('[StoryOrchestrator] Image resize failed, using original (risk of timeout):', resizeErr);
+                base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+            }
         } else {
             return res.status(400).json({ error: "No image file provided" });
         }
 
-        // --- UNIFIED PIPELINE (Doubao for All Languages) ---
-        // Gemini is blocked, so we use Doubao for English too.
+        // --- UNIFIED PIPELINE (Gemini 2.0 Flash as Primary) ---
+        // Gemini is now the preferred engine for high-quality storytelling.
 
         console.log(`[StoryOrchestrator] Starting Unified Pipeline (Lang: ${lang})`);
 
-        // 1. Interpreting Image (Doubao)
+        // 1. Interpreting Image
         console.log('[StoryOrchestrator] Interpreting image...');
         const visionPrompt = lang === 'en'
             ? "Describe the characters, visual style, atmosphere, and key objects in this image for a children's story."
-            : "请详细描述这张图片中的画面内容，包括场景、人物、动作和氛围。";
+            : "Describe the characters, visual style, atmosphere, and key objects in this image for a children's story.";
 
-        const imageDescription = await doubaoService.analyzeImage(base64Image, visionPrompt);
+        let imageDescription = "";
+        try {
+            imageDescription = await geminiService.analyzeImage(base64Image, visionPrompt);
+        } catch (e) {
+            console.warn("[StoryOrchestrator] Gemini Vision failed, falling back to Doubao Vision...");
+            imageDescription = await doubaoService.analyzeImage(base64Image, visionPrompt);
+        }
+
         console.log('[StoryOrchestrator] Interpretation:', imageDescription.substring(0, 50) + '...');
 
-        // 2. Story Generation (Doubao Text)
+        const userProvidedPrompt = req.body.prompt || '';
+        console.log('[StoryOrchestrator] User Prompt:', userProvidedPrompt);
+
+        // 2. Story Generation (Gemini 2.0 Flash)
         console.log('[StoryOrchestrator] Generating story...');
         let userPromptText = '';
         if (lang === 'zh') {
             userPromptText = `
-【任务】你是专业的儿童绘本作家。请根据【参考图片解读】创作一个温馨、有趣的中文睡前故事。
-
-【参考图片解读】：
-${imageDescription}
-
-【写作要求】：
-1. 必须深刻结合上述图片内容。
-2. 语言生动活泼，适合6-10岁儿童阅读。
-3. 篇幅约300字。
-4. 必须有一个温馨的结尾。
-5.【重要】直接输出故事内容，不要标题，不要重复图片描述，不要输出"好的"等客套话。
-`.trim();
-        } else {
-            userPromptText = `
-[Task] You are a professional children's story writer. Create a warm, engaging bedtime story based on the [Image Context].
+[Task] You are a professional children's story writer. Create a warm, engaging bedtime story based on the [Image Context] and [User Preferences].
 
 [Image Context]:
 ${imageDescription}
 
+[User Preferences]:
+${userProvidedPrompt}
+
 [Requirements]:
-1. Strictly base the story on the image details.
+1. Strictly base the story on the image details and user preferences.
+2. Lively language, suitable for 6-10 year olds.
+3. Length: Approx 200-300 words.
+4. Warm ending.
+5. [IMPORTANT] Output story text only. No titles. Do NOT repeat the image description. Start the story immediately.
+`.trim();
+        } else {
+            userPromptText = `
+[Task] You are a professional children's story writer. Create a warm, engaging bedtime story based on the [Image Context] and [User Preferences].
+
+[Image Context]:
+${imageDescription}
+
+[User Preferences]:
+${userProvidedPrompt}
+
+[Requirements]:
+1. Strictly base the story on the image details and user preferences.
 2. Lively language, suitable for 6-10 year olds.
 3. Length: Approx 200-300 words.
 4. Warm ending.
@@ -101,10 +182,20 @@ ${imageDescription}
 `.trim();
         }
 
-        const story = await doubaoService.generateStory(userPromptText);
-        console.log(`[StoryOrchestrator] Story generated (${story.length} chars)`);
+        let story = "";
+        try {
+            story = await geminiService.generateText(userPromptText, userId);
+        } catch (e) {
+            console.warn("[StoryOrchestrator] Gemini Text failed, falling back to Doubao Text...");
+            story = await doubaoService.generateStory(userPromptText);
+        }
 
-        // 3. Audio Generation (Select Engine)
+        console.log(`[StoryOrchestrator] Story generated (${story.length} chars)`);
+        if (!story || story.length < 50) {
+            story = "Once upon a time, there was a magical moment captured in this picture. Let your imagination fly!";
+        }
+
+        // 3. Audio Generation
         console.log('[StoryOrchestrator] Generating audio...');
         let audioUrl = null;
         let audioPath: string;
@@ -118,10 +209,12 @@ ${imageDescription}
         const outputPath = path.join(outputDir, filename);
 
         try {
-            // Unified TTS (Baidu for both ZH and EN)
-            console.log(`[TTS] Using Baidu (${lang.toUpperCase()})`);
-            const baiduLang = lang === 'zh' ? 'zh' : 'en';
-            const audioBuffer = await baiduService.generateSpeech(story, baiduLang);
+            // Updated Pipeline: Use Gemini (Google) TTS as primary for high quality
+            console.log(`[TTS] Using Gemini/Google (${lang.toUpperCase()})`);
+            const googleLang = 'en-US';
+
+            // Generate Speech
+            const audioBuffer = await geminiService.generateSpeech(story, googleLang);
 
             if (audioBuffer) {
                 fs.writeFileSync(outputPath, audioBuffer);
@@ -131,9 +224,32 @@ ${imageDescription}
             } else {
                 throw new Error(`Baidu TTS Failed to generate audio for ${lang}`);
             }
-        } catch (ttsErr: any) {
-            console.error('TTS Generation FAILURE (Returning Story Only):', ttsErr);
-            audioUrl = null;
+        } catch (baiduErr: any) {
+            console.warn(`Baidu TTS Failed (${baiduErr.message}), attempting Doubao Fallback...`);
+            try {
+                // Unified Pipeline: Fallback to Doubao TTS
+                const voiceId = 'en_us_female_sjt';
+                const audioBuffer = await doubaoService.generateSpeech(story, voiceId);
+
+                if (audioBuffer) {
+                    fs.writeFileSync(outputPath, audioBuffer);
+                    audioUrl = `/generated/${filename}`;
+                    console.log('[StoryOrchestrator] Audio generated successfully via Doubao Fallback:', audioUrl);
+                }
+            } catch (doubaoErr: any) {
+                console.warn(`Doubao TTS Failed (${doubaoErr.message}), attempting Xunfei Fallback...`);
+                try {
+                    // Tertiary Fallback: Xunfei TTS
+                    const authPath = await xunfeiTTS(story, outputPath, lang);
+                    if (authPath) {
+                        audioUrl = `/generated/${filename}`;
+                        console.log('[StoryOrchestrator] Audio generated successfully via Xunfei Fallback:', audioUrl);
+                    }
+                } catch (xunfeiErr: any) {
+                    console.error('ALL TTS Generation FAILED. Baidu:', baiduErr.message, 'Doubao:', doubaoErr.message, 'Xunfei:', xunfeiErr.message);
+                    audioUrl = null;
+                }
+            }
         }
 
         // 4. Save Image & Record to DB
@@ -144,12 +260,16 @@ ${imageDescription}
             const uploadsDir = path.join(process.cwd(), 'client', 'public', 'uploads');
             if (!fs.existsSync(uploadsDir)) { fs.mkdirSync(uploadsDir, { recursive: true }); }
 
-            // Assume jpeg/png based on mimetype, or just use .png/jpg. 
-            // req.file.mimetype gives us clue, default to png for safety if unknown or handle ext.
-            const ext = req.file.mimetype.split('/')[1] || 'png';
-            const imageFilename = `story-input-${id}.${ext}`;
+            // Optimize: Resize & Compress into JPEG to save storage (50MB -> ~500KB)
+            const sharp = (await import('sharp')).default;
+            const compressedBuffer = await sharp(req.file.buffer)
+                .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 80 })
+                .toBuffer();
+
+            const imageFilename = `story-input-${id}.jpg`;
             const imagePath = path.join(uploadsDir, imageFilename);
-            fs.writeFileSync(imagePath, req.file.buffer);
+            fs.writeFileSync(imagePath, compressedBuffer);
 
             storedImageUrl = `/uploads/${imageFilename}`;
             const summary = imageDescription ? imageDescription.substring(0, 100) : "Story generated from image";

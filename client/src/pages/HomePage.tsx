@@ -8,6 +8,7 @@ import { DetailModal } from '../components/home/DetailModal';
 import { BottomNav } from '../components/BottomNav';
 import type { ImageRecord } from '../components/history/ImageModal';
 import { Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
     { id: '1', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: false, prompt: 'Space Adventure' },
@@ -17,23 +18,106 @@ const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
     { id: '5', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1615184697985-c9bde1b07da7?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Magical Forest' },
 ];
 
-// Mock promotion Banner
-const PromoBanner: React.FC = () => (
-    <div className="px-6 mb-8 w-full max-w-4xl mx-auto flex-shrink-0">
-        <div className="w-full h-[180px] bg-gradient-to-r from-pink-400 to-purple-400 rounded-3xl shadow-xl flex items-center justify-center relative overflow-hidden group cursor-pointer border-4 border-white">
-            <div className="absolute top-[-50px] left-[-50px] w-32 h-32 bg-white/20 rounded-full blur-2xl" />
-            <div className="absolute bottom-[-30px] right-[-20px] w-40 h-40 bg-yellow-300/30 rounded-full blur-3xl" />
-            <div className="text-center z-10 text-white transform group-hover:scale-105 transition-transform">
-                <h2 className="text-3xl font-black drop-shadow-md mb-2">Weekly Art Challenge!</h2>
-                <p className="text-lg font-bold opacity-90">Draw a "Flying Fish" 🐟✈️</p>
-                <div className="mt-4 px-6 py-2 bg-white text-purple-600 rounded-full font-bold shadow-lg inline-block">Join Now</div>
+const PROMO_SLIDES = [
+    {
+        id: 1,
+        title: "",
+        subtitle: '',
+        gradient: "",
+        decor: (
+            <img src="/promo_banner_v3.png" alt="Promo" className="w-full h-full object-contain" />
+        )
+    },
+    {
+        id: 2,
+        title: "Send a Magic Card! 💌",
+        subtitle: 'Turn photos into voice greetings!',
+        gradient: "from-pink-400 to-purple-300",
+        link: '/generate/greeting-card',
+        decor: (
+            <>
+                <div className="absolute top-10 right-10 w-20 h-20 bg-white/30 rounded-full blur-xl animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/10 to-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                    <Sparkles className="w-32 h-32 text-white" />
+                </div>
+            </>
+        )
+    },
+    {
+        id: 3,
+        title: "Premium Membership",
+        subtitle: 'Unlock unlimited generations! 🚀',
+        gradient: "from-orange-400 to-red-400",
+        link: '/subscription',
+        decor: (
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30" />
+        )
+    }
+];
+
+const PromoBanner: React.FC = () => {
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % PROMO_SLIDES.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const handleBannerClick = () => {
+        const link = (PROMO_SLIDES[currentSlide] as any).link;
+        if (link) navigate(link);
+    };
+
+    return (
+        <div className="px-4 mb-8 w-full max-w-4xl mx-auto flex-shrink-0 flex flex-col items-center">
+            {/* Slide Area - Taller */}
+            <div
+                onClick={handleBannerClick}
+                className="w-full h-[280px] relative overflow-hidden rounded-3xl shadow-xl group cursor-pointer border-4 border-white transition-all duration-500 bg-white hover:scale-[1.02]"
+            >
+                {PROMO_SLIDES.map((slide, index) => (
+                    <div
+                        key={slide.id}
+                        className={`absolute inset-0 bg-gradient-to-r ${slide.gradient} flex items-center justify-center transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                            }`}
+                    >
+                        {slide.decor}
+                        {slide.title && (
+                            <div className="text-center z-20 text-white transform group-hover:scale-105 transition-transform duration-500">
+                                <h2 className="text-4xl font-black drop-shadow-md mb-2">{slide.title}</h2>
+                                <p className="text-xl font-bold opacity-90">{slide.subtitle}</p>
+                                <div className="mt-6 px-8 py-3 bg-white text-slate-800 rounded-full font-black shadow-lg inline-block hover:bg-yellow-100 transition-colors">
+                                    Explore Now
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Dots Selector - User Choice */}
+            <div className="flex gap-2 mt-4">
+                {PROMO_SLIDES.map((_, index) => (
+                    <button
+                        key={index}
+                        onClick={() => setCurrentSlide(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-blue-500 w-8' : 'bg-slate-300 hover:bg-blue-300'
+                            }`}
+                        aria-label={`Go to slide ${index + 1}`}
+                    />
+                ))}
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 export const HomePage: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [publicItems, setPublicItems] = useState<ImageRecord[]>([]);
     const [filteredItems, setFilteredItems] = useState<ImageRecord[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -54,8 +138,10 @@ export const HomePage: React.FC = () => {
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data)) {
-                        setPublicItems(data);
-                        setFilteredItems(data);
+                        // Filter out failed items or invalid images
+                        const validData = data.filter((item: any) => item.imageUrl && item.status !== 'failed');
+                        setPublicItems(validData);
+                        setFilteredItems(validData);
                         return;
                     }
                 }
@@ -78,10 +164,25 @@ export const HomePage: React.FC = () => {
             setFilteredItems(publicItems);
         } else {
             setFilteredItems(publicItems.filter(item => {
-                if (activeFilter === 'story') return item.type === 'story';
-                if (activeFilter === 'comic') return item.type === 'comic';
-                if (activeFilter === 'picture-book') return item.type === 'generated';
-                if (activeFilter === 'animation') return item.type === 'animation';
+                const t = (item.type || '').toLowerCase();
+
+                if (activeFilter === 'story') {
+                    return t === 'story' || t === 'audio-story';
+                }
+
+                if (activeFilter === 'comic') {
+                    return t === 'comic' || t === 'comic-strip' || t === 'picture-book' || t === 'book';
+                }
+
+                if (activeFilter === 'generated') {
+                    // Greeting Cards
+                    return t === 'greeting-card' || t === 'card' || t === 'generated';
+                }
+
+                if (activeFilter === 'animation') {
+                    return t === 'animation' || t === 'video';
+                }
+
                 return true;
             }));
         }
@@ -118,7 +219,12 @@ export const HomePage: React.FC = () => {
 
             {/* 3. Main Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto z-10 relative w-full scrollbar-hide">
-                <div className="pb-24 pt-4">
+                <div className="pb-24 pt-24">
+                    {/* TEMP: Dev Links */}
+                    <div className="flex justify-center gap-4 mb-2 opacity-50 hover:opacity-100 transition-opacity">
+                        <button onClick={() => navigate('/splash')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Splash</button>
+                        <button onClick={() => navigate('/startup')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Startup</button>
+                    </div>
 
                     {/* Logo Area (Scrolls) */}
                     <LogoArea />
@@ -129,7 +235,7 @@ export const HomePage: React.FC = () => {
                     <div className="relative min-h-screen">
 
                         {/* Sticky Filter Bar - TRANSPARENT */}
-                        <div className="sticky top-0 z-30 pt-6 pb-2 px-4">
+                        <div className="sticky top-0 z-30 pt-2 pb-2 px-4">
                             <FeatureButtonsRow activeFilter={activeFilter} onFilterChange={setActiveFilter} />
                         </div>
 

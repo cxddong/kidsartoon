@@ -1,0 +1,16 @@
+[DEBUG] Starting Vision Robustness Check...
+[DEBUG] Fetching sample image: https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png
+[DEBUG] Image fetched. Size: 299446 chars.
+
+--- TESTING DOUBAO VISION ---
+[PASS] Doubao Result: "The image depicts four transparent, glossy dice in mid-air against a plain white background. Each die is a different color: blue, green, red, and yellow. The dice are oriented such that various faces are visible, showcasing the white pips (dots) that indicate their values. 
+
+- The **blue die** is positioned on the left side of the image. It appears to be showing a combination of pips, though the exact number is not entirely clear due to its angle.
+- The **green die** is on the right side. Similar to the blue die, its orientation makes it a bit challenging to determine the exact value, but several pips are visible.
+- The **red die** is prominently in the center, slightly overlapping the yellow die beneath it. The red die shows a clear **6** on its top face (as indicated by the six pips arranged in two columns of three).
+- The **yellow die** is partially obscured by the red die but still shows some pips, suggesting it is also in motion.
+
+The overall scene conveys a sense of randomness and playfulness, typical of dice games. The transparency and reflections on the dice add a dynamic, almost three-dimensional effect, enhancing the visual interest. The white background ensures that the focus remains entirely on the colorful, glossy dice."
+
+--- TESTING GEMINI VISION ---
+[PASS] Gemini Result: "A colorful drawing."

@@ -144,7 +144,7 @@ const EditProfilePage: React.FC = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white w-full max-w-lg rounded-3xl shadow-xl overflow-hidden"
+                className="bg-white w-full max-w-lg rounded-3xl shadow-xl overflow-hidden max-h-[85vh] overflow-y-auto"
             >
                 <div className="bg-blue-500 p-6 flex items-center text-white">
                     <button onClick={() => navigate('/settings')} className="p-2 hover:bg-white/20 rounded-full transition-colors">

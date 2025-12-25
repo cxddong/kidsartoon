@@ -1,188 +1,32 @@
 import { Router } from 'express';
+import { subscriptionService } from '../services/subscription.js';
 
 export const router = Router();
 
-type Usage = { 
-  pictureBooks: number; 
-  animations: number; 
-  audioStories: number;
-  lastResetDate: string; // ISO date string
-};
+// Mock Subscribe Endpoint
+router.post('/subscribe', async (req, res) => {
+  const { userId, planId, platform } = req.body;
 
-type Membership = 'free' | 'gold';
-
-const dailyUsage = new Map<string, Usage>();
-
-// Get today's date string (YYYY-MM-DD)
-function getTodayDateString(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-// Reset daily usage if it's a new day
-function resetIfNewDay(userId: string, usage: Usage): Usage {
-  const today = getTodayDateString();
-  if (usage.lastResetDate !== today) {
-    return {
-      pictureBooks: 0,
-      animations: 0,
-      audioStories: 0,
-      lastResetDate: today,
-    };
+  // Security: In production, verify auth token. Here relying on userId.
+  if (!userId || !planId) {
+    return res.status(400).json({ error: 'Missing userId or planId' });
   }
-  return usage;
-}
 
-// Get or initialize usage for user
-function getUserUsage(userId: string): Usage {
-  let usage = dailyUsage.get(userId);
-  if (!usage) {
-    usage = {
-      pictureBooks: 0,
-      animations: 0,
-      audioStories: 0,
-      lastResetDate: getTodayDateString(),
-    };
-    dailyUsage.set(userId, usage);
-  } else {
-    usage = resetIfNewDay(userId, usage);
-    dailyUsage.set(userId, usage);
+  try {
+    const result = await subscriptionService.subscribeUser(userId, planId, platform || 'web');
+    res.json(result);
+  } catch (error: any) {
+    console.error('[Subscription API] Error:', error);
+    res.status(500).json({ error: error.message || 'Subscription failed' });
   }
-  return usage;
-}
+});
 
-// Get subscription plans
-router.get('/plans', (_req, res) => {
+// Get Plans
+router.get('/plans', (req, res) => {
+  // Return plans structure aligned with frontend requirement
   res.json({
-    free: {
-      name: 'Free Member',
-      perks: [
-        'Daily: 1 audio story',
-        'Daily: 1 picture book (4 pages)',
-        'Daily: 1 short animation',
-        'With watermark',
-        'Can purchase additional points'
-      ],
-      watermark: true,
-      limits: {
-        audioStories: 1,
-        pictureBooks: 1,
-        animations: 1,
-      },
-    },
-    gold: {
-      name: 'Gold Member',
-      perks: [
-        'All free member features',
-        'Daily: 1 picture book (4 pages)',
-        'Daily: 5 animations',
-        'Unlimited audio stories*',
-        'No watermark',
-        'Can purchase additional points'
-      ],
-      watermark: false,
-      limits: {
-        audioStories: -1, // -1 means unlimited
-        pictureBooks: 1,
-        animations: 5,
-      },
-    },
+    basic: { id: 'basic', points: 1200, price: 9.99, name: 'Basic' },
+    pro: { id: 'pro', points: 2800, price: 19.99, name: 'Pro' },
+    yearly_pro: { id: 'yearly_pro', points: 14000, price: 99.00, name: 'Yearly Pro' }
   });
 });
-
-// Get user's daily usage
-router.get('/:userId/usage', (req, res) => {
-  const usage = getUserUsage(req.params.userId);
-  const { lastResetDate, ...usageData } = usage;
-  res.json({
-    ...usageData,
-    lastResetDate,
-    isNewDay: lastResetDate === getTodayDateString(),
-  });
-});
-
-// Check if user can consume a quota item
-router.post('/:userId/check-quota', (req, res) => {
-  const userId = req.params.userId;
-  const type: keyof Omit<Usage, 'lastResetDate'> = req.body.type;
-  const membership: Membership = req.body.membership ?? 'free';
-  
-  const usage = getUserUsage(userId);
-  const plans = {
-    free: { audioStories: 1, pictureBooks: 1, animations: 1 },
-    gold: { audioStories: -1, pictureBooks: 1, animations: 5 },
-  };
-  
-  const limit = plans[membership][type];
-  const current = usage[type];
-  
-  const canConsume = limit === -1 || current < limit;
-  
-  res.json({
-    canConsume,
-    current,
-    limit: limit === -1 ? 'unlimited' : limit,
-    remaining: limit === -1 ? 'unlimited' : Math.max(0, limit - current),
-    membership,
-  });
-});
-
-// Consume a quota item
-router.post('/:userId/consume', (req, res) => {
-  const userId = req.params.userId;
-  const type: keyof Omit<Usage, 'lastResetDate'> = req.body.type;
-  const membership: Membership = req.body.membership ?? 'free';
-  
-  const usage = getUserUsage(userId);
-  const plans = {
-    free: { audioStories: 1, pictureBooks: 1, animations: 1 },
-    gold: { audioStories: -1, pictureBooks: 1, animations: 5 },
-  };
-  
-  const limit = plans[membership][type];
-  const current = usage[type];
-  
-  // Check if user can consume
-  if (limit !== -1 && current >= limit) {
-    return res.status(403).json({ 
-      error: 'Daily quota exceeded',
-      type,
-      current,
-      limit,
-      membership,
-      message: 'You have reached your daily limit. Please upgrade or purchase points.',
-    });
-  }
-  
-  // Consume quota
-  usage[type] = current + 1;
-  dailyUsage.set(userId, usage);
-  
-  res.json({
-    success: true,
-    usage: {
-      pictureBooks: usage.pictureBooks,
-      animations: usage.animations,
-      audioStories: usage.audioStories,
-    },
-    remaining: {
-      pictureBooks: plans[membership].pictureBooks === -1 ? 'unlimited' : Math.max(0, plans[membership].pictureBooks - usage.pictureBooks),
-      animations: plans[membership].animations === -1 ? 'unlimited' : Math.max(0, plans[membership].animations - usage.animations),
-      audioStories: plans[membership].audioStories === -1 ? 'unlimited' : Math.max(0, plans[membership].audioStories - usage.audioStories),
-    },
-  });
-});
-
-// Reset usage (for testing or admin purposes)
-router.post('/:userId/reset', (req, res) => {
-  const userId = req.params.userId;
-  const usage: Usage = {
-    pictureBooks: 0,
-    animations: 0,
-    audioStories: 0,
-    lastResetDate: getTodayDateString(),
-  };
-  dailyUsage.set(userId, usage);
-  res.json({ message: 'Usage reset', usage });
-});
-
-

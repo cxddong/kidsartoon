@@ -22,6 +22,9 @@ export interface User {
     language?: string;
     interests?: string[];
     profileCompleted?: boolean;
+    uiMode?: 'visual' | 'standard';
+    plan?: 'free' | 'basic' | 'pro' | 'yearly_pro' | 'admin';
+    lastPointsReset?: string;
 }
 
 interface AuthContextType {
@@ -58,6 +61,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const unsubDoc = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
+
+                        // Admin / Plan Upgrade Check
+                        let currentPlan = userData.plan || 'free';
+                        let currentPoints = userData.points ?? 50;
+
+                        // Admin Override for specific user
+                        if (firebaseUser.email?.includes('cxddong')) {
+                            currentPlan = 'admin'; // Treated as Pro+
+                            currentPoints = 99999;
+                        }
+
+                        // Monthly Reset Logic for Free Plan
+                        if (currentPlan === 'free') {
+                            const now = new Date();
+                            const lastReset = userData.lastPointsReset ? new Date(userData.lastPointsReset) : null;
+
+                            // If never reset, or reset was in a previous month
+                            if (!lastReset || lastReset.getMonth() !== now.getMonth() || lastReset.getFullYear() !== now.getFullYear()) {
+                                console.log("Monthly Reset: Resetting Free Plan points to 50.");
+                                currentPoints = 50;
+                                // Update Firestore immediately to prevent repeat reset
+                                setDoc(userRef, {
+                                    points: 50,
+                                    lastPointsReset: now.toISOString()
+                                }, { merge: true });
+                            }
+                        }
+
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
@@ -65,18 +96,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             photoURL: userData.photoUrl || firebaseUser.photoURL || null,
                             age: userData.age,
                             gender: userData.gender,
-                            points: userData.points || 0,
+                            points: currentPoints,
+                            plan: currentPlan,
+                            lastPointsReset: userData.lastPointsReset,
                             language: userData.language || 'English',
                             interests: userData.interests || [],
-                            profileCompleted: userData.profileCompleted || false
+                            profileCompleted: userData.profileCompleted || false,
+                            uiMode: userData.uiMode || 'standard'
                         });
                     } else {
+                        // Auto-Heal: Create missing user document
+                        const newUserData = {
+                            name: firebaseUser.displayName || 'New Artist',
+                            email: firebaseUser.email,
+                            photoUrl: firebaseUser.photoURL || null,
+                            createdAt: new Date().toISOString(),
+                            points: 50, // Start with 50 for free tier
+                            plan: 'free',
+                            language: 'English',
+                            profileCompleted: false,
+                            creationHistory: [],
+                            lastPointsReset: new Date().toISOString()
+                        };
+                        setDoc(userRef, newUserData, { merge: true }).catch(err => console.error("Auto-heal profile failed:", err));
+
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
-                            name: firebaseUser.displayName || 'New Artist',
-                            photoURL: firebaseUser.photoURL || null,
-                            profileCompleted: false
+                            name: newUserData.name,
+                            photoURL: newUserData.photoUrl,
+                            profileCompleted: false,
+                            points: 50,
+                            plan: 'free'
                         });
                     }
                     setLoading(false);
@@ -110,10 +161,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     email: user.email,
                     photoUrl: user.photoURL,
                     createdAt: new Date().toISOString(),
-                    points: 0,
+                    points: 50,
+                    plan: 'free',
                     language: 'English',
                     profileCompleted: false,
-                    creationHistory: []
+                    creationHistory: [],
+                    lastPointsReset: new Date().toISOString()
                 });
                 return true; // New User
             }
@@ -137,10 +190,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     email: user.email,
                     photoUrl: user.photoURL,
                     createdAt: new Date().toISOString(),
-                    points: 0,
+                    points: 50,
+                    plan: 'free',
                     language: 'English',
                     profileCompleted: false,
-                    creationHistory: []
+                    creationHistory: [],
+                    lastPointsReset: new Date().toISOString()
                 });
                 return true; // New User
             }
@@ -166,10 +221,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email,
             photoUrl: null,
             createdAt: new Date().toISOString(),
-            points: 0,
+            points: 50,
+            plan: 'free',
             language: 'English',
             profileCompleted: false,
-            creationHistory: []
+            creationHistory: [],
+            lastPointsReset: new Date().toISOString()
         });
     };
 
@@ -191,7 +248,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.language !== undefined) firestoreData.language = data.language;
         if (data.interests !== undefined) firestoreData.interests = data.interests;
         if (data.points !== undefined) firestoreData.points = data.points;
+        if (data.plan !== undefined) firestoreData.plan = data.plan; // Allow plan update
         if (data.profileCompleted !== undefined) firestoreData.profileCompleted = data.profileCompleted;
+        if (data.uiMode !== undefined) firestoreData.uiMode = data.uiMode;
 
         await setDoc(doc(db, 'users', auth.currentUser.uid), firestoreData, { merge: true });
     };

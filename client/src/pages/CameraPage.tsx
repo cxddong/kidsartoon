@@ -82,6 +82,8 @@ export const CameraPage: React.FC = () => {
                                 ref={videoRef}
                                 autoPlay
                                 playsInline
+                                disablePictureInPicture
+                                controlsList="nodownload noremoteplayback"
                                 className="w-full h-full object-cover"
                             />
                         ) : (

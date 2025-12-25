@@ -7,10 +7,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// 托管 dist 目录里的静态文件
+// Host static files from dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// 所有路由都返回 index.html（支持前端路由）
+// All routes return index.html (supports frontend routing)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });

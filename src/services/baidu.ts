@@ -1,86 +1,148 @@
 import fetch from 'node-fetch';
-import { v4 as uuidv4 } from 'uuid';
+
+const API_KEY = 'bce-v3/ALTAK-cENkdBaUXJezbTlUbJEzr/f662c1fc6ce8ddac7087b3ad8276667b8e39d630';
+const BASE_URL = 'https://qianfan.baidubce.com/video/generations';
+
+interface BaiduVideoTaskResponse {
+    id: string;
+    task_id: string;
+    error_code?: string;
+    error_msg?: string;
+}
+
+interface BaiduStatusResponse {
+    id: string;
+    task_id: string;
+    created: string;
+    model: string;
+    status: 'Pending' | 'Processing' | 'Succeeded' | 'Failed'; // Verify case
+    result?: {
+        video: {
+            url: string;
+            cover_url?: string;
+            width?: number;
+            height?: number;
+            duration?: number;
+        }
+    };
+    error_code?: string;
+    error_msg?: string;
+}
 
 export class BaiduService {
     private apiKey: string;
-    private secretKey: string;
-    private accessToken: string | null = null;
-    private tokenExpiresAt: number = 0;
 
     constructor() {
-        this.apiKey = process.env.BAIDU_TTS_API_KEY || 'EtMKYITxAwM1tOpDYttKS60N';
-        this.secretKey = process.env.BAIDU_TTS_SECRET_KEY || '1TQL2IjaiKGhRUxb4VgbKjKJOZr7H3RV';
-
-        if (!this.apiKey || !this.secretKey) {
-            console.warn('Baidu TTS credentials missing (BAIDU_TTS_API_KEY, BAIDU_TTS_SECRET_KEY). Audio generation may fail.');
-        }
+        this.apiKey = API_KEY;
     }
 
-    private async getAccessToken(): Promise<string | null> {
-        // Return cached token if valid
-        if (this.accessToken && Date.now() < this.tokenExpiresAt) {
-            return this.accessToken;
-        }
+    /**
+     * Generate Video (MuseSteamer 2.0)
+     */
+    async generateVideo(imageUrl: string, prompt: string, options: { duration?: 5 | 10 } = {}): Promise<{ taskId: string }> {
+        const duration = options.duration || 5;
 
-        try {
-            const url = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${this.apiKey}&client_secret=${this.secretKey}`;
-            const response = await fetch(url);
-            const data: any = await response.json();
+        // Ensure prompt exists for audio model, or fallback
+        const textPrompt = prompt || "Animate this scene naturally.";
 
-            if (data.access_token) {
-                this.accessToken = data.access_token;
-                // Expires in seconds, usually 30 days. safe buffer: subtract 1 hour
-                this.tokenExpiresAt = Date.now() + (data.expires_in * 1000) - 3600000;
-                return this.accessToken;
-            } else {
-                console.error('Failed to get Baidu Token:', data);
-                return null;
-            }
-        } catch (error) {
-            console.error('Baidu Token Error:', error);
-            return null;
-        }
-    }
+        const payload = {
+            model: "musesteamer-2.0-turbo-i2v-audio",
+            content: [
+                {
+                    type: "text",
+                    text: textPrompt
+                },
+                {
+                    type: "image_url",
+                    image_url: {
+                        url: imageUrl
+                    }
+                }
+            ],
+            duration: duration
+        };
 
-    async generateSpeech(text: string, lang: 'en' | 'zh' = 'en'): Promise<Buffer | null> {
-        const token = await this.getAccessToken();
-        if (!token) return null;
+        console.log('[Baidu] Start Task:', JSON.stringify(payload));
 
-        // Params per user guide
-        // per: 6221 (Slightly emotional/story), spd: 4 (Slower), pit: 6 (Higher pitch), vol: 5
-        const params = new URLSearchParams({
-            tex: text,
-            tok: token,
-            cuid: uuidv4(), // Unique user ID
-            ctp: '1',
-            lan: lang,
-            per: '6221',
-            spd: '4',
-            pit: '6',
-            vol: '5',
-            aue: '3'
+        const res = await fetch(BASE_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error('[Baidu] Error starting task:', errText);
+            throw new Error(`Baidu API Error: ${res.statusText} - ${errText}`);
+        }
+
+        const data = await res.json() as BaiduVideoTaskResponse;
+
+        if (data.error_code) {
+            throw new Error(`Baidu Error: ${data.error_msg}`);
+        }
+
+        return { taskId: data.task_id };
+    }
+
+    /**
+     * Check Task Status
+     */
+    async checkTaskStatus(taskId: string): Promise<{ status: 'SUCCEEDED' | 'FAILED' | 'PROCESSING', videoUrl?: string, error?: string }> {
+        // Check status via GET with query param ?task_id=...
+        const url = `${BASE_URL}?task_id=${taskId}`;
+
         try {
-            const response = await fetch('https://tsn.baidu.com/text2audio', {
-                method: 'POST',
-                body: params,
+            const res = await fetch(url, {
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
-            if (response.headers.get('content-type')?.includes('audio') || response.headers.get('content-type')?.includes('mpeg')) {
-                const arrayBuffer = await response.arrayBuffer();
-                return Buffer.from(arrayBuffer);
-            } else {
-                const errorText = await response.text();
-                console.error('Baidu TTS Failed:', errorText);
-                return null;
+            if (!res.ok) {
+                // If 404, maybe invalid ID. If 200 but error body, handle below.
+                const txt = await res.text();
+                // Baidu returns error json even on 200 sometimes? Or 400.
+                console.error('[Baidu] Check Status Error:', txt);
+                return { status: 'FAILED', error: txt };
             }
-        } catch (error) {
-            console.error('Baidu TTS Exception:', error);
-            return null;
+
+            const data = await res.json() as any;
+            console.log('[Baidu] Status Response:', JSON.stringify(data));
+
+            if (data.error_code) {
+                return { status: 'FAILED', error: data.error_msg };
+            }
+
+            // Map Baidu Status
+            const s = (data.status || data.task_status || '').toUpperCase();
+
+            if (s === 'SUCCEEDED' || s === 'SUCCESS') {
+                // Baidu MuseSteamer uses 'content' not 'result'
+                const resObj = data.result || data.content || {};
+                // Try multiple paths (video.url, video_url, url)
+                const videoUrl = resObj.video?.url || resObj.video_url || resObj.url || '';
+
+                if (!videoUrl) console.warn('[Baidu] Video URL missing in result:', resObj);
+
+                return {
+                    status: 'SUCCEEDED',
+                    videoUrl
+                };
+            } else if (s === 'FAILED' || s === 'FAIL') {
+                return { status: 'FAILED', error: data.error_msg || 'Unknown failure' };
+            } else {
+                return { status: 'PROCESSING' };
+            }
+
+        } catch (e: any) {
+            console.error('[Baidu] Network Error:', e);
+            return { status: 'PROCESSING' }; // Retry on net error
         }
     }
 }

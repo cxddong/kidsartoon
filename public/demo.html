@@ -1,24 +1,92 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kids Art Tales - Demo</title>
   <style>
-    :root { color-scheme: light dark; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Microsoft YaHei", sans-serif; margin: 24px; line-height: 1.5; }
-    h1 { margin: 0 0 8px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    section { border: 1px solid #8884; border-radius: 12px; padding: 16px; }
-    button { padding: 8px 12px; border-radius: 8px; border: 1px solid #9996; cursor: pointer; }
-    input, select { padding: 8px; border-radius: 8px; border: 1px solid #9996; width: 100%; box-sizing: border-box; }
-    .row { display: flex; gap: 8px; align-items: center; }
-    .row > * { flex: 1; }
-    .muted { opacity: 0.75; font-size: 12px; }
-    pre { background: #00000008; padding: 12px; border-radius: 8px; overflow: auto; }
-    .media { display: grid; gap: 8px; }
-    .kpis { display: flex; gap: 12px; flex-wrap: wrap; }
-    .kpi { padding: 8px 12px; border-radius: 999px; background: #7c3aed18; border: 1px solid #7c3aed42; }
+    :root {
+      color-scheme: light dark;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Microsoft YaHei", sans-serif;
+      margin: 24px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    section {
+      border: 1px solid #8884;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #9996;
+      cursor: pointer;
+    }
+
+    input,
+    select {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #9996;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .row>* {
+      flex: 1;
+    }
+
+    .muted {
+      opacity: 0.75;
+      font-size: 12px;
+    }
+
+    pre {
+      background: #00000008;
+      padding: 12px;
+      border-radius: 8px;
+      overflow: auto;
+    }
+
+    .media {
+      display: grid;
+      gap: 8px;
+    }
+
+    .kpis {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .kpi {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #7c3aed18;
+      border: 1px solid #7c3aed42;
+    }
   </style>
   <script>
     async function jsonFetch(url, opts) {
@@ -42,7 +110,7 @@
 
     async function getUser() {
       const id = document.getElementById('userId').value.trim();
-      if (!id) return alert('请输入用户ID');
+      if (!id) return alert('Please enter User ID');
       const r = await jsonFetch(`/api/users/${id}`);
       document.getElementById('userOut').textContent = JSON.stringify(r.json, null, 2);
     }
@@ -100,7 +168,7 @@
 
     async function likeWork() {
       const id = document.getElementById('workId').value.trim();
-      if (!id) return alert('请先输入作品ID');
+      if (!id) return alert('Please enter Work ID');
       const r = await jsonFetch(`/api/community/works/${id}/like`, { method: 'POST' });
       document.getElementById('communityOut').textContent = JSON.stringify(r.json, null, 2);
     }
@@ -108,7 +176,7 @@
     async function coCreate() {
       const id = document.getElementById('workId').value.trim();
       const authorId = document.getElementById('userId').value.trim() || 'anon';
-      if (!id) return alert('请先输入作品ID');
+      if (!id) return alert('Please enter Work ID');
       const r = await jsonFetch(`/api/community/works/${id}/cocreate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authorId }) });
       document.getElementById('communityOut').textContent = JSON.stringify(r.json, null, 2);
     }
@@ -120,99 +188,101 @@
 
     async function viewUsage() {
       const id = document.getElementById('userId').value.trim();
-      if (!id) return alert('请先创建或输入用户ID');
+      if (!id) return alert('Please create or enter User ID');
       const r = await jsonFetch(`/api/subscriptions/${id}/usage`);
       document.getElementById('subsOut').textContent = JSON.stringify(r.json, null, 2);
     }
 
     async function consumeQuota() {
       const id = document.getElementById('userId').value.trim();
-      if (!id) return alert('请先创建或输入用户ID');
+      if (!id) return alert('Please create or enter User ID');
       const type = document.getElementById('quotaType').value;
       const r = await jsonFetch(`/api/subscriptions/${id}/consume`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) });
       document.getElementById('subsOut').textContent = JSON.stringify(r.json, null, 2);
     }
   </script>
 </head>
+
 <body>
-  <h1>Kids Art Tales - 演示页面</h1>
-  <div class="muted">快速体验后端能力：健康检查、用户、媒体生成、社区、订阅</div>
+  <h1>Kids Art Tales - Demo Page</h1>
+  <div class="muted">Quickly experience backend capabilities: Health Check, Users, Media Generation, Community,
+    Subscription</div>
   <div class="kpis">
-    <span class="kpi">GET <code>/docs</code> 为 Swagger API 文档</span>
-    <span class="kpi">静态资源来自 <code>/public</code></span>
+    <span class="kpi">GET <code>/docs</code> for Swagger API Docs</span>
+    <span class="kpi">Static assets from <code>/public</code></span>
   </div>
 
   <div class="grid" style="margin-top:16px;">
     <section>
-      <h3>健康检查</h3>
+      <h3>Health Check</h3>
       <div class="row">
-        <button onclick="checkHealth()">检查 /health</button>
+        <button onclick="checkHealth()">Check /health</button>
       </div>
-      <pre id="healthOut">点击上方按钮运行</pre>
+      <pre id="healthOut">Click button above to run</pre>
     </section>
 
     <section>
-      <h3>用户</h3>
+      <h3>Users</h3>
       <div class="row">
-        <input id="userName" placeholder="用户名，默认 Kid Artist" />
-        <button onclick="createUser()">创建用户</button>
+        <input id="userName" placeholder="Username, default Kid Artist" />
+        <button onclick="createUser()">Create User</button>
       </div>
       <div class="row" style="margin-top:8px;">
-        <input id="userId" placeholder="用户ID（自动填入）" />
-        <button onclick="getUser()">获取用户</button>
+        <input id="userId" placeholder="User ID (Auto-filled)" />
+        <button onclick="getUser()">Get User</button>
       </div>
-      <pre id="userOut">等待操作…</pre>
+      <pre id="userOut">Waiting...</pre>
     </section>
 
     <section>
-      <h3>媒体生成</h3>
+      <h3>Media Generation</h3>
       <div class="media">
         <div class="row">
-          <input id="voiceText" placeholder="图像讲述关键词（可选）" />
+          <input id="voiceText" placeholder="Image Story Keywords (Optional)" />
           <input id="imgInput1" type="file" accept="image/*" />
-          <button onclick="genImageToVoice()">图像 → 音频</button>
+          <button onclick="genImageToVoice()">Image → Audio</button>
         </div>
         <div class="row">
-          <input id="imgPrompt" placeholder="卡通图像提示词（可选）" />
+          <input id="imgPrompt" placeholder="Cartoon Prompt (Optional)" />
           <input id="imgInput2" type="file" accept="image/*" />
-          <button onclick="genImageToImage()">图像 → 图像</button>
+          <button onclick="genImageToImage()">Image → Image</button>
         </div>
         <div class="row">
-          <input id="videoPrompt" placeholder="动画提示词（可选）" />
+          <input id="videoPrompt" placeholder="Animation Prompt (Optional)" />
           <input id="imgInput3" type="file" accept="image/*" />
-          <button onclick="genImageToVideo()">图像 → 视频</button>
+          <button onclick="genImageToVideo()">Image → Video</button>
         </div>
         <img id="previewImg" style="max-width:100%;display:none;border-radius:8px;border:1px solid #9996;" />
       </div>
-      <pre id="mediaOut">等待操作…</pre>
+      <pre id="mediaOut">Waiting...</pre>
     </section>
 
     <section>
-      <h3>社区作品</h3>
+      <h3>Community Works</h3>
       <div class="row">
         <select id="workType">
           <option value="audio">audio</option>
           <option value="picture">picture</option>
           <option value="animation">animation</option>
         </select>
-        <input id="workTitle" placeholder="作品标题（可选）" />
+        <input id="workTitle" placeholder="Work Title (Optional)" />
       </div>
       <div class="row" style="margin-top:8px;">
-        <button onclick="publishWork()">发布作品</button>
-        <button onclick="listWorks()">查看作品列表</button>
+        <button onclick="publishWork()">Publish Work</button>
+        <button onclick="listWorks()">List Works</button>
       </div>
       <div class="row" style="margin-top:8px;">
-        <input id="workId" placeholder="作品ID（发布后自动填入）" />
-        <button onclick="likeWork()">点赞</button>
-        <button onclick="coCreate()">协作创作</button>
+        <input id="workId" placeholder="Work ID (Auto-filled)" />
+        <button onclick="likeWork()">Like</button>
+        <button onclick="coCreate()">Co-Create</button>
       </div>
-      <pre id="communityOut">等待操作…</pre>
+      <pre id="communityOut">Waiting...</pre>
     </section>
 
     <section>
-      <h3>订阅与配额</h3>
+      <h3>Subscription & Quota</h3>
       <div class="row">
-        <button onclick="viewPlans()">查看套餐</button>
+        <button onclick="viewPlans()">View Plans</button>
       </div>
       <div class="row" style="margin-top:8px;">
         <select id="quotaType">
@@ -220,16 +290,14 @@
           <option value="animations">animations</option>
           <option value="audioStories">audioStories</option>
         </select>
-        <button onclick="viewUsage()">查看日用量</button>
-        <button onclick="consumeQuota()">消耗一次配额</button>
+        <button onclick="viewUsage()">View Usage</button>
+        <button onclick="consumeQuota()">Consume Quota</button>
       </div>
-      <pre id="subsOut">等待操作…</pre>
+      <pre id="subsOut">Waiting...</pre>
     </section>
   </div>
 
-  <p class="muted">更多接口与字段，请访问 <a href="/docs" target="_blank" rel="noreferrer">Swagger 文档</a>。</p>
+  <p class="muted">For more APIs, visit <a href="/docs" target="_blank" rel="noreferrer">Swagger Docs</a>.</p>
 </body>
+
 </html>
-
-
-

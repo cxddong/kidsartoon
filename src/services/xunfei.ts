@@ -53,8 +53,13 @@ function generateAuthUrl(): string {
  * @param text Text to synthesize
  * @param outputPath Optional output path (must end in .mp3 for mp3 format)
  */
-// Update signature to accept lang
-export async function xunfeiTTS(text: string, outputPath: string = path.join(__dirname, '../audio', `${uuidv4()}.mp3`), lang: string = 'en'): Promise<string> {
+// Update signature to accept lang and options
+export async function xunfeiTTS(
+    text: string,
+    outputPath: string = path.join(__dirname, '../audio', `${uuidv4()}.mp3`),
+    lang: string = 'en',
+    options: { speed?: number, pitch?: number, volume?: number } = {}
+): Promise<string> {
     return new Promise((resolve, reject) => {
         const authUrl = generateAuthUrl();
         const ws = new WebSocket(authUrl);
@@ -81,10 +86,9 @@ export async function xunfeiTTS(text: string, outputPath: string = path.join(__d
                     aue: XUNFEI_CONFIG.aue,
                     sfl: XUNFEI_CONFIG.sfl, // 1 for streaming mp3
                     vcn: voiceName, // Dynamic voice selection
-                    speed: 40, // Slower speed for storytelling
-
-                    volume: 50,
-                    pitch: 45, // Slightly lower pitch for warmth
+                    speed: options.speed ?? 40,
+                    volume: options.volume ?? 50,
+                    pitch: options.pitch ?? 45,
                     tte: 'UTF8' // Text encoding
                 },
                 data: {
@@ -163,6 +167,6 @@ export async function xunfeiTTS(text: string, outputPath: string = path.join(__d
                     reject(new Error("Timeout without audio data"));
                 }
             }
-        }, 15000); // 15s timeout
+        }, 8000); // 8s timeout to prevent long hangs
     });
 }

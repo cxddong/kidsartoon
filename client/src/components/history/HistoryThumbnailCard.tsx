@@ -6,6 +6,7 @@ import type { ImageRecord } from './ImageModal';
 interface HistoryThumbnailCardProps {
     image: ImageRecord;
     onClick: () => void;
+    viewMode?: 'grid' | 'list';
 }
 
 const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onClick, viewMode = 'grid' }) => {
@@ -13,15 +14,15 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
     const getTypeConfig = () => {
         switch (image.type) {
             case 'animation':
-                return { icon: <Play size={12} className="fill-current" />, color: 'bg-purple-500', label: 'Animation' };
+                return { icon: <Play size={20} className="fill-current" />, color: 'bg-purple-500', label: 'Animation' };
             case 'comic':
-                return { icon: <BookOpen size={12} />, color: 'bg-orange-500', label: 'Comic' };
+                return { icon: <BookOpen size={20} />, color: 'bg-orange-500', label: 'Picture Book' };
             case 'story':
-                return { icon: <BookOpen size={12} />, color: 'bg-blue-500', label: 'Story' };
+                return { icon: <BookOpen size={20} />, color: 'bg-blue-500', label: 'Story' };
             case 'generated':
-                return { icon: <ImageIcon size={12} />, color: 'bg-green-500', label: 'Picture Book' };
+                return { icon: <ImageIcon size={20} />, color: 'bg-pink-500', label: 'Greeting Card' };
             default:
-                return { icon: <ImageIcon size={12} />, color: 'bg-slate-500', label: 'Image' };
+                return { icon: <ImageIcon size={20} />, color: 'bg-slate-500', label: 'Image' };
         }
     };
 
@@ -52,7 +53,7 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
                         </span>
                         <span className="text-xs text-slate-400">{new Date(image.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <p className="font-bold text-slate-800 text-sm truncate">{image.prompt || "Untitled Artwork"}</p>
+                    {/* Removed prompt display */}
                 </div>
 
                 {/* Actions */}
@@ -76,7 +77,7 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
         >
             <img
                 src={image.imageUrl}
-                alt={image.prompt || "Artwork"}
+                alt="Artwork"
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 loading="lazy"
             />
@@ -90,10 +91,10 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
                 </div>
             )}
 
-            {/* Type Badge */}
-            <div className={`absolute top-2 left-2 px-2 py-1 ${typeConfig.color} text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 z-10`}>
+            {/* Type Badge - Enlarged & Vertical */}
+            <div className={`absolute top-2 left-2 px-2 py-2 ${typeConfig.color} text-white rounded-xl shadow-md flex flex-col items-center justify-center gap-0.5 z-10 min-w-[50px]`}>
                 {typeConfig.icon}
-                {typeConfig.label}
+                <span className="text-[9px] font-black uppercase tracking-wider leading-none shadow-black drop-shadow-sm">{typeConfig.label}</span>
             </div>
 
             {/* Bottom Info */}
@@ -101,11 +102,6 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
                 <p className="text-xs font-medium truncate opacity-90">
                     {new Date(image.createdAt).toLocaleDateString()}
                 </p>
-                {image.prompt && (
-                    <p className="text-xs font-bold truncate">
-                        {image.prompt}
-                    </p>
-                )}
             </div>
         </motion.div>
     );

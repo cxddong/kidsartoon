@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-// API Key 存储（生产环境应使用数据库）
+// API Key storage (Use database in production)
 const apiKeys = new Map<string, {
   key: string;
   userId?: string;
@@ -11,10 +11,10 @@ const apiKeys = new Map<string, {
   requestsCount: number;
 }>();
 
-// 从环境变量加载默认 API key
+// Load default API key from environment variables
 const DEFAULT_API_KEY = process.env.API_KEY || 'dev-key-12345';
 
-// 初始化默认 API key
+// Initialize default API key
 if (!apiKeys.has(DEFAULT_API_KEY)) {
   apiKeys.set(DEFAULT_API_KEY, {
     key: DEFAULT_API_KEY,
@@ -25,33 +25,33 @@ if (!apiKeys.has(DEFAULT_API_KEY)) {
 }
 
 /**
- * API Key 认证中间件
- * 支持从以下位置获取 API key:
+ * API Key Authentication Middleware
+ * Supports getting API key from:
  * 1. Header: X-API-Key
  * 2. Header: Authorization: Bearer <key>
  * 3. Query parameter: apiKey
  */
 export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
-  // 获取 API key
+  // Get API key
   let apiKey: string | undefined;
 
-  // 1. 从 Header X-API-Key 获取
+  // 1. From Header X-API-Key
   if (req.headers['x-api-key']) {
     apiKey = req.headers['x-api-key'] as string;
   }
-  // 2. 从 Authorization Bearer 获取
+  // 2. From Authorization Bearer
   else if (req.headers.authorization) {
     const authHeader = req.headers.authorization;
     if (authHeader.startsWith('Bearer ')) {
       apiKey = authHeader.substring(7);
     }
   }
-  // 3. 从 Query 参数获取
+  // 3. From Query parameter
   else if (req.query.apiKey) {
     apiKey = req.query.apiKey as string;
   }
 
-  // 如果没有提供 API key
+  // If no API key provided
   if (!apiKey) {
     return res.status(401).json({
       error: 'Unauthorized',
@@ -59,7 +59,7 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
     });
   }
 
-  // 验证 API key
+  // Validate API key
   const keyData = apiKeys.get(apiKey);
   if (!keyData) {
     return res.status(401).json({
@@ -68,11 +68,11 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
     });
   }
 
-  // 更新使用信息
+  // Update usage info
   keyData.lastUsed = new Date().toISOString();
   keyData.requestsCount += 1;
 
-  // 将 API key 信息附加到请求对象
+  // Attach API key info to request object
   (req as any).apiKey = apiKey;
   (req as any).apiKeyData = keyData;
 
@@ -80,7 +80,7 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
- * 可选的 API Key 认证（不强制要求）
+ * Optional API Key Authentication (Not mandatory)
  */
 export function optionalApiKeyAuth(req: Request, res: Response, next: NextFunction) {
   let apiKey: string | undefined;
@@ -107,11 +107,11 @@ export function optionalApiKeyAuth(req: Request, res: Response, next: NextFuncti
 }
 
 /**
- * API Key 管理函数
+ * API Key Manager
  */
 export const apiKeyManager = {
   /**
-   * 生成新的 API key
+   * Generate new API key
    */
   generateKey(name: string, userId?: string): string {
     const key = `kat_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
@@ -126,45 +126,45 @@ export const apiKeyManager = {
   },
 
   /**
-   * 验证 API key
+   * Validate API key
    */
   validateKey(key: string): boolean {
     return apiKeys.has(key);
   },
 
   /**
-   * 获取 API key 信息
+   * Get API key info
    */
   getKeyInfo(key: string) {
     return apiKeys.get(key);
   },
 
   /**
-   * 列出所有 API keys（管理员功能）
+   * List all API keys (Admin function)
    */
   listKeys() {
     return Array.from(apiKeys.values()).map(({ key, ...rest }) => ({
-      key: key.substring(0, 10) + '...', // 只显示部分 key
+      key: key.substring(0, 10) + '...', // Show partial key only
       ...rest,
     }));
   },
 
   /**
-   * 删除 API key
+   * Delete API key
    */
   deleteKey(key: string): boolean {
     return apiKeys.delete(key);
   },
 
   /**
-   * 获取存储对象（用于管理）
+   * Get storage object (for management)
    */
   getStorage() {
     return apiKeys;
   },
 };
 
-// 类型声明
+// Type declarations
 declare global {
   namespace Express {
     interface Request {
