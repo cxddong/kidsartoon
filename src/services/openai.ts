@@ -59,27 +59,38 @@ YOUR GOAL: Help the child animate their drawing based on WHAT YOU SEE.
 CRITICAL RULES:
 1. **LOOK FIRST:** Always analyze the user's uploaded image first.
 2. **BE SPECIFIC:** Don't just say "cool drawing". Say "Wow, that's a cute [DOG/CAR/TREE]!" based on the image.
-3. **FALLBACK:** If the image is messy or unclear, DO NOT guess wildly. Instead, ask: "This looks interesting! Can you tell me what you drew?"
-4. **NO ROBOT TALK:** Be enthusiastic and encouraging. Use simple English.
-5. **ALWAYS OUTPUT JSON**.
+3. **ASSESS CLARITY:** Determine if you can confidently identify the subject (confidence 0-1).
+4. **ASK IF UNCLEAR:** If confidence < 0.7, ask the user what they drew before proceeding.
+5. **NO ROBOT TALK:** Be enthusiastic and encouraging. Use simple English.
+6. **ALWAYS OUTPUT JSON**.
 
 CONVERSATION FLOW:
-- **Scenario A (Clear Image):** - User uploads a cat.
-  - You: "I see a fluffy cat! Do you want it to jump, meow, or run?"
+- **Scenario A (Clear Image, confidence >= 0.7):**
+  - User uploads a cat.
+  - You: "I see a fluffy cat! Let's make it come alive!" 
+  - Output: confidence: 0.9, readyToGenerate: true
   
-- **Scenario B (Unclear/Abstract Image):**
+- **Scenario B (Unclear/Abstract Image, confidence < 0.7):**
   - User uploads scribbles.
-  - You: "Ooh, colorful! Is this a magic monster or a fast car? Tell me about it!"
+  - You: "Ooh, colorful! Can you tell me what you drew?"
+  - Output: confidence: 0.4, readyToGenerate: false, needsClarification: true
 
-- **Scenario C (Action Confirmation):**
-  - User says: "It's a monster."
-  - You: "A monster! Should it roar or dance?"
-  - User says: "Dance."
-  - You: "Dancing monster coming up!" (Then output action tag)
+- **Scenario C (After Clarification):**
+  - User says: "It's a dancing robot!"
+  - You: "A dancing robot! Let's animate it!"
+  - Output: confidence: 0.8, readyToGenerate: true
+
+DECISION LOGIC:
+- confidence >= 0.7 AND tags.subject exists → readyToGenerate: true
+- confidence < 0.7 OR no clear subject → readyToGenerate: false, needsClarification: true
+- After user clarifies → Update tags and set readyToGenerate: true
 
 Output JSON Schema:
 {
   "sparkleTalk": "Your spoken reply.",
+  "confidence": 0.0-1.0,
+  "readyToGenerate": true/false,
+  "needsClarification": true/false (optional),
   "tags": {
     "action": "...",
     "subject": "...",
@@ -163,11 +174,19 @@ Output JSON Schema:
                 return {
                     sparkleTalk: parsed.sparkleTalk,
                     tags: parsed.tags,
-                    text: parsed.sparkleTalk
+                    text: parsed.sparkleTalk,
+                    confidence: parsed.confidence || 0.5,
+                    readyToGenerate: parsed.readyToGenerate || false,
+                    needsClarification: parsed.needsClarification || false
                 };
             } catch (e) {
                 console.error("[OpenAI] JSON Parse Failed:", e);
-                return { sparkleTalk: "I got a bit confused! Let's try again. ✨" };
+                return {
+                    sparkleTalk: "I got a bit confused! Let's try again. ✨",
+                    confidence: 0,
+                    readyToGenerate: false,
+                    needsClarification: true
+                };
             }
 
         } catch (e: any) {

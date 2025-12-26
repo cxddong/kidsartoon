@@ -78,9 +78,20 @@ export const MagicLabPage: React.FC = () => {
         }
     };
 
-    const handleSparkleTags = (tags: any) => {
-        console.log("Magic Lab caught tags:", tags);
-        setExtractedTags(tags);
+    const handleSparkleTags = (response: any) => {
+        console.log("Magic Lab caught response:", response);
+        setExtractedTags(response.tags);
+
+        // NEW: Auto-generate if AI indicates ready
+        if (response.readyToGenerate && response.tags && imageFile) {
+            console.log("✨ AI is confident! Auto-generating...");
+            // Small delay for better UX (let user hear the response first)
+            setTimeout(() => {
+                handleTransform();
+            }, 2000);
+        } else if (response.needsClarification) {
+            console.log("🤔 AI needs more info, waiting for user input...");
+        }
     };
 
     const handleTransform = async () => {

@@ -264,7 +264,9 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
             });
             const data = await response.json();
 
-            if (data.tags) onTagsExtracted(data.tags);
+            // Pass full response to parent (not just tags)
+            if (data) onTagsExtracted(data);
+
             if (data.sparkleTalk) {
                 speak(data.sparkleTalk, 'en-US', () => {
                     // Loop: Always listen after responding
