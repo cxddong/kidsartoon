@@ -193,9 +193,12 @@ export const GeneratePage: React.FC = () => {
                                         style={{ scale: 1.2 }}
                                     />
                                     {/* Overlay Text inside the circle */}
-                                    <div className="absolute inset-x-0 bottom-4 flex justify-center">
-                                        <span className="text-sm md:text-lg font-black text-white drop-shadow-[0_2px_2px_rgba(0,0,0,1)] tracking-wider text-center leading-tight">
-                                            MAGIC<br />LAB
+                                    <div className="absolute inset-x-0 bottom-3 flex flex-col items-center justify-center">
+                                        <span className="text-[10px] md:text-xs font-black text-white drop-shadow-[0_2px_2px_rgba(0,0,0,1)] tracking-wider text-center leading-tight">
+                                            SPARKLE<br />CHAT ✨
+                                        </span>
+                                        <span className="text-[6px] md:text-[8px] text-white/80 font-bold mt-0.5">
+                                            Talk & Create
                                         </span>
                                     </div>
                                 </div>

@@ -7,6 +7,9 @@ import { SparkleVoiceFab } from '../components/sparkle/SparkleVoiceFab';
 import { cn } from '../lib/utils';
 import { RechargeModal } from '../components/payment/RechargeModal';
 import { MagicFireworks } from '../components/effects/MagicFireworks';
+import { WelcomeCard } from '../components/magic/WelcomeCard';
+import { QuickChips } from '../components/magic/QuickChips';
+import { MagicOverlay } from '../components/magic/MagicOverlay';
 import { useAuth } from '../context/AuthContext'; // Making sure we have auth
 import { getAuth } from 'firebase/auth'; // Direct auth fallback
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore'; // Direct firestore for speed or use service
@@ -28,6 +31,8 @@ export const MagicLabPage: React.FC = () => {
     const [magicResult, setMagicResult] = useState<string | null>(null);
     const [isTransforming, setIsTransforming] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const [showWelcome, setShowWelcome] = useState(true);
+    const [showChips, setShowChips] = useState(false);
 
     // Credit System
     // Credit System
@@ -61,6 +66,7 @@ export const MagicLabPage: React.FC = () => {
             const url = URL.createObjectURL(file);
             setImagePreview(url);
             setMagicResult(null);
+            setShowWelcome(false); // Hide welcome card on upload
 
             // Trigger Vision Analysis (Vision Capability)
             const reader = new FileReader();
@@ -82,9 +88,15 @@ export const MagicLabPage: React.FC = () => {
         console.log("Magic Lab caught response:", response);
         setExtractedTags(response.tags);
 
+        // Show quick chips after analysis (if not auto-generating)
+        if (response.tags && !response.readyToGenerate) {
+            setShowChips(true);
+        }
+
         // NEW: Auto-generate if AI indicates ready
         if (response.readyToGenerate && response.tags && imageFile) {
             console.log("✨ AI is confident! Auto-generating...");
+            setShowChips(false);
             // Small delay for better UX (let user hear the response first)
             setTimeout(() => {
                 handleTransform();
@@ -92,6 +104,23 @@ export const MagicLabPage: React.FC = () => {
         } else if (response.needsClarification) {
             console.log("🤔 AI needs more info, waiting for user input...");
         }
+    };
+
+    const handleChipSelect = (action: 'movie' | 'story' | 'comic') => {
+        console.log("User selected:", action);
+        setShowChips(false);
+        // Trigger corresponding action
+        if (sparkleRef.current) {
+            const actionText = action === 'movie' ? 'Make a movie' : action === 'story' ? 'Write a story' : 'Draw a comic';
+            sparkleRef.current.triggerSpeak(
+                `Got it! Let's ${actionText.toLowerCase()}!`,
+                undefined
+            );
+        }
+        // Auto-trigger generation
+        setTimeout(() => {
+            handleTransform();
+        }, 1500);
     };
 
     const handleTransform = async () => {
@@ -174,9 +203,9 @@ export const MagicLabPage: React.FC = () => {
                     </button>
                     <div className="flex flex-col">
                         <h1 className="text-2xl md:text-3xl font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
-                            Magic Cinema 🎬
+                            Sparkle Chat ✨
                         </h1>
-                        <p className="text-white/80 text-sm font-bold">Let's make a Movie!</p>
+                        <p className="text-white/80 text-sm font-bold">Talk & Create (说话就能变)</p>
                     </div>
                 </div>
 
