@@ -263,18 +263,25 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                     </div>
                 </div>
 
-                {/* Generate Button (Main Action) */}
+                {/* Generate Button (Desktop - In Flow) */}
                 <button
-                    onClick={() => onGenerate({
-                        storyType: selectedMoodId, // Use the ID (e.g. mood_victory)
-                        visualStyle: visualStyleId,
-                        characters: [selectedCharacterId, selectedSidekickId].filter(Boolean)
-                    })}
+                    onClick={handleGenerateClick}
                     disabled={!isReady}
-                    className="w-full max-w-sm py-4 rounded-full text-white font-black text-xl shadow-xl shadow-orange-500/20 bg-gradient-to-r from-yellow-400 to-orange-500 hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="hidden md:block w-full max-w-sm py-4 rounded-full text-white font-black text-xl shadow-xl shadow-orange-500/20 bg-gradient-to-r from-yellow-400 to-orange-500 hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Generate Comic! 🚀 (Costs 40 Points)
+                    Generate Comic! 🚀 (40 Pts)
                 </button>
+
+                {/* Generate Button (Mobile - Fixed Bottom) */}
+                <div className="md:hidden fixed bottom-20 left-4 right-4 z-50">
+                    <button
+                        onClick={handleGenerateClick}
+                        disabled={!isReady}
+                        className="w-full py-4 rounded-full text-white font-black text-xl shadow-[0_0_20px_rgba(249,115,22,0.5)] bg-gradient-to-r from-yellow-400 to-orange-500 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed border-4 border-white"
+                    >
+                        Generate! 🚀 (40 Pts)
+                    </button>
+                </div>
             </div>
 
             {/* Right Column: MOOD ZONE + MAGIC QUEST */}

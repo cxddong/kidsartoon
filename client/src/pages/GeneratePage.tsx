@@ -129,7 +129,7 @@ export const GeneratePage: React.FC = () => {
                                 className="flex items-center gap-4 group justify-start relative px-1 py-1"
                             >
                                 <div className={cn(
-                                    "w-14 h-14 flex items-center justify-center transition-transform duration-300 group-active:scale-95 group-hover:scale-110",
+                                    "w-24 h-24 flex items-center justify-center transition-transform duration-300 group-active:scale-95 group-hover:scale-110",
                                     (opt as any).image || (opt as any).video ? "" : `${opt.color} text-white rounded-full shadow-lg`
                                 )}>
                                     {(opt as any).video ? (
@@ -157,15 +157,11 @@ export const GeneratePage: React.FC = () => {
                                             style={{ scale: (opt as any).imageScale || 1.0 }}
                                         />
                                     ) : (
-                                        <opt.icon className="w-8 h-8" />
+                                        <opt.icon className="w-10 h-10" />
                                     )}
                                 </div>
-                                <span className={cn(
-                                    "text-xl font-bold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] tracking-wide group-hover:text-yellow-300 transition-colors",
-                                    "bg-black/20 px-3 py-1 rounded-full backdrop-blur-[2px]"
-                                )}>
-                                    {opt.title}
-                                </span>
+                                {/* Text Hidden as requested */}
+                                {/* <span className={cn(...) }>{opt.title}</span> */}
                             </motion.button>
                         ))}
                     </div>
@@ -183,9 +179,8 @@ export const GeneratePage: React.FC = () => {
                                 {/* Glow Effect */}
                                 <div className="absolute inset-0 bg-purple-500/30 blur-3xl rounded-full group-hover:bg-purple-500/50 transition-all duration-500" />
 
-                                {/* Reduced Size Again: w-48/64 -> w-40/56 */}
-                                {/* Reduced Size Again: w-32/48 */}
-                                <div className="w-32 h-32 md:w-48 md:h-48 relative z-10 rounded-full border-4 border-white/50 shadow-[0_0_50px_rgba(168,85,247,0.6)] overflow-hidden bg-black/40 backdrop-blur-sm">
+                                {/* Reduced Size: w-24 h-24 md:w-32 md:h-32 */}
+                                <div className="w-24 h-24 md:w-32 md:h-32 relative z-10 rounded-full border-4 border-white/50 shadow-[0_0_30px_rgba(168,85,247,0.6)] overflow-hidden bg-black/40 backdrop-blur-sm">
                                     <video
                                         src={(opt as any).video}
                                         autoPlay
@@ -198,15 +193,13 @@ export const GeneratePage: React.FC = () => {
                                         style={{ scale: 1.2 }}
                                     />
                                     {/* Overlay Text inside the circle */}
-                                    <div className="absolute inset-x-0 bottom-6 flex justify-center">
-                                        <span className="text-xl md:text-2xl font-black text-white drop-shadow-[0_4px_4px_rgba(0,0,0,1)] tracking-wider">
-                                            MAGIC LAB ✨
+                                    <div className="absolute inset-x-0 bottom-4 flex justify-center">
+                                        <span className="text-sm md:text-lg font-black text-white drop-shadow-[0_2px_2px_rgba(0,0,0,1)] tracking-wider text-center leading-tight">
+                                            MAGIC<br />LAB
                                         </span>
                                     </div>
                                 </div>
-                                <div className="mt-4 text-white/80 font-bold text-lg animate-pulse">
-                                    ✨ Click to Transform! ✨
-                                </div>
+                                {/* Removed External Text */}
                             </motion.button>
                         </div>
                     ))}
@@ -223,19 +216,12 @@ export const GeneratePage: React.FC = () => {
                                 className="flex items-center gap-4 group justify-end flex-row-reverse relative px-1 py-1"
                             >
                                 <div className={cn(
-                                    "w-14 h-14 flex items-center justify-center transition-transform duration-300 group-active:scale-95 group-hover:scale-110",
+                                    "w-24 h-24 flex items-center justify-center transition-transform duration-300 group-active:scale-95 group-hover:scale-110",
                                     (opt as any).image || (opt as any).video ? "" : `${opt.color} text-white rounded-2xl shadow-lg`
                                 )}>
-                                    {/* Simple Icon for now as configured in options */}
-                                    {/* But Greeting Card might not have video/image set correctly? It uses Gift icon in options */}
-                                    <opt.icon className="w-8 h-8" />
+                                    <opt.icon className="w-10 h-10" />
                                 </div>
-                                <span className={cn(
-                                    "text-xl font-bold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] tracking-wide group-hover:text-yellow-300 transition-colors",
-                                    "bg-black/20 px-3 py-1 rounded-full backdrop-blur-[2px]"
-                                )}>
-                                    {opt.title}
-                                </span>
+                                {/* Text Hidden */}
                             </motion.button>
                         ))}
                     </div>
