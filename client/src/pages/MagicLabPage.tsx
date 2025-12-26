@@ -69,9 +69,10 @@ export const MagicLabPage: React.FC = () => {
                 const base64 = reader.result?.toString().split(',')[1];
                 if (base64 && sparkleRef.current) {
                     // Auto-Trigger AI Analysis (Hands-Free)
+                    // Wait longer to avoid conflict with welcome greeting
                     setTimeout(() => {
                         sparkleRef.current.triggerAnalysis(base64);
-                    }, 500);
+                    }, 1500);
                 }
             };
         }

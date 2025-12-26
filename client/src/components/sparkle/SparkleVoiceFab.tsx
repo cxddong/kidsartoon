@@ -245,6 +245,9 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
     };
 
     const handleChat = async (text: string, imageOverride?: string) => {
+        // CRITICAL: Stop listening first to prevent stuck state
+        stopEverything();
+
         setIsProcessing(true);
         try {
             // Send to Backend
