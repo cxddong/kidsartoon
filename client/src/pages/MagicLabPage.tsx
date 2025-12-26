@@ -332,6 +332,17 @@ export const MagicLabPage: React.FC = () => {
             {/* --- Bottom Controls --- */}
             {/* --- Bottom Controls REMOVED user request --- */}
 
+            {/* NEW: Welcome Card */}
+            <WelcomeCard isVisible={showWelcome && !imageFile} />
+
+            {/* NEW: Quick Chips */}
+            <div className="fixed bottom-24 left-0 right-0 z-40">
+                <QuickChips isVisible={showChips} onSelect={handleChipSelect} />
+            </div>
+
+            {/* NEW: Magic Overlay */}
+            <MagicOverlay isVisible={isTransforming} />
+
             <BottomNav />
         </div>
     );
