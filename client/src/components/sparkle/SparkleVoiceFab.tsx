@@ -100,17 +100,19 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
         }
     }));
 
-    // Auto-Greeting on Mount
+    // Auto-Greeting on Mount (Singleton Pattern)
+    const hasGreetedRef = useRef(false);
+
     useEffect(() => {
-        // Only if autoStart is requested (or default behavior for Magic Lab)
-        // User asked: "进场自动说话" (Auto speak on enter)
-        if (!hasStarted) {
+        // Strict Mode Protection: Only greet once per session
+        if (!hasGreetedRef.current && !hasStarted) {
+            hasGreetedRef.current = true;
             setHasStarted(true);
             playUiSound('pop');
             speakWelcome();
         }
         return () => stopEverything();
-    }, []);
+    }, []); // Empty deps to ensure only once
 
     const speakWelcome = () => {
         const text = WELCOME_SCRIPTS['en-US'];

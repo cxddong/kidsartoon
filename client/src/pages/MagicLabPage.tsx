@@ -155,7 +155,7 @@ export const MagicLabPage: React.FC = () => {
             <header className="p-4 flex items-center justify-between gap-4 z-10">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate('/home')}
+                        onClick={() => navigate('/generate')}
                         className="p-2 bg-white/20 backdrop-blur-md rounded-full hover:bg-white/40 transition-all"
                     >
                         <ArrowLeft className="w-8 h-8 text-black" />
