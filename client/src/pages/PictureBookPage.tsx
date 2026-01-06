@@ -42,6 +42,7 @@ export const PictureBookPage: React.FC = () => {
 
     // Cropper State
     const [cropImage, setCropImage] = useState<string | null>(null);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -247,7 +248,10 @@ export const PictureBookPage: React.FC = () => {
                             >
                                 {/* Embedded Upload Box */}
                                 <div className="relative w-full h-full flex items-center justify-center flex-col overflow-hidden hover:scale-105 transition-all group cursor-pointer"
-                                    onClick={() => document.getElementById('book-upload')?.click()}
+                                    onClick={() => {
+                                        console.log('[PictureBook] Upload box clicked');
+                                        fileInputRef.current?.click();
+                                    }}
                                 >
                                     {/* Video Background (Restored) */}
                                     <video
@@ -260,9 +264,16 @@ export const PictureBookPage: React.FC = () => {
                                         disablePictureInPicture
                                     />
 
-                                    <input type="file" id="book-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        id="book-upload"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                    />
                                     {imagePreview && (
-                                        <img src={imagePreview} className="relative z-10 w-full h-full object-cover" />
+                                        <img src={imagePreview} alt="Uploaded preview" className="relative z-10 w-full h-full object-cover pointer-events-none" />
                                     )}
                                 </div>
                             </PictureBookBuilderPanel>
