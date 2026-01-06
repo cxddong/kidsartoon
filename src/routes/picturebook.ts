@@ -27,13 +27,34 @@ const characterPrompts: Record<string, string> = {
 
 router.post('/create', async (req, res) => {
     try {
-        const { userId, imageUrl, theme, pageCount = 4, character } = req.body;
+        const { userId, imageUrl, theme, pageCount = 4, character, vibe, illustrationStyle } = req.body;
 
         if (!userId || !imageUrl || !theme) {
             return res.status(400).json({ error: 'Missing required fields: userId, imageUrl, theme' });
         }
 
-        console.log(`[PictureBookV2] Starting for ${userId}. Theme: ${theme}, Pages: ${pageCount}`);
+        console.log(`[PictureBookV2] Starting for ${userId}. Theme: ${theme}, Vibe: ${vibe}, Style: ${illustrationStyle}, Pages: ${pageCount}`);
+
+        // --- New V2 Logic: Vibe & Style Prompts ---
+        const VIBE_PROMPTS: Record<string, string> = {
+            vibe_bedtime: "Tone: Soothing, gentle, slow, whispering. Plot: No scary conflicts. Focus on relaxation, dreams, and saying goodnight. Ending is very calm.",
+            vibe_funny: "Tone: Silly, humorous, playful. Plot: Include jokes, clumsy mistakes, funny sounds, and unexpected twists. Make the child laugh aloud.",
+            vibe_adventure: "Tone: Exciting, energetic, fast-paced. Plot: A journey, overcoming small obstacles, bravery, discovery. A clear Hero's Journey structure.",
+            vibe_mystery: "Tone: Curious, mysterious (but not scary), inquisitive. Plot: Someone lost something? A strange footprint? Follow clues to find the answer.",
+            vibe_heartwarm: "Tone: Emotional, sweet, caring. Plot: Focus on friendship, sharing, helping others, and gratitude. A big hug at the end."
+        };
+
+        const STYLE_PROMPTS: Record<string, string> = {
+            style_3d: "pixar style 3d render, cgsociety, cute shape, vibrant lighting, smooth texture, high fidelity",
+            style_watercolor: "soft watercolor painting, pastel colors, beatrix potter style, storybook illustration, dreamy, artistic",
+            style_paper: "layered paper art, paper cutout style, origami texture, 3d depth, craft aesthetic, shadow depth",
+            style_clay: "plasticine texture, claymation style, aardman animation style, handmade look, soft rounded edges",
+            style_doodle: "children's crayon drawing, colorful markers, simple lines, cute doodle, white background, sketchy",
+            style_real: "photorealistic, 8k resolution, cinematic lighting, cute photography, macro lens, highly detailed fur/texture"
+        };
+
+        const selectedVibePrompt = VIBE_PROMPTS[vibe] || VIBE_PROMPTS['vibe_adventure'];
+        const selectedStylePrompt = STYLE_PROMPTS[illustrationStyle] || ""; // Will append to visual prompt
 
         // 1. Calculate and Deduct Points
         let cost = POINT_COSTS.PICTURE_BOOK_4;
@@ -52,8 +73,11 @@ router.post('/create', async (req, res) => {
 
         // 3. Step B: Story Generation (With Validation)
         console.log('[PictureBookV2] Step 1: Story Generation...');
+        // Append Vibe Instruction to Theme to guide the story tone
+        const enhancedTheme = `${theme}. ${selectedVibePrompt}`;
+
         const storyInput = {
-            theme: theme,
+            theme: enhancedTheme,
             character_description: anchors.character_description,
             page_count: pageCount
         };
@@ -92,7 +116,11 @@ router.post('/create', async (req, res) => {
             // Construct Prompt: Style + Char + Action
             // Force "No Text" to avoid artifacts
             const charDesc = character ? (characterPrompts[character] || "") : "";
-            const basePrompt = `${anchors.art_style}. ${anchors.character_description}`;
+
+            // Override or Augment Art Style
+            // If user selected a specific style, use it. Otherwise fall back to anchor style.
+            const artStyle = selectedStylePrompt || anchors.art_style;
+            const basePrompt = `${artStyle}. ${anchors.character_description}`;
 
             // Inject specific character style if selected
             const characterInjection = charDesc ? `, featuring a ${charDesc}` : "";
@@ -138,13 +166,12 @@ router.post('/create', async (req, res) => {
         await databaseService.saveImageRecord(
             userId,
             coverImage,
-            'story',
+            'picturebook',
             theme,
             {
-                pages: renderedPages,
-                anchors,
                 pageCount,
-                version: 'v2'
+                version: 'v2',
+                originalImageUrl: imageUrl // Persist original upload
             }
         );
 

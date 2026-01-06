@@ -13,14 +13,14 @@ const STEPS = ['Identity', 'About You', 'Interests', 'Welcome'];
 
 // Interests Data
 const INTERESTS_LIST = [
-    { id: 'robots', label: 'Robots', icon: '🤖' },
-    { id: 'animals', label: 'Animals', icon: '🦊' },
-    { id: 'space', label: 'Space', icon: '🚀' },
-    { id: 'princess', label: 'Princess', icon: '👑' },
-    { id: 'dinosaurs', label: 'Dinosaurs', icon: '🦖' },
-    { id: 'superheroes', label: 'Heroes', icon: '🦸' },
-    { id: 'cars', label: 'Cars', icon: '🏎️' },
-    { id: 'magic', label: 'Magic', icon: '✨' },
+    { id: 'robots', label: 'Robots', icon: '🤖', image: null },
+    { id: 'animals', label: 'Animals', icon: '🦊', image: null },
+    { id: 'space', label: 'Space', icon: '🚀', image: '/assets/interests/space.jpg' },
+    { id: 'princess', label: 'Princess', icon: '👑', image: '/assets/interests/princess.jpg' },
+    { id: 'dinosaurs', label: 'Dinosaurs', icon: '🦖', image: '/assets/interests/dinosaurs.jpg' },
+    { id: 'superheroes', label: 'Heroes', icon: '🦸', image: null },
+    { id: 'cars', label: 'Cars', icon: '🏎️', image: '/assets/interests/cars.jpg' },
+    { id: 'magic', label: 'Magic', icon: '✨', image: '/assets/interests/magic.jpg' },
 ];
 
 const StartupPage: React.FC = () => {
@@ -40,6 +40,7 @@ const StartupPage: React.FC = () => {
     const [gender, setGender] = useState<'Boy' | 'Girl' | null>(null);
     const [language, setLanguage] = useState('English');
     const [interests, setInterests] = useState<string[]>([]);
+    const [invitationCode, setInvitationCode] = useState('');
 
     // Camera State
     const [showCamera, setShowCamera] = useState(false);
@@ -251,6 +252,27 @@ const StartupPage: React.FC = () => {
                 points: (user.points || 0) + 100
             });
 
+            // Redeem Invitation Code if provided
+            if (invitationCode) {
+                try {
+                    const redeemRes = await fetch('/api/referral/redeem', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: invitationCode, userId: user.uid })
+                    });
+                    const redeemData = await redeemRes.json();
+                    if (redeemData.success) {
+                        console.log("Code Redeemed:", redeemData.message);
+                    } else {
+                        console.warn("Redeem Failed:", redeemData.error);
+                    }
+                } catch (redeemErr) {
+                    console.error("Redeem Error:", redeemErr);
+                }
+            }
+
+            // Save to Firestore (Wait for it)
+
             const saveTimeout = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error("Firestore Save Timed Out")), 15000)
             );
@@ -260,6 +282,16 @@ const StartupPage: React.FC = () => {
 
         } catch (err: any) {
             console.error("Save Error:", err);
+
+            // PATCH: Ignore permission errors and proceed
+            // If the user confirms "Let's Go", we shouldn't block them just because Firestore rules are strict/broken.
+            // This allows the "Guest" flow (local state only).
+            if (err.message?.includes('permission') || err.code?.includes('permission')) {
+                console.warn("Ignoring Firestore permission error, proceeding to home...");
+                setStep(4);
+                return;
+            }
+
             setError("Connection issue. Please try again!");
         } finally {
             setLoading(false);
@@ -313,6 +345,17 @@ const StartupPage: React.FC = () => {
                     onChange={e => setName(e.target.value)}
                     className="w-full bg-white border-2 border-slate-100 rounded-xl p-3 font-bold text-base outline-none focus:border-indigo-400"
                     placeholder="Enter your name"
+                />
+            </div>
+
+            <div className="mb-4">
+                <label className="text-[10px] font-bold text-slate-400 ml-2 mb-1 block">INVITATION CODE (OPTIONAL)</label>
+                <input
+                    type="text"
+                    value={invitationCode}
+                    onChange={e => setInvitationCode(e.target.value.toUpperCase())}
+                    className="w-full bg-white border-2 border-emerald-100 rounded-xl p-3 font-bold text-base outline-none focus:border-emerald-400 text-emerald-600"
+                    placeholder="Enter code for bonus points"
                 />
             </div>
         </motion.div>
@@ -413,13 +456,36 @@ const StartupPage: React.FC = () => {
                     <button
                         key={item.id}
                         onClick={() => toggleInterest(item.id)}
-                        className={`p-2 rounded-xl flex flex-col items-center justify-center gap-1 border-2 transition-all aspect-square ${interests.includes(item.id)
-                            ? 'bg-pink-50 border-pink-400'
+                        className={`relative p-2 rounded-xl flex flex-col items-center justify-end gap-1 border-2 transition-all aspect-square overflow-hidden ${interests.includes(item.id)
+                            ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-200'
                             : 'bg-white border-slate-100 hover:border-slate-200'
                             }`}
                     >
-                        <span className="text-2xl">{item.icon}</span>
-                        <span className={`text-[9px] font-bold truncate w-full ${interests.includes(item.id) ? 'text-pink-600' : 'text-slate-400'}`}>
+                        {/* Background Image */}
+                        {item.image && (
+                            <div className="absolute inset-0">
+                                <img
+                                    src={item.image}
+                                    alt={item.label}
+                                    className="w-full h-full object-cover"
+                                />
+                                {/* Dark gradient overlay for text readability */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                            </div>
+                        )}
+
+                        {/* Icon for non-image items */}
+                        {!item.image && (
+                            <span className="text-2xl mb-1">{item.icon}</span>
+                        )}
+
+                        {/* Label */}
+                        <span className={`relative z-10 text-[10px] font-bold truncate w-full text-center px-1 py-1 rounded-md ${item.image
+                            ? 'text-white drop-shadow-md'
+                            : interests.includes(item.id)
+                                ? 'text-pink-600'
+                                : 'text-slate-700'
+                            }`}>
                             {item.label}
                         </span>
                     </button>

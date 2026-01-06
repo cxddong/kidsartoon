@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import splashVideo from '../assets/startmagic.mp4';
+import splashVideo from '../assets/splash.mp4';
 
 export const SplashPage: React.FC = () => {
     const navigate = useNavigate();
@@ -12,28 +12,27 @@ export const SplashPage: React.FC = () => {
     useEffect(() => {
         const timer = setTimeout(() => {
             setShowButton(true);
-        }, 10000); // 10 seconds
+        }, 8000); // 8 seconds
 
         return () => clearTimeout(timer);
     }, []);
 
     const handleEnter = () => {
-        navigate('/home');
+        navigate('/');
     };
 
     return (
         <div className="fixed inset-0 w-full h-full bg-black flex flex-col items-center justify-center overflow-hidden z-50">
-            {/* Video Background */}
+            {/* Background Video - Restored */}
             <video
                 src={splashVideo}
-                className="absolute inset-0 w-full h-full object-cover"
                 autoPlay
+                loop
                 muted
                 playsInline
-                disablePictureInPicture
-                controlsList="nodownload noremoteplayback"
-                onEnded={() => setShowButton(true)}
+                className="absolute inset-0 w-full h-full object-cover"
             />
+            <div className="absolute inset-0 w-full h-full bg-black/40" />
 
             {/* Enter Button */}
             <AnimatePresence>

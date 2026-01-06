@@ -9,6 +9,9 @@ import { BottomNav } from '../components/BottomNav';
 import type { ImageRecord } from '../components/history/ImageModal';
 import { Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { magicFloatVariants } from '../lib/animations';
+import { DailyTreasureMap } from '../components/dashboard/DailyTreasureMap';
 
 const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
     { id: '1', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: false, prompt: 'Space Adventure' },
@@ -22,7 +25,7 @@ const PROMO_SLIDES = [
     {
         id: 99,
         title: "MAGIC LAB ✨",
-        subtitle: 'Talk to Sparkle & Animate!',
+        subtitle: 'Cast spells with your apprentice!',
         gradient: "from-purple-600 to-indigo-600",
         link: '/magic-lab',
         decor: (
@@ -92,7 +95,7 @@ const PromoBanner: React.FC = () => {
             {/* Slide Area - Taller */}
             <div
                 onClick={handleBannerClick}
-                className="w-full h-[280px] relative overflow-hidden rounded-3xl shadow-xl group cursor-pointer border-4 border-white transition-all duration-500 bg-white hover:scale-[1.02]"
+                className="w-full h-[200px] relative overflow-hidden rounded-3xl shadow-xl group cursor-pointer border-4 border-white transition-all duration-500 bg-white hover:scale-[1.02]"
             >
                 {PROMO_SLIDES.map((slide, index) => (
                     <div
@@ -152,17 +155,21 @@ export const HomePage: React.FC = () => {
 
                 if (res.ok) {
                     const data = await res.json();
-                    if (Array.isArray(data)) {
+                    if (Array.isArray(data) && data.length > 0) {
                         // Filter out failed items or invalid images
                         const validData = data.filter((item: any) => item.imageUrl && item.status !== 'failed');
-                        setPublicItems(validData);
-                        setFilteredItems(validData);
-                        return;
+                        if (validData.length > 0) {
+                            setPublicItems(validData);
+                            setFilteredItems(validData);
+                            setLoading(false);
+                            return;
+                        }
                     }
                 }
-                throw new Error("API Failed");
+                // If API returns empty or fails, use mock data
+                throw new Error("API returned empty data");
             } catch (error) {
-                console.warn("API unavailable, using mock data", error);
+                console.warn("API unavailable or empty, using mock data", error);
                 setPublicItems(MOCK_PUBLIC_ITEMS);
                 setFilteredItems(MOCK_PUBLIC_ITEMS);
             } finally {
@@ -229,12 +236,14 @@ export const HomePage: React.FC = () => {
                 <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px]" />
             </div>
 
-            {/* 2. Header (Fixed) */}
-            <HeaderBar />
+            {/* 2. Header (Relative) */}
+            <div className="z-20 relative">
+                <HeaderBar />
+            </div>
 
             {/* 3. Main Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto z-10 relative w-full scrollbar-hide">
-                <div className="pb-24 pt-24">
+                <div className="pb-24 pt-20">
                     {/* TEMP: Dev Links */}
                     <div className="flex justify-center gap-4 mb-2 opacity-50 hover:opacity-100 transition-opacity">
                         <button onClick={() => navigate('/splash')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Splash</button>
@@ -242,9 +251,20 @@ export const HomePage: React.FC = () => {
                     </div>
 
                     {/* Logo Area (Scrolls) */}
-                    <LogoArea />
+                    <motion.div variants={magicFloatVariants} initial="initial" animate="animate">
+                        <LogoArea />
+                    </motion.div>
 
-                    <PromoBanner />
+                    <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.1 }}>
+                        <PromoBanner />
+                    </motion.div>
+
+                    {/* Daily Check-in Map */}
+                    <div className="mb-8 px-4">
+                        <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.15 }}>
+                            <DailyTreasureMap />
+                        </motion.div>
+                    </div>
 
                     {/* Filter & Gallery Area - TRANSPARENT */}
                     <div className="relative min-h-screen">
@@ -262,7 +282,9 @@ export const HomePage: React.FC = () => {
                                     <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
                                 </div>
                             ) : (
-                                <ContentGrid items={filteredItems} onItemClick={(item) => setSelectedId(item.id)} />
+                                <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.2 }}>
+                                    <ContentGrid items={filteredItems} onItemClick={(item) => setSelectedId(item.id)} />
+                                </motion.div>
                             )}
                         </div>
                     </div>

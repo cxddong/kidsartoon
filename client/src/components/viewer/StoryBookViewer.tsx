@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X, Volume2, VolumeX, FileDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Volume2, VolumeX, FileDown, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export interface StoryPage {
@@ -27,9 +27,10 @@ interface StoryBookViewerProps {
     book: StoryBook;
     onClose: () => void;
     onRemix?: (url: string) => void;
+    onDelete?: () => void;
 }
 
-export const StoryBookViewer: React.FC<StoryBookViewerProps> = ({ book, onClose, onRemix }) => {
+export const StoryBookViewer: React.FC<StoryBookViewerProps> = ({ book, onClose, onRemix, onDelete }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -176,16 +177,18 @@ export const StoryBookViewer: React.FC<StoryBookViewerProps> = ({ book, onClose,
                 >
                     <FileDown className="w-6 h-6" />
                 </button>
-                <button
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-all border border-white/10"
-                    title="Toggle Narration"
-                >
-                    {isPlaying ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-                </button>
+                {onDelete && (
+                    <button
+                        onClick={onDelete}
+                        className="p-3 bg-red-500/80 backdrop-blur-md rounded-full textwhite hover:bg-red-600 transition-all border border-white/10"
+                        title="Delete Story"
+                    >
+                        <Trash2 className="w-6 h-6" />
+                    </button>
+                )}
                 <button
                     onClick={onClose}
-                    className="p-3 bg-red-500/80 backdrop-blur-md rounded-full text-white hover:bg-red-600 transition-all shadow-lg"
+                    className="p-3 bg-slate-700/80 backdrop-blur-md rounded-full text-white hover:bg-slate-800 transition-all shadow-lg"
                     title="Close"
                 >
                     <X className="w-6 h-6" />

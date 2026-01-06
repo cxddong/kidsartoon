@@ -2,14 +2,25 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HistoryThumbnailCard from './HistoryThumbnailCard';
 import type { ImageRecord } from './ImageModal';
+import { jellyPopContainer } from '../../lib/animations';
 
 interface HistoryGridProps {
     images: ImageRecord[];
     onImageClick: (image: ImageRecord) => void;
     viewMode?: 'grid' | 'list';
+    isSelectionMode?: boolean;
+    selectedIds?: Set<string>;
+    onToggleItem?: (id: string) => void;
 }
 
-const HistoryGrid: React.FC<HistoryGridProps> = ({ images, onImageClick, viewMode = 'grid' }) => {
+const HistoryGrid: React.FC<HistoryGridProps> = ({
+    images,
+    onImageClick,
+    viewMode = 'grid',
+    isSelectionMode,
+    selectedIds,
+    onToggleItem
+}) => {
     if (images.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -25,6 +36,9 @@ const HistoryGrid: React.FC<HistoryGridProps> = ({ images, onImageClick, viewMod
     return (
         <motion.div
             layout
+            variants={jellyPopContainer}
+            initial="initial"
+            animate="animate"
             className={viewMode === 'grid'
                 ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 p-1 pb-20"
                 : "flex flex-col gap-3 p-1 pb-20 max-w-3xl mx-auto"
@@ -37,6 +51,9 @@ const HistoryGrid: React.FC<HistoryGridProps> = ({ images, onImageClick, viewMod
                         image={image}
                         onClick={() => onImageClick(image)}
                         viewMode={viewMode}
+                        isSelectionMode={isSelectionMode}
+                        isSelected={selectedIds?.has(image.id)}
+                        onToggle={() => onToggleItem?.(image.id)}
                     />
                 ))}
             </AnimatePresence>

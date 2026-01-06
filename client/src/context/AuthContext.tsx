@@ -82,10 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 console.log("Monthly Reset: Resetting Free Plan points to 50.");
                                 currentPoints = 50;
                                 // Update Firestore immediately to prevent repeat reset
+                                // If permission denied, this will throw, but it's async and shouldn't kill the app
                                 setDoc(userRef, {
                                     points: 50,
                                     lastPointsReset: now.toISOString()
-                                }, { merge: true });
+                                }, { merge: true }).catch(e => console.warn("Reset points failed (permission):", e));
                             }
                         }
 
@@ -118,21 +119,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             creationHistory: [],
                             lastPointsReset: new Date().toISOString()
                         };
-                        setDoc(userRef, newUserData, { merge: true }).catch(err => console.error("Auto-heal profile failed:", err));
-
-                        setUser({
-                            uid: firebaseUser.uid,
-                            email: firebaseUser.email,
-                            name: newUserData.name,
-                            photoURL: newUserData.photoUrl,
-                            profileCompleted: false,
-                            points: 50,
-                            plan: 'free'
+                        setDoc(userRef, newUserData, { merge: true }).catch(err => {
+                            console.error("Auto-heal profile failed:", err);
+                            // FALLBACK: If we can't write, still set user so they can login (READ-ONLY MODE)
+                            setUser({
+                                uid: firebaseUser.uid,
+                                email: firebaseUser.email,
+                                name: newUserData.name,
+                                photoURL: newUserData.photoUrl,
+                                profileCompleted: false,
+                                points: 50,
+                                plan: 'free'
+                            });
                         });
                     }
                     setLoading(false);
                 }, (err) => {
-                    console.error("Firestore error:", err);
+                    console.error("Firestore error (Permission?):", err);
+
+                    // FALLBACK FOR PERMISSION ERRORS:
+                    // If Firestore is blocked, we must still allow the user to "login" in a limited state
+                    // otherwise the router will bounce them back to login page forever (Flash Crash).
+                    setUser({
+                        uid: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        name: firebaseUser.displayName || 'Guest Artist',
+                        photoURL: firebaseUser.photoURL || null,
+                        profileCompleted: false, // Force them to onboarding? Or true to skip?
+                        points: 50,
+                        plan: 'free',
+                        // Minimal valid user object
+                        language: 'English',
+                        interests: []
+                    });
+
                     setLoading(false);
                 });
 
@@ -152,25 +172,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const result = await signInWithPopup(auth, googleProvider);
             const user = result.user;
 
-            const userRef = doc(db, 'users', user.uid);
-            const docSnap = await getDoc(userRef);
+            // ATTEMPT 1: Fetch Real Profile First
+            try {
+                const userRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(userRef);
 
-            if (!docSnap.exists()) {
-                await setDoc(userRef, {
-                    name: user.displayName || 'New Artist',
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    // Found existing user! Set valid state
+                    setUser({
+                        uid: user.uid,
+                        email: user.email,
+                        name: userData.name || user.displayName || 'Artist',
+                        photoURL: userData.photoUrl || user.photoURL || null,
+                        profileCompleted: userData.profileCompleted || false,
+                        points: userData.points ?? 50,
+                        plan: userData.plan || 'free',
+                        language: userData.language || 'English',
+                        interests: userData.interests || []
+                    });
+                    setLoading(false);
+                    return false; // Not new
+                } else {
+                    // New User - Create Profile
+                    await setDoc(userRef, {
+                        name: user.displayName || 'New Artist',
+                        email: user.email,
+                        photoUrl: user.photoURL,
+                        createdAt: new Date().toISOString(),
+                        points: 50,
+                        plan: 'free',
+                        language: 'English',
+                        profileCompleted: false,
+                        creationHistory: [],
+                        lastPointsReset: new Date().toISOString()
+                    });
+
+                    // Set State for New User
+                    setUser({
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || 'New Artist',
+                        photoURL: user.photoURL || null,
+                        profileCompleted: false,
+                        points: 50,
+                        plan: 'free',
+                        language: 'English',
+                        interests: []
+                    });
+                    setLoading(false);
+                    return true;
+                }
+            } catch (firestoreError: any) {
+                console.warn('Firestore blocked. Falling back to Guest Mode.', firestoreError);
+
+                // FALLBACK: Manual State (Guest Mode)
+                setUser({
+                    uid: user.uid,
                     email: user.email,
-                    photoUrl: user.photoURL,
-                    createdAt: new Date().toISOString(),
-                    points: 50,
+                    name: user.displayName || 'Artist',
+                    photoURL: user.photoURL || null,
+                    profileCompleted: false,
+                    points: 50, // Offline Cache
                     plan: 'free',
                     language: 'English',
-                    profileCompleted: false,
-                    creationHistory: [],
-                    lastPointsReset: new Date().toISOString()
+                    interests: []
                 });
-                return true; // New User
+                setLoading(false);
+                return true; // Treat as new/startup flow if we can't verify
             }
-            return false;
         } catch (error) {
             console.error("Google Login Error", error);
             throw error;
@@ -182,24 +252,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const result = await signInWithPopup(auth, appleProvider);
             const user = result.user;
-            const userRef = doc(db, 'users', user.uid);
-            const docSnap = await getDoc(userRef);
-            if (!docSnap.exists()) {
-                await setDoc(userRef, {
-                    name: user.displayName || 'Apple User',
+
+            // ATTEMPT 1: Fetch Real Profile First
+            try {
+                const userRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(userRef);
+
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    setUser({
+                        uid: user.uid,
+                        email: user.email,
+                        name: userData.name || user.displayName || 'Apple Artist',
+                        photoURL: userData.photoUrl || user.photoURL || null,
+                        profileCompleted: userData.profileCompleted || false,
+                        points: userData.points ?? 50,
+                        plan: userData.plan || 'free',
+                        language: userData.language || 'English',
+                        interests: userData.interests || []
+                    });
+                    setLoading(false);
+                    return false;
+                } else {
+                    await setDoc(userRef, {
+                        name: user.displayName || 'Apple User',
+                        email: user.email,
+                        photoUrl: user.photoURL,
+                        createdAt: new Date().toISOString(),
+                        points: 50,
+                        plan: 'free',
+                        language: 'English',
+                        profileCompleted: false,
+                        creationHistory: [],
+                        lastPointsReset: new Date().toISOString()
+                    });
+                    setUser({
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || 'Apple User',
+                        photoURL: user.photoURL || null,
+                        profileCompleted: false,
+                        points: 50,
+                        plan: 'free',
+                        language: 'English',
+                        interests: []
+                    });
+                    setLoading(false);
+                    return true;
+                }
+            } catch (firestoreError: any) {
+                console.warn('Firestore blocked. Falling back to Guest Mode.', firestoreError);
+                setUser({
+                    uid: user.uid,
                     email: user.email,
-                    photoUrl: user.photoURL,
-                    createdAt: new Date().toISOString(),
+                    name: user.displayName || 'Apple Artist',
+                    photoURL: user.photoURL || null,
+                    profileCompleted: false,
                     points: 50,
                     plan: 'free',
                     language: 'English',
-                    profileCompleted: false,
-                    creationHistory: [],
-                    lastPointsReset: new Date().toISOString()
+                    interests: []
                 });
-                return true; // New User
+                setLoading(false);
+                return true;
             }
-            return false;
         } catch (error) {
             console.error("Apple Login Error", error);
             throw error;

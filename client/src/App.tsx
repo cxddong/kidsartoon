@@ -21,7 +21,7 @@ import { GreetingCardPage } from './pages/GreetingCardPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import { MagicLabPage } from './pages/MagicLabPage'; // SUSPECT 2
-// import StartupPage from './pages/StartupPage'; // SUSPECT 3
+import StartupPage from './pages/StartupPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import EditProfilePage from './pages/EditProfilePage';
@@ -30,6 +30,9 @@ import OnboardingPage2 from './pages/onboarding/OnboardingPage2';
 import OnboardingPage3 from './pages/onboarding/OnboardingPage3';
 import OnboardingStartPage from './pages/onboarding/OnboardingStartPage';
 import { MakeCartoonPage } from './pages/MakeCartoonPage';
+// Removed: MasterpieceMatchPage (duplicated by CreativeJourneyPage)
+import CreativeJourneyPage from './pages/CreativeJourneyPage';
+
 
 // Protected Route Wrapper
 const RequireAuth = () => {
@@ -57,14 +60,15 @@ const AppRoutes = () => {
       <Route path="/onboarding/start" element={<OnboardingStartPage />} />
 
       {/* Public Pages */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/home" element={<HomePage />} />
+      <Route path="/" element={<GeneratePage />} />
+      <Route path="/home" element={<GeneratePage />} />
+      <Route path="/community" element={<HomePage />} />
       <Route path="/splash" element={<SplashPage />} />
 
       {/* Protected Routes */}
       <Route element={<RequireAuth />}>
 
-        {/* <Route path="/startup" element={<StartupPage />} /> */}
+        <Route path="/startup" element={<StartupPage />} />
         <Route path="/comic" element={<ComicPage />} />
         <Route path="/generate/comic" element={<ComicPage />} />
         <Route path="/make-cartoon" element={<MakeCartoonPage />} />
@@ -79,18 +83,20 @@ const AppRoutes = () => {
           <Route path="/camera" element={<CameraPage />} />
           <Route path="/generate" element={<GeneratePage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
-          <Route path="/generate/video" element={<AnimationPage />} />
-          <Route path="/animation" element={<AnimationPage />} />
           <Route path="/profile/history" element={<HistoryPage />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
         </Route>
 
         {/* Standalone Protected Routes (Custom Layouts) */}
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/generate/video" element={<AnimationPage />} />
+        <Route path="/animation" element={<AnimationPage />} />
         <Route path="/generate/audio" element={<AudioStoryPage />} />
         <Route path="/audio" element={<AudioStoryPage />} />
         <Route path="/magic-lab" element={<MagicLabPage />} />
         <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
+        {/* Removed: masterpiece-match route (duplicated by creative-journey) */}
+        <Route path="/creative-journey" element={<CreativeJourneyPage />} />
 
       </Route>
 

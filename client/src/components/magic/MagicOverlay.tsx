@@ -8,10 +8,10 @@ interface MagicOverlayProps {
 }
 
 const DEFAULT_STEPS = [
-    { en: "Analyzing your drawing...", zh: "正在看你的画..." },
-    { en: "Writing the script...", zh: "正在写剧本..." },
-    { en: "Painting the frames...", zh: "正在绘制画面..." },
-    { en: "Adding magic dust...", zh: "正在撒魔法粉..." }
+    { en: "Chasing the magic particles...", zh: "正在追逐魔法粒子..." },
+    { en: "Mixing the colors... Oops, spilled blue!", zh: "正在调色... 哎呀，洒了点蓝色！" },
+    { en: "Consulting the ancient cat scrolls...", zh: "正在查阅猫族古籍..." },
+    { en: "Almost ready, Master...", zh: "马上就好，大师..." }
 ];
 
 export const MagicOverlay: React.FC<MagicOverlayProps> = ({ isVisible }) => {
@@ -37,9 +37,9 @@ export const MagicOverlay: React.FC<MagicOverlayProps> = ({ isVisible }) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-lg bg-black/60"
+                    className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-lg bg-black/60 pointer-events-none"
                 >
-                    <div className="flex flex-col items-center gap-8">
+                    <div className="flex flex-col items-center gap-8 pointer-events-auto">
                         {/* Sparkle Animation */}
                         <motion.div
                             animate={{
@@ -47,13 +47,14 @@ export const MagicOverlay: React.FC<MagicOverlayProps> = ({ isVisible }) => {
                                 scale: [1, 1.2, 1]
                             }}
                             transition={{
-                                rotate: { duration: 2, repeat: Infinity, ease: "linear" },
-                                scale: { duration: 1, repeat: Infinity, ease: "easeInOut" }
+                                rotate: { duration: 3, repeat: Infinity, ease: "linear" },
+                                scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
                             }}
                             className="relative"
                         >
-                            <div className="w-32 h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-yellow-400 rounded-full flex items-center justify-center shadow-2xl">
-                                <Wand2 className="w-16 h-16 text-white" />
+                            <div className="w-32 h-32 bg-gradient-to-br from-purple-500 via-pink-500 to-yellow-400 rounded-full flex items-center justify-center shadow-2xl relative overflow-hidden">
+                                <span className="text-6xl z-10">🐱</span>
+                                <Wand2 className="absolute top-2 right-2 w-8 h-8 text-white/50 -rotate-12" />
                             </div>
 
                             {/* Sparkles around */}
@@ -112,8 +113,8 @@ export const MagicOverlay: React.FC<MagicOverlayProps> = ({ isVisible }) => {
                                 <div
                                     key={i}
                                     className={`w-2 h-2 rounded-full transition-all ${i === currentStep
-                                            ? 'bg-yellow-400 w-8'
-                                            : 'bg-white/40'
+                                        ? 'bg-yellow-400 w-8'
+                                        : 'bg-white/40'
                                         }`}
                                 />
                             ))}

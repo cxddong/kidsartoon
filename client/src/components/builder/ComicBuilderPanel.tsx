@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 import { BouncyButton } from '../ui/BouncyButton';
 import { playUiSound } from '../../utils/SoundSynth';
+import comicGenBtn from '../../assets/comic_gen_v2.jpg'; // Updated to V2 Asset
 
 import { COMIC_STYLES } from '../../constants/comicStyles';
 
@@ -33,6 +34,7 @@ const CHARACTERS = [
     { id: 'grandma', label: 'Grandma', icon: '👵' },
     { id: 'grandpa', label: 'Grandpa', icon: '👴' },
     { id: 'teacher', label: 'Teacher', icon: '👩‍🏫' },
+    { id: 'other', label: 'Other', icon: '✨' },
 ];
 
 export interface ComicBuilderData {
@@ -57,9 +59,12 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
     // V4.0 Independent Bubble State
     const [questState, setQuestState] = useState<{ visible: boolean, text: string }>({ visible: false, text: "" });
     const [lootState, setLootState] = useState<{ visible: boolean, text: string }>({ visible: false, text: "" });
+    console.log("ComicBuilderPanel Loaded V5 - New Button");
     const [selectedSidekickId, setSelectedSidekickId] = useState<string | null>(null);
     const [showSidekickModal, setShowSidekickModal] = useState(false);
     const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(CHARACTERS[0].id);
+    const [customCharacterName, setCustomCharacterName] = useState("");
+    const [isListening, setIsListening] = useState(false);
 
     // Magic Quests
     const MAGIC_QUESTS = [
@@ -133,8 +138,12 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
         // Construct character list
         const role = CHARACTERS.find(c => c.id === selectedCharacterId);
         let characterList: string[] = [];
-        if (role && role.id === 'hero') characterList.push('Me (The Hero)');
-        else if (role) characterList.push(role.label);
+        if (role) {
+            if (role.id === 'hero') characterList.push('Me (The Hero)');
+            else if (role.id === 'other' && customCharacterName) characterList.push(customCharacterName);
+            else characterList.push(role.label);
+        }
+
         if (selectedSidekickId) {
             const sidekick = SIDEKICKS.find(s => s.id === selectedSidekickId);
             if (sidekick) characterList.push(sidekick.label);
@@ -151,13 +160,13 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
     const currentSidekick = selectedSidekickId ? SIDEKICKS.find(s => s.id === selectedSidekickId) : null;
 
     return (
-        <div className="w-full flex flex-col md:grid md:grid-cols-[250px_1fr_250px] md:gap-8 items-center md:items-start p-4 md:p-10 max-w-7xl mx-auto relative">
+        <div className="w-full flex flex-col md:grid md:grid-cols-[330px_1fr_330px] md:gap-3 items-center md:items-start p-4 md:p-10 max-w-7xl mx-auto relative">
 
             {/* Left Column: STYLE ZONE + MAGIC LOOT */}
             {/* Left Column: STYLE ZONE + MAGIC LOOT */}
             <div className="w-full md:w-auto order-2 md:order-1 flex flex-col gap-8 relative min-h-[400px]">
                 <div className="flex flex-col gap-4">
-                    <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 justify-center md:justify-start">
+                    <h3 className="text-lg font-black text-white flex items-center gap-2 justify-center md:justify-start">
                         <span className="bg-orange-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm">1</span>
                         Style 🎨
                     </h3>
@@ -168,12 +177,12 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                                 key={item.id}
                                 onClick={() => setVisualStyleId(prev => prev === item.id ? null : item.id)}
                                 className={cn(
-                                    "rounded-2xl border-4 transition-all shrink-0 w-20 h-20 aspect-square animate-float overflow-hidden relative shadow-lg",
+                                    "rounded-2xl border-4 transition-all w-full aspect-square animate-float overflow-hidden relative shadow-lg",
                                     visualStyleId === item.id
                                         ? "border-orange-500 scale-105 shadow-xl z-10"
                                         : "border-slate-100 bg-white hover:border-orange-200 hover:scale-105",
                                 )}
-                                style={{ animationDelay: `${index * 0.1}s` }}
+                                style={{ animationDelay: `${index * 0.1} s` }}
                             >
                                 {item.image ? (
                                     <img
@@ -196,7 +205,7 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                 {/* Left Floating Key: Magic Loot (In-Flow) */}
                 <div className="mt-8 relative z-20 flex flex-col items-center w-full">
                     <button
-                        className="relative flex flex-col items-center justify-center p-0 rounded-2xl bg-gradient-to-bl from-yellow-300 to-orange-500 w-24 h-24 aspect-square text-white shadow-[0_0_20px_rgba(250,204,21,0.6)] transform hover:scale-110 active:scale-95 transition-all animate-wiggle overflow-hidden z-30"
+                        className="relative flex flex-col items-center justify-center p-0 rounded-2xl bg-gradient-to-bl from-yellow-300 to-orange-500 w-full aspect-square text-white shadow-[0_0_20px_rgba(250,204,21,0.6)] transform hover:scale-110 active:scale-95 transition-all animate-wiggle overflow-hidden z-30"
                         onClick={handleMagicLoot}
                     >
                         <div className="absolute inset-0 rounded-2xl overflow-hidden isolation-auto">
@@ -234,53 +243,108 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
             {/* Center Column: Upload Box + Role Labels + Generate */}
             <div className="w-full order-1 md:order-2 flex flex-col items-center gap-6">
                 {/* Upload Box */}
-                <div className="w-full max-w-md aspect-[4/3]">
+                <div className="w-[85%] max-w-md aspect-[4/3] shadow-2xl rounded-3xl overflow-hidden border-4 border-white/50 bg-white/10 backdrop-blur-sm">
                     {children}
                 </div>
 
-                {/* Section 4: Role Labels */}
-                <div className="w-full flex flex-col gap-4">
-                    <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 justify-center md:justify-start">
-                        <span className="bg-green-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm">3</span>
+
+
+                {/* Section 4: Role Labels (Optimized layout) */}
+                <div className="w-full flex flex-col gap-4 bg-white/40 backdrop-blur-sm p-6 rounded-[32px] border-2 border-slate-100 shadow-xl">
+                    <h3 className="text-lg font-black text-white flex items-center gap-2 justify-center md:justify-start">
+                        <span className="bg-green-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shadow-sm">3</span>
                         Role Labels 🏷️
                     </h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-7 gap-2">
                         {CHARACTERS.map(item => (
                             <button
                                 key={item.id}
                                 onClick={() => setSelectedCharacterId(prev => prev === item.id ? null : item.id)}
                                 className={cn(
-                                    "flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all shrink-0 hover:bg-green-50 shadow-sm aspect-square",
+                                    "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all shrink-0 hover:bg-green-50 shadow-sm aspect-square w-full relative group",
                                     selectedCharacterId === item.id
-                                        ? "border-green-500 bg-green-50 text-green-700 shadow-md scale-105"
+                                        ? "border-green-500 bg-green-50 text-green-700 shadow-md scale-105 z-10"
                                         : "border-slate-100 bg-white text-slate-500 hover:border-green-200"
                                 )}
                             >
-                                <span className="text-5xl mb-2 filter drop-shadow-sm">{item.icon}</span>
-                                <span className="text-sm md:text-base font-black whitespace-nowrap leading-tight">{item.label}</span>
+                                <span className="text-2xl sm:text-3xl filter drop-shadow-sm group-hover:scale-110 transition-transform">{item.icon}</span>
+                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight text-center leading-tight mt-1">{item.label}</span>
                             </button>
                         ))}
                     </div>
+
+                    {/* Custom Character Input */}
+                    {selectedCharacterId === 'other' && (
+                        <div className="w-full animate-in slide-in-from-top-4">
+                            <div className="relative flex items-center gap-2 bg-white rounded-2xl border-2 border-green-200 p-2 shadow-inner">
+                                <input
+                                    type="text"
+                                    value={customCharacterName}
+                                    onChange={(e) => setCustomCharacterName(e.target.value)}
+                                    placeholder="Enter character name..."
+                                    className="flex-1 bg-transparent px-2 py-2 text-sm font-bold outline-none placeholder:text-slate-300"
+                                />
+                                <button
+                                    onClick={() => {
+                                        if (isListening) {
+                                            setIsListening(false);
+                                            return;
+                                        }
+                                        setIsListening(true);
+                                        const recognition = new (window as any).webkitSpeechRecognition();
+                                        recognition.lang = 'en-US';
+                                        recognition.onresult = (event: any) => {
+                                            const text = event.results[0][0].transcript;
+                                            setCustomCharacterName(text);
+                                            setIsListening(false);
+                                        };
+                                        recognition.onerror = () => setIsListening(false);
+                                        recognition.onend = () => setIsListening(false);
+                                        recognition.start();
+                                    }}
+                                    className={cn(
+                                        "p-2 rounded-xl transition-colors",
+                                        isListening ? "bg-red-500 text-white animate-pulse" : "bg-green-100 text-green-600 hover:bg-green-200"
+                                    )}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Generate Button (Desktop - In Flow) */}
-                <button
-                    onClick={handleGenerateClick}
-                    disabled={!isReady}
-                    className="hidden md:block w-full max-w-sm py-4 rounded-full text-white font-black text-xl shadow-xl shadow-orange-500/20 bg-gradient-to-r from-yellow-400 to-orange-500 hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Generate Comic! 🚀 (40 Pts)
-                </button>
-
-                {/* Generate Button (Mobile - Fixed Bottom) */}
-                <div className="md:hidden fixed bottom-20 left-4 right-4 z-50">
+                {/* Generate Button (Image Replacement - Clean) */}
+                <div className="w-full flex flex-col items-center gap-2 py-4">
                     <button
                         onClick={handleGenerateClick}
                         disabled={!isReady}
-                        className="w-full py-4 rounded-full text-white font-black text-xl shadow-[0_0_20px_rgba(249,115,22,0.5)] bg-gradient-to-r from-yellow-400 to-orange-500 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed border-4 border-white"
+                        className="relative w-40 h-40 md:w-48 md:h-48 hover:scale-105 active:scale-95 transition-transform disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
                     >
-                        Generate! 🚀 (40 Pts)
+                        <img
+                            src={comicGenBtn}
+                            alt="Generate"
+                            className="w-full h-full object-contain"
+                            style={{ filter: 'url(#remove-black)' }}
+                        />
+                        {/* SVG Filter to turn Black Background to Transparent */}
+                        <svg width="0" height="0" className="absolute">
+                            <filter id="remove-black">
+                                <feColorMatrix
+                                    type="matrix"
+                                    values="1 0 0 0 0  
+                                            0 1 0 0 0  
+                                            0 0 1 0 0  
+                                            4 4 4 0 -0.5"
+                                />
+                            </filter>
+                        </svg>
+                        {/* Cost Badge */}
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20 bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm border border-white/20 shadow-lg whitespace-nowrap">
+                            30 Magic Pts
+                        </div>
                     </button>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Ready to create!</p>
                 </div>
             </div>
 
@@ -289,7 +353,7 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
 
                 {/* Section 2: Mood */}
                 <div className="flex flex-col gap-4">
-                    <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 justify-center md:justify-start">
+                    <h3 className="text-lg font-black text-white flex items-center gap-2 justify-center md:justify-start">
                         <span className="bg-yellow-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm">2</span>
                         Mood 🎭
                     </h3>
@@ -300,12 +364,12 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                                 key={item.id}
                                 onClick={() => setSelectedMoodId(prev => prev === item.id ? null : item.id)}
                                 className={cn(
-                                    "rounded-2xl border-4 transition-all shrink-0 w-20 h-20 aspect-square animate-float overflow-hidden relative shadow-lg",
+                                    "rounded-2xl border-4 transition-all w-full aspect-square animate-float overflow-hidden relative shadow-lg",
                                     selectedMoodId === item.id
                                         ? "border-yellow-500 scale-105 shadow-xl z-10"
                                         : "border-slate-100 bg-white hover:border-yellow-200 hover:scale-105"
                                 )}
-                                style={{ animationDelay: `${index * 0.1 + 0.2}s` }}
+                                style={{ animationDelay: `${index * 0.1 + 0.2} s` }}
                             >
                                 {(item as any).image ? (
                                     <img
@@ -328,7 +392,7 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                 {/* Right Floating Key: Magic Quest (In-Flow) */}
                 <div className="mt-8 relative z-20 flex flex-col items-center w-full">
                     <button
-                        className="relative flex flex-col items-center justify-center p-0 rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 w-24 h-24 aspect-square text-white shadow-[0_0_20px_rgba(245,158,11,0.6)] transform hover:scale-110 active:scale-95 transition-all animate-wiggle overflow-hidden z-30"
+                        className="relative flex flex-col items-center justify-center p-0 rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 w-full aspect-square text-white shadow-[0_0_20px_rgba(245,158,11,0.6)] transform hover:scale-110 active:scale-95 transition-all animate-wiggle overflow-hidden z-30"
                         onClick={handleMagicQuest}
                     >
                         <div className="absolute inset-0 rounded-2xl overflow-hidden isolation-auto">

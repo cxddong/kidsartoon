@@ -22,7 +22,7 @@ export const BottomNav: React.FC = () => {
     // User asked for "expand when needed, collapse when not".
     const [isExpanded, setIsExpanded] = useState(false);
 
-    const isActive = (path: string) => currentPath === path || (path === '/home' && currentPath === '/');
+    const isActive = (path: string) => currentPath === path || (path === '/community' && currentPath === '/');
 
     // Toggle handler
     const toggleNav = () => setIsExpanded(!isExpanded);
@@ -50,7 +50,7 @@ export const BottomNav: React.FC = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.5 }}
                         onClick={toggleNav}
-                        className="w-full h-full flex items-center justify-center text-slate-600 hover:text-slate-900 group"
+                        className="w-full h-full flex items-center justify-center text-slate-600 hover:text-slate-900 group cursor-pointer pointer-events-auto"
                     >
                         {/* More visible collapsed icon */}
                         <div className="bg-white p-3 rounded-full shadow-md group-hover:scale-110 transition-transform">
@@ -69,7 +69,7 @@ export const BottomNav: React.FC = () => {
                         {/* More visible Close Button */}
                         <button
                             onClick={toggleNav}
-                            className="bg-slate-100/80 hover:bg-slate-200 p-2 rounded-full text-slate-600 shadow-sm transition-colors absolute left-2 z-10"
+                            className="bg-slate-100/80 hover:bg-slate-200 p-2 rounded-full text-slate-600 shadow-sm transition-colors absolute left-2 z-10 cursor-pointer pointer-events-auto"
                         >
                             <ChevronRight size={20} />
                         </button>
@@ -78,13 +78,13 @@ export const BottomNav: React.FC = () => {
                         <div className="w-8" />
 
                         <button
-                            onClick={() => navigate('/home')}
-                            className="transition-transform duration-300 hover:scale-110 relative -top-0.5"
+                            onClick={() => navigate('/community')}
+                            className="transition-transform duration-300 hover:scale-110 relative -top-0.5 cursor-pointer pointer-events-auto"
                         >
                             <div className={cn(
                                 "rounded-full overflow-hidden shadow-md transition-all",
                                 isVisual ? "w-14 h-14" : "w-10 h-10",
-                                isActive('/home') ? "scale-110 ring-2 ring-blue-400 ring-offset-2" : "opacity-80 hover:opacity-100"
+                                isActive('/community') ? "scale-110 ring-2 ring-blue-400 ring-offset-2" : "opacity-80 hover:opacity-100"
                             )}>
                                 <video
                                     src={homeVideo}
@@ -103,7 +103,7 @@ export const BottomNav: React.FC = () => {
                         <div className="relative transition-all">
                             <button
                                 onClick={() => navigate('/generate')}
-                                className="transition-transform duration-300 hover:scale-110 hover:rotate-3"
+                                className="transition-transform duration-300 hover:scale-110 hover:rotate-3 cursor-pointer pointer-events-auto"
                             >
                                 <div className={cn(
                                     "rounded-full overflow-hidden shadow-xl relative transition-all",
@@ -124,21 +124,11 @@ export const BottomNav: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Sparkle Voice - Global Helper (Hidden in Magic Lab) */}
-                        {!currentPath.startsWith('/magic-lab') && (
-                            <SparkleVoiceFab
-                                className={cn(
-                                    "relative bottom-auto right-auto transform-none shadow-md z-10", // Override fixed pos
-                                    isVisual ? "w-14 h-14" : "w-10 h-10"
-                                )}
-                                autoStart={false}
-                                onTagsExtracted={() => { }} // No-op for global chat
-                            />
-                        )}
+
 
                         <button
                             onClick={() => navigate('/profile')}
-                            className="transition-transform duration-300 hover:scale-110 relative -top-0.5"
+                            className="transition-transform duration-300 hover:scale-110 relative -top-0.5 cursor-pointer pointer-events-auto"
                         >
                             <div className={cn(
                                 "rounded-full overflow-hidden shadow-md transition-all",

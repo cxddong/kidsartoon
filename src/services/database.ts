@@ -1,45 +1,12 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDocs,
-    query,
-    where,
-    orderBy,
-    limit,
-    doc,
-    getDoc,
-    updateDoc,
-    setDoc,
-    deleteDoc,
-    Timestamp,
-    increment,
-    runTransaction
-} from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { adminDb, adminStorage, admin } from './firebaseAdmin.js'; // Use centralized admin
 import { v4 as uuidv4 } from 'uuid';
-
-const firebaseConfig = {
-    apiKey: "AIzaSyAPiovapSN9I5o56rJRrDwKiY-wWeHdY7I",
-    authDomain: "kat-antigravity.firebaseapp.com",
-    projectId: "kat-antigravity",
-    storageBucket: "kat-antigravity.firebasestorage.app",
-    messagingSenderId: "1045560094198",
-    appId: "1:1045560094198:web:8c0186f65ab1ddbab3ebd7",
-    measurementId: "G-Y4M4VX7B5Q"
-};
-
-console.log("[DatabaseService] Init with FORCE config: " + firebaseConfig.projectId);
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
-const storage = getStorage(app);
+import { CreativeSeries } from '../types/mentor';
 
 export interface ImageRecord {
     id: string; // Firestore ID usually, but we keep our UUID for compatibility
     userId: string;
     imageUrl: string;
-    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation';
+    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards';
     createdAt: string;
     prompt?: string;
     meta?: any;
@@ -73,19 +40,36 @@ export interface PointsHistoryRecord {
     createdAt: string;
 }
 
+// Transaction Types
+export type TransactionType =
+    | 'MAGIC_LAB_CHAT'
+    | 'IMAGE_TRANSFORM'
+    | 'PREMIUM_TTS'      // NEW: ElevenLabs voice
+    | 'REFUND'
+    | 'SIGNUP_BONUS'
+    | 'RECHARGE';
+
 export interface CreditTransaction {
     id: string;
     userId: string;
     amount: number; // Negative for deduction, Positive for refund/add
-    type: 'MAGIC_LAB_CHAT' | 'IMAGE_TRANSFORM' | 'REFUND' | 'SIGNUP_BONUS' | 'RECHARGE';
+    type: TransactionType;
     reason: string;
     createdAt: string;
     meta?: any;
 }
 
+export interface DailyCheckIn {
+    userId: string;
+    lastCheckInDate: string; // YYYY-MM-DD
+    currentStreak: number;
+    updatedAt: string;
+}
+
 export class DatabaseService {
+
     constructor() {
-        console.log('[DatabaseService] Initialized with Firebase Firestore');
+        console.log('[DatabaseService] Initialized with Firebase Admin SDK');
     }
 
     // --- Storage ---
@@ -93,16 +77,16 @@ export class DatabaseService {
         try {
             const ext = mimeType.split('/')[1] || 'bin';
             const filename = `${folder}/${uuidv4()}.${ext}`;
-            const storageRef = ref(storage, filename);
+            const bucket = adminStorage.bucket();
+            const file = bucket.file(filename);
 
-            // Convert Buffer to Uint8Array for Firebase JS SDK
-            const uint8Array = new Uint8Array(buffer);
-
-            const snapshot = await uploadBytes(storageRef, uint8Array, {
-                contentType: mimeType
+            await file.save(buffer, {
+                metadata: { contentType: mimeType },
+                public: true // Make file public for legacy compatibility
             });
 
-            return await getDownloadURL(snapshot.ref);
+            // Return public URL (assumes default bucket)
+            return `https://storage.googleapis.com/${bucket.name}/${filename}`;
         } catch (e) {
             console.error("Upload failed", e);
             throw e;
@@ -112,12 +96,12 @@ export class DatabaseService {
     // --- Video Tasks (Cost Tracking) ---
     public async saveVideoTask(taskId: string, userId: string, cost: number, prompt: string = '', meta: any = {}) {
         try {
-            await setDoc(doc(db, 'video_tasks', taskId), {
+            await adminDb.collection('video_tasks').doc(taskId).set({
                 taskId,
                 userId,
                 cost,
-                prompt, // Store prompt
-                meta,   // Store extra metadata (e.g., originalImageUrl)
+                prompt,
+                meta,
                 status: 'PENDING',
                 createdAt: new Date().toISOString(),
                 refunded: false
@@ -127,14 +111,14 @@ export class DatabaseService {
 
     public async getVideoTask(taskId: string) {
         try {
-            const snap = await getDoc(doc(db, 'video_tasks', taskId));
-            return snap.exists() ? snap.data() : null;
+            const snap = await adminDb.collection('video_tasks').doc(taskId).get();
+            return snap.exists ? snap.data() : null;
         } catch (e) { return null; }
     }
 
     public async markTaskRefunded(taskId: string) {
         try {
-            await updateDoc(doc(db, 'video_tasks', taskId), {
+            await adminDb.collection('video_tasks').doc(taskId).update({
                 status: 'REFUNDED',
                 refunded: true
             });
@@ -143,21 +127,21 @@ export class DatabaseService {
 
     public async markTaskCompleted(taskId: string) {
         try {
-            await updateDoc(doc(db, 'video_tasks', taskId), {
+            await adminDb.collection('video_tasks').doc(taskId).update({
                 status: 'COMPLETED'
             });
-        } catch (e) { }
+        } catch (e) { console.error('markTaskCompleted failed', e); }
     }
 
     // --- Images ---
     public async saveImageRecord(
         userId: string,
         imageUrl: string,
-        type: ImageRecord['type'],
+        type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards',
         prompt?: string,
         meta?: any
     ): Promise<ImageRecord> {
-        const id = uuidv4(); // Generate our own UUID
+        const id = uuidv4();
         const newRecord: ImageRecord = {
             id,
             userId,
@@ -170,29 +154,23 @@ export class DatabaseService {
         };
 
         try {
-            // Use setDoc with specific ID instead of addDoc (auto-ID)
-            // This ensures our 'id' field matches the Document ID, simplifying queries.
-            await setDoc(doc(db, "images", id), newRecord);
+            await adminDb.collection('images').doc(id).set(newRecord);
             console.log(`[Database] Saved image record: ${id} (User: ${userId}, Type: ${type})`);
         } catch (e) {
             console.error('[Database] Failed to save image:', e);
-            throw e; // Throw so we know it failed
+            throw e;
         }
         return newRecord;
     }
 
     public async getUserImages(userId: string): Promise<ImageRecord[]> {
         try {
-            // REMOVED orderBy to avoid needing a composite index (userId + createdAt)
-            const q = query(
-                collection(db, "images"),
-                where("userId", "==", userId)
-            );
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('images')
+                .where("userId", "==", userId)
+                .get();
+
             const results = snapshot.docs.map(d => {
                 const data = d.data() as ImageRecord;
-                // CRITICAL: Ensure 'id' is present. If saved without 'id' field, use doc.id
-                // Also ensure we don't have duplicate field issues.
                 return {
                     ...data,
                     id: data.id || d.id
@@ -212,10 +190,9 @@ export class DatabaseService {
 
     public async getUser(userId: string): Promise<UserRecord | null> {
         try {
-            const snap = await getDoc(doc(db, 'users', userId));
-            if (snap.exists()) {
+            const snap = await adminDb.collection('users').doc(userId).get();
+            if (snap.exists) {
                 const data = snap.data() as UserRecord;
-                // Ensure credits exist for legacy users
                 if (data.credits === undefined) {
                     data.credits = 0;
                 }
@@ -230,15 +207,18 @@ export class DatabaseService {
 
     public async toggleFavorite(id: string, userId: string): Promise<ImageRecord | null> {
         try {
-            const q = query(collection(db, "images"), where("id", "==", id), where("userId", "==", userId)); // Assuming 'id' field is used
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('images')
+                .where("id", "==", id)
+                .where("userId", "==", userId)
+                .get();
+
             if (snapshot.empty) return null;
 
             const docRef = snapshot.docs[0].ref;
             const data = snapshot.docs[0].data() as ImageRecord;
             const newVal = !data.favorite;
 
-            await updateDoc(docRef, { favorite: newVal });
+            await docRef.update({ favorite: newVal });
 
             return { ...data, favorite: newVal };
         } catch (e) {
@@ -249,11 +229,14 @@ export class DatabaseService {
 
     public async deleteImage(id: string, userId: string): Promise<boolean> {
         try {
-            const q = query(collection(db, "images"), where("id", "==", id), where("userId", "==", userId));
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('images')
+                .where("id", "==", id)
+                .where("userId", "==", userId)
+                .get();
+
             if (snapshot.empty) return false;
 
-            await deleteDoc(snapshot.docs[0].ref);
+            await snapshot.docs[0].ref.delete();
             return true;
         } catch (e) {
             console.error('[Database] Delete failed:', e);
@@ -264,21 +247,16 @@ export class DatabaseService {
     // --- Likes System ---
     public async toggleLike(userId: string, imageId: string): Promise<boolean> {
         try {
-            // Check if already liked
-            const q = query(
-                collection(db, "likes"),
-                where("userId", "==", userId),
-                where("imageId", "==", imageId)
-            );
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('likes')
+                .where("userId", "==", userId)
+                .where("imageId", "==", imageId)
+                .get();
 
             if (!snapshot.empty) {
-                // Allows unlike
-                await deleteDoc(snapshot.docs[0].ref);
+                await snapshot.docs[0].ref.delete();
                 return false;
             } else {
-                // Like
-                await addDoc(collection(db, "likes"), {
+                await adminDb.collection('likes').add({
                     userId,
                     imageId,
                     createdAt: new Date().toISOString()
@@ -293,8 +271,7 @@ export class DatabaseService {
 
     public async getLikedImageIds(userId: string): Promise<string[]> {
         try {
-            const q = query(collection(db, "likes"), where("userId", "==", userId));
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('likes').where("userId", "==", userId).get();
             return snapshot.docs.map(d => d.data().imageId);
         } catch (e) {
             return [];
@@ -306,17 +283,9 @@ export class DatabaseService {
             const imageIds = await this.getLikedImageIds(userId);
             if (imageIds.length === 0) return [];
 
-            // Firestore "in" query limited to 10, so might need chunking or individual fetches.
-            // For simplicity/demo, let's fetch individual (less efficient but works for small sets)
-            // OR fetch all images and filter (bad scale).
-            // Let's rely on "where id in ids" if < 10, else loop.
-
-            // Actually, we can just use the existing generic 'getImages' if we had one by ID.
-            // Let's implement a verify simple fetch-by-id loop for now.
             const images: ImageRecord[] = [];
             for (const id of imageIds) {
-                const q = query(collection(db, "images"), where("id", "==", id));
-                const snap = await getDocs(q);
+                const snap = await adminDb.collection('images').where("id", "==", id).get();
                 if (!snap.empty) images.push(snap.docs[0].data() as ImageRecord);
             }
             return images;
@@ -328,9 +297,7 @@ export class DatabaseService {
 
     public async saveFeedback(id: string, feedback: string): Promise<boolean> {
         try {
-            // Find document by our custom 'id' field
-            const q = query(collection(db, "images"), where("id", "==", id));
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('images').where("id", "==", id).get();
 
             if (snapshot.empty) {
                 console.warn(`[Database] Image with id ${id} not found for feedback.`);
@@ -342,7 +309,7 @@ export class DatabaseService {
             const meta = data.meta || {};
             meta.feedback = feedback;
 
-            await updateDoc(docRef, { meta });
+            await docRef.update({ meta });
             console.log(`[Database] Feedback saved for ${id}`);
             return true;
         } catch (e) {
@@ -353,22 +320,14 @@ export class DatabaseService {
 
     public async getPublicImages(type?: string): Promise<ImageRecord[]> {
         try {
-            let q;
+            let ref: any = adminDb.collection('images');
             if (type) {
-                // If filtering by type, we should ideally have a composite index (type + createdAt).
-                // If not, we might fall back to client-side filtering or just 'where' (and hope for implicit order or add explicit index later).
-                // Let's try simple where + orderBy first.
-                q = query(
-                    collection(db, "images"),
-                    where("type", "==", type),
-                    orderBy("createdAt", "desc"),
-                    limit(50)
-                );
+                ref = ref.where("type", "==", type).orderBy("createdAt", "desc").limit(50);
             } else {
-                q = query(collection(db, "images"), orderBy("createdAt", "desc"), limit(50));
+                ref = ref.orderBy("createdAt", "desc").limit(50);
             }
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(d => d.data() as ImageRecord);
+            const snapshot = await ref.get();
+            return snapshot.docs.map((d: any) => d.data() as ImageRecord);
         } catch (e) {
             console.error('[Database] Public images failed:', e);
             return [];
@@ -378,11 +337,9 @@ export class DatabaseService {
     // --- Users ---
     public async getUserProfile(uid: string): Promise<UserRecord | null> {
         try {
-            const docRef = doc(db, "users", uid);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
+            const snap = await adminDb.collection('users').doc(uid).get();
+            if (snap.exists) {
                 const data = snap.data() as UserRecord;
-                // Ensure credits exist for legacy users safely
                 if (data.credits === undefined) {
                     data.credits = 0;
                 }
@@ -397,11 +354,11 @@ export class DatabaseService {
 
     public async updateUserProfile(uid: string, data: Partial<UserRecord>): Promise<UserRecord> {
         try {
-            const docRef = doc(db, "users", uid);
-            const snap = await getDoc(docRef);
+            const userRef = adminDb.collection('users').doc(uid);
+            const snap = await userRef.get();
 
-            if (snap.exists()) {
-                await updateDoc(docRef, data);
+            if (snap.exists) {
+                await userRef.update(data);
                 return { ...snap.data(), ...data } as UserRecord;
             } else {
                 // ** NEW USER CREATION LOGIC **
@@ -416,7 +373,7 @@ export class DatabaseService {
                     ...data
                 } as UserRecord;
 
-                await setDoc(docRef, newUser);
+                await userRef.set(newUser);
 
                 // Log the signup bonus
                 await this.logCreditTransaction(uid, 50, 'SIGNUP_BONUS', 'Welcome Gift');
@@ -431,8 +388,7 @@ export class DatabaseService {
 
     public async getUserByEmail(email: string): Promise<UserRecord | null> {
         try {
-            const q = query(collection(db, "users"), where("email", "==", email));
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('users').where("email", "==", email).get();
             if (snapshot.empty) return null;
             return snapshot.docs[0].data() as UserRecord;
         } catch (e) { return null; }
@@ -451,7 +407,7 @@ export class DatabaseService {
 
             await this.updateUserProfile(userId, { points: newPoints });
 
-            await addDoc(collection(db, "points_history"), {
+            await adminDb.collection('points_history').add({
                 id: uuidv4(),
                 userId,
                 delta: amount,
@@ -469,8 +425,10 @@ export class DatabaseService {
 
     public async getPointsHistory(userId: string): Promise<PointsHistoryRecord[]> {
         try {
-            const q = query(collection(db, "points_history"), where("userId", "==", userId), orderBy("createdAt", "desc"));
-            const snapshot = await getDocs(q);
+            const snapshot = await adminDb.collection('points_history')
+                .where("userId", "==", userId)
+                .orderBy("createdAt", "desc")
+                .get();
             return snapshot.docs.map(d => d.data() as PointsHistoryRecord);
         } catch (e) { return []; }
     }
@@ -484,7 +442,7 @@ export class DatabaseService {
         reason: string
     ) {
         try {
-            await addDoc(collection(db, 'credit_transactions'), {
+            await adminDb.collection('credit_transactions').add({
                 userId,
                 amount,
                 type,
@@ -495,12 +453,12 @@ export class DatabaseService {
     }
 
     public async deductCredits(userId: string, amount: number, reason: string, type: CreditTransaction['type']): Promise<boolean> {
-        const docRef = doc(db, "users", userId);
+        const userRef = adminDb.collection('users').doc(userId);
 
         try {
-            return await runTransaction(db, async (transaction) => {
-                const userDoc = await transaction.get(docRef);
-                if (!userDoc.exists()) throw "User does not exist!";
+            return await adminDb.runTransaction(async (transaction) => {
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists) throw "User does not exist!";
 
                 const userData = userDoc.data() as UserRecord;
                 const currentCredits = userData.credits || 0;
@@ -510,11 +468,7 @@ export class DatabaseService {
                 }
 
                 const newBalance = currentCredits - amount;
-                transaction.update(docRef, { credits: newBalance });
-
-                // We should also log inside transaction ideally, but independent log is okay for loose coupling
-                // To be safe, let's rely on calling logCreditTransaction AFTER success, or addDoc here (but addDoc is not transactional on root level usually unless keyed)
-                // We will return true and let caller log, or log strictly here.
+                transaction.update(userRef, { credits: newBalance });
 
                 return true;
             });
@@ -526,13 +480,218 @@ export class DatabaseService {
 
     public async refundCredits(userId: string, amount: number, reason: string): Promise<void> {
         try {
-            const docRef = doc(db, "users", userId);
-            await updateDoc(docRef, {
-                credits: increment(amount)
+            const userRef = adminDb.collection('users').doc(userId);
+            await userRef.update({
+                credits: admin.firestore.FieldValue.increment(amount)
             });
             await this.logCreditTransaction(userId, amount, 'REFUND', reason);
         } catch (e) {
             console.error("Refund failed", e);
+        }
+    }
+
+    // --- TTS Cache Management ---
+    public async getCachedAudio(cacheKey: string): Promise<string | null> {
+        try {
+            const snap = await adminDb.collection('tts_cache').doc(cacheKey).get();
+            if (snap.exists) {
+                const data = snap.data();
+                return data?.audioUrl || null;
+            }
+            return null;
+        } catch (e) {
+            console.warn('[Database] getCachedAudio failed:', e);
+            return null;
+        }
+    }
+
+    public async saveCachedAudio(cacheKey: string, audioUrl: string): Promise<void> {
+        try {
+            await adminDb.collection('tts_cache').doc(cacheKey).set({
+                cacheKey,
+                audioUrl,
+                createdAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.error('[Database] saveCachedAudio failed:', e);
+        }
+    }
+
+    // --- Magic Mentor (Creative Series) ---
+    public async getCreativeSeries(seriesId: string): Promise<CreativeSeries | null> {
+        try {
+            const snap = await adminDb.collection('creative_series').doc(seriesId).get();
+            return snap.exists ? snap.data() as CreativeSeries : null;
+        } catch (e) {
+            console.error('[Database] getCreativeSeries failed:', e);
+            return null;
+        }
+    }
+
+    public async saveCreativeSeries(series: CreativeSeries): Promise<void> {
+        try {
+            await adminDb.collection('creative_series').doc(series.id).set({
+                ...series,
+                updatedAt: Date.now()
+            });
+            console.log(`[Database] Saved creative series: ${series.id} (User: ${series.userId}, Step: ${series.currentStep})`);
+        } catch (e) {
+            console.error('[Database] saveCreativeSeries failed:', e);
+            throw e;
+        }
+    }
+
+    public async getUserActiveSeries(userId: string): Promise<CreativeSeries | null> {
+        try {
+            const snapshot = await adminDb.collection('creative_series')
+                .where('userId', '==', userId)
+                .where('status', '==', 'active')
+                .limit(1)
+                .get();
+
+            if (snapshot.empty) return null;
+            return snapshot.docs[0].data() as CreativeSeries;
+        } catch (e) {
+            console.error('[Database] getUserActiveSeries failed:', e);
+            return null;
+        }
+    }
+
+    // --- Daily Treasure Hunt Check-in ---
+    public async getCheckInStatus(userId: string): Promise<{ streak: number, lastCheckInDate: string | null, canCheckIn: boolean, nextReward: number, dayCycle: number }> {
+        try {
+            const checkInRef = adminDb.collection('daily_checkins').doc(userId);
+            const snap = await checkInRef.get();
+
+            if (!snap.exists) {
+                return { streak: 0, lastCheckInDate: null, canCheckIn: true, nextReward: 2, dayCycle: 1 };
+            }
+
+            const data = snap.data()!;
+            const lastDate = data.lastCheckInDate; // YYYY-MM-DD
+            const today = new Date().toISOString().split('T')[0];
+
+            let streak = data.currentStreak || 0;
+            const canCheckIn = lastDate !== today;
+
+            if (lastDate && lastDate !== today) {
+                const last = new Date(lastDate);
+                const current = new Date(today);
+                const diffTime = Math.abs(current.getTime() - last.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays > 1) {
+                    streak = 0;
+                }
+            }
+
+            const dayCycle = (streak) % 7 + 1;
+            const rewardsMap: Record<number, number> = { 1: 2, 2: 2, 3: 3, 4: 3, 5: 5, 6: 5, 7: 10 };
+            const nextReward = rewardsMap[dayCycle] || 2;
+
+            return { streak, lastCheckInDate: lastDate, canCheckIn, nextReward, dayCycle };
+
+        } catch (e) {
+            console.error('[Database] getCheckInStatus failed:', e);
+            throw e;
+        }
+    }
+
+    public async performCheckIn(userId: string, isVip: boolean): Promise<{ success: boolean, points: number, dayCycle: number, newStreak: number, message?: string }> {
+        const today = new Date().toISOString().split('T')[0];
+        const checkInRef = adminDb.collection('daily_checkins').doc(userId);
+        const userRef = adminDb.collection('users').doc(userId);
+
+        try {
+            return await adminDb.runTransaction(async (transaction) => {
+                const checkInDoc = await transaction.get(checkInRef);
+                let streak = 0;
+
+                if (checkInDoc.exists) {
+                    const data = checkInDoc.data()!;
+                    if (data.lastCheckInDate === today) {
+                        return { success: false, points: 0, dayCycle: 0, newStreak: data.currentStreak, message: "Already checked in today" };
+                    }
+
+                    const lastDate = new Date(data.lastCheckInDate);
+                    const currentDate = new Date(today);
+                    const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 1) {
+                        streak = data.currentStreak + 1;
+                    } else {
+                        streak = 1;
+                    }
+                } else {
+                    streak = 1;
+                }
+
+                const dayCycle = (streak - 1) % 7 + 1;
+                const rewardsMap: Record<number, number> = { 1: 2, 2: 2, 3: 3, 4: 3, 5: 5, 6: 5, 7: 10 };
+                let basePoints = rewardsMap[dayCycle] || 2;
+
+                if (isVip) {
+                    basePoints *= 2;
+                }
+
+                transaction.set(checkInRef, {
+                    userId,
+                    lastCheckInDate: today,
+                    currentStreak: streak,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                transaction.update(userRef, {
+                    credits: admin.firestore.FieldValue.increment(basePoints)
+                });
+
+                return { success: true, points: basePoints, dayCycle, newStreak: streak };
+            });
+        } catch (e) {
+            console.error('[Database] performCheckIn failed:', e);
+            throw e;
+        }
+    }
+
+    // --- USAGE TRACKING ---
+    async getUserDailyUsage(userId: string, type: string): Promise<number> {
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Using history or images collection. Based on getUserImages, it seems we use 'images' collection.
+            // But legacy code might have used subcollection. Let's aim for 'images' collection query.
+            const snapshot = await adminDb.collection('images')
+                .where('userId', '==', userId)
+                .where('type', '==', type)
+                .where('createdAt', '>=', today.toISOString())
+                .get();
+
+            return snapshot.size;
+        } catch (error) {
+            console.error("[DB] Failed to get daily usage:", error);
+            return 0;
+        }
+    }
+
+    async findCachedGenerations(userId: string, imageHash: string): Promise<any | null> {
+        try {
+            // Check main images collection first, assuming 'meta.imageHash' is what we want
+            const snapshot = await adminDb.collection('images')
+                .where('userId', '==', userId)
+                .where('meta.imageHash', '==', imageHash)
+                .orderBy('createdAt', 'desc')
+                .limit(1)
+                .get();
+
+            if (!snapshot.empty) {
+                return snapshot.docs[0].data();
+            }
+            return null;
+        } catch (error) {
+            console.error("[DB] Cache lookup failed:", error);
+            return null;
         }
     }
 }

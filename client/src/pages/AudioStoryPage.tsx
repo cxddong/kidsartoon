@@ -1,43 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, CloudUpload, Music, BookOpen, Video, Wand2, Check, Play, Pause, RotateCw, Volume2, Mic, ImageIcon, Clapperboard, Lock, X, Smile, Moon, Sun, Hand, Footprints, Sparkles, Film, PenTool, Gift, Zap, Globe, Fish, Castle, TreeDeciduous, Rocket, Tent, Snowflake } from 'lucide-react';
+import { Volume2, Upload, Sparkles, Check, Play, Pause, ArrowLeft, Music, Heart, Zap, Hand, Lock, Volume, Smile, Moon, Rocket, Gift, Castle, Wand2, Snowflake, TreeDeciduous, Footprints, Globe, Fish, Flame, Palette, PawPrint, Users, Cake, Waves, CloudUpload, RotateCw } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { BottomNav } from '../components/BottomNav';
+import { playAudioWithPitchShift } from '../lib/audioUtils';
 import { VIPCover } from '../components/ui/VIPCover';
+import mic3Video from '../assets/mic3.mp4';
 
 const backgroundUrl = '/bg_cartoon_new.jpg';
 
-// --- Configuration Options ---
-const STORY_STYLES = [
-    { id: 'castle_ball', labels: { en: '🏰 Glittering Castle Ball', fr: '🏰 Bal du Château Scintillant', es: '🏰 Baile del Castillo Brillante' }, image: '/assets/story_icons/story_castle.jpg', icon: Castle },
-    { id: 'little_wizard', labels: { en: '🧙‍♂️ Little Wizard\'s Magic School', fr: '🧙‍♂️ École de Magie du Petit Sorcier', es: '🧙‍♂️ Escuela de Magia del Pequeño Mago' }, image: '/assets/story_icons/story_wizard.jpg', icon: Wand2 },
-    { id: 'ice_kingdom', labels: { en: '❄️ Winter Adventure in the Ice Kingdom', fr: '❄️ Aventure Hivernale au Royaume de Glace', es: '❄️ Aventura Invernal en el Reino de Hielo' }, image: '/assets/story_icons/story_ice.jpg', icon: Snowflake },
-    { id: 'magic_woods', labels: { en: '🌳 Talking Magic Woods', fr: '🌳 Bois Magique Parlant', es: '🌳 Bosque Mágico Parlante' }, image: '/assets/story_icons/story_woods.png', icon: TreeDeciduous },
-    { id: 'dino_egg', labels: { en: '🦖 Dino Island: Find the Egg', fr: '🦖 Île aux Dinos : Trouve l\'Œuf', es: '🦖 Isla Dino: Encuentra el Huevo' }, image: '/assets/story_icons/story_dino.jpg', icon: Footprints },
-    { id: 'space_rescue', labels: { en: '🦸‍♂️ Superhero Space Rescue', fr: '🦸‍♂️ Sauvetage Spatial de Super-Héros', es: '🦸‍♂️ Rescate Espacial de Superhéroes' }, image: '/assets/story_icons/story_space.jpg', icon: Rocket },
-    { id: 'marshmallow_clouds', labels: { en: '☁️ Sleepy Marshmallow Clouds', fr: '☁️ Nuages de Guimauve Endormis', es: '☁️ Nubes de Malvavisco Soñolientas' }, image: '/assets/story_icons/story_clouds.png', icon: Moon },
-    { id: 'alien_base', labels: { en: '🛸 Alien Secret Base', fr: '🛸 Base Secrète Extraterrestre', es: '🛸 Base Secreta Alienígena' }, image: '/assets/story_icons/story_alien.jpg', icon: Globe },
-    { id: 'rainbow_palace', labels: { en: '🧜‍♀️ Rainbow Pearl Palace', fr: '🧜‍♀️ Palais de Perles Arc-en-ciel', es: '🧜‍♀️ Palacio de Perlas Arcoíris' }, image: '/assets/story_icons/story_underwater.jpg', icon: Fish },
-];
-
-const MOODS = [
-    { id: 'happy', labels: { en: 'Happy & Cheerful', fr: 'Joyeux & Gai', es: 'Feliz & Alegre' }, image: '/assets/mood_icons/mood_sun.jpg', color: 'bg-yellow-100 text-yellow-600', icon: Smile },
-    { id: 'adventurous', labels: { en: 'Adventurous & Brave', fr: 'Aventureux & Courageux', es: 'Aventurero & Valiente' }, image: '/assets/mood_icons/mood_racing.jpg', color: 'bg-red-100 text-red-600', icon: Rocket },
-    { id: 'calm', labels: { en: 'Calm & Soothing', fr: 'Calme & Apaisant', es: 'Calmado & Relajante' }, image: '/assets/mood_icons/mood_teddy.jpg', color: 'bg-blue-100 text-blue-600', icon: Moon },
-    { id: 'mysterious', labels: { en: 'Mysterious & Magical', fr: 'Mystérieux & Magique', es: 'Misterioso & Mágico' }, image: '/assets/mood_icons/mood_magic.jpg', color: 'bg-purple-100 text-purple-600', icon: Sparkles },
-    { id: 'silly', labels: { en: 'Silly & Funny', fr: 'Rigolo & Amusant', es: 'Tonto & Gracioso' }, image: '/assets/mood_icons/mood_party.jpg', color: 'bg-green-100 text-green-600', icon: Gift },
-    { id: 'spooky', labels: { en: 'Spooky (But Safe!)', fr: 'Effrayant (Mais Sûr!)', es: 'Escalofriante (¡Pero Seguro!)' }, image: '/assets/mood_icons/mood_forest.jpg', color: 'bg-slate-100 text-slate-600', icon: Hand }
-];
-
-const VOICES = [
-    { id: 'female', label: 'Gentle Female', icon: Volume2 },
-    { id: 'male', label: 'Warm Male', icon: Volume2 },
-    { id: 'storyteller', label: 'Storyteller', icon: Volume2 },
-    { id: 'clone', label: 'Clone (VIP)', icon: Lock },
-];
+import { StoryBuilderPanel, type StoryBuilderData, STORY_STYLES, MOODS } from '../components/builder/StoryBuilderPanel';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 export const AudioStoryPage: React.FC = () => {
     const navigate = useNavigate();
@@ -49,9 +25,31 @@ export const AudioStoryPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState(0);
 
+    // Fair Use: Cooldown & Recharge
+    const [isRecharging, setIsRecharging] = useState(false);
+    const [rechargeTime, setRechargeTime] = useState(0);
+
+    const startRecharge = () => {
+        setIsRecharging(true);
+        setRechargeTime(15);
+        const interval = setInterval(() => {
+            setRechargeTime(prev => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    setIsRecharging(false);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
     // Data State
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    // Cropper State
+    const [cropImage, setCropImage] = useState<string | null>(null);
 
     // Community Gallery Data
     const [galleryImages, setGalleryImages] = useState<any[]>([]);
@@ -71,27 +69,38 @@ export const AudioStoryPage: React.FC = () => {
         }
     }, [location]);
 
-    // Step 2 Data
-    const [storyStyle, setStoryStyle] = useState(STORY_STYLES[0].id);
-    const [mood, setMood] = useState(MOODS[0].id);
-    const [voice, setVoice] = useState(VOICES[0].id);
+    // Removed redundant local story settings state
     const [storyData, setStoryData] = useState<any>(null); // {text, audioUrl}
 
     // Audio Player State
     const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     // Handlers
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setImageFile(file);
+            // Read for Cropper
             const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
+            reader.onloadend = () => {
+                setCropImage(reader.result as string);
+            };
             reader.readAsDataURL(file);
+
+            // Clear input
+            e.target.value = '';
         }
+    };
+
+    const handleCropComplete = (blob: Blob) => {
+        if (!cropImage) return;
+        const url = URL.createObjectURL(blob);
+        const file = new File([blob], "story-image.jpg", { type: "image/jpeg" });
+
+        setImagePreview(url);
+        setImageFile(file);
+        setCropImage(null);
     };
 
     const [estTime, setEstTime] = useState('');
@@ -123,6 +132,8 @@ export const AudioStoryPage: React.FC = () => {
             setIsPlaying(true);
         }
     };
+
+    // playVoiceDemo logic moved to StoryBuilderPanel.tsx
 
     const goBack = () => {
         if (step > 1) {
@@ -160,7 +171,7 @@ export const AudioStoryPage: React.FC = () => {
         window.speechSynthesis.speak(utterance);
     };
 
-    const generateStory = async () => {
+    const generateStory = async (builderData: StoryBuilderData) => {
         if (!imageFile && !imagePreview) return;
         setLoading(true);
         setEstTime('Estimated time: ~45 seconds');
@@ -172,26 +183,18 @@ export const AudioStoryPage: React.FC = () => {
 
         try {
             // Lookup English Labels for Agent
-            const styleLabel = STORY_STYLES.find(s => s.id === storyStyle)?.labels.en || storyStyle;
-            const moodLabel = MOODS.find(m => m.id === mood)?.labels?.en || mood;
-
-            // Agent Keyword Logic
-            let extraKeywords = '';
-            if (storyStyle === 'little_wizard') {
-                extraKeywords = 'spells, potions, flying broomsticks, ancient libraries, magical sparks';
-            } else if (storyStyle === 'ice_kingdom') {
-                extraKeywords = 'crystalline textures, frozen landscapes, glowing snowflakes, winter animals, pixar style';
-            }
+            const styleLabel = STORY_STYLES.find(s => s.id === builderData.storyStyle)?.labels.en || builderData.storyStyle;
+            const moodLabel = MOODS.find(m => m.id === builderData.mood)?.labels?.en || builderData.mood;
 
             // Updated Prompt to emphasize Image Context + Visual Anchors
             const prompt = `
                                     ANALYZE the uploaded image in detail first. Then, create a short, engaging audio story based STRICTLY on the visible characters, setting, and actions in the image.
                                     
                                     VISUAL ANCHORS (Use these to pull lighting/texture from Context Cache):
-                                    - Scene: ${styleLabel} ${extraKeywords ? `(${extraKeywords})` : ''}
+                                    - Scene: ${styleLabel}
                                     - Mood/Vibe: ${moodLabel}
                                     
-                                    Narration Voice: ${voice}
+                                    Narration Voice: ${builderData.voice}
                                     Rules: Friendly narration tone, short story suitable for children (approx 30-50 words). DO NOT make up generic elements; use what is seen in the picture.
                                     `.trim();
 
@@ -202,7 +205,8 @@ export const AudioStoryPage: React.FC = () => {
                 formData.append('imageUrl', imagePreview);
             }
             formData.append('voiceText', prompt);
-            formData.append('voice', voice); // 'female', 'male', 'storyteller'
+            formData.append('voice', builderData.voice);
+            formData.append('voiceTier', builderData.voiceTier);
             formData.append('userId', user?.uid || 'demo');
 
             const res = await fetch('/api/media/image-to-voice', {
@@ -260,27 +264,7 @@ export const AudioStoryPage: React.FC = () => {
                     <img src={backgroundUrl} className="w-full h-full object-cover" />
                 </div>
 
-                {/* Left Sidebar (Community) */}
-                <div className="hidden xl:flex w-80 flex-col gap-4 p-6 overflow-y-auto border-r border-slate-200/50 bg-white/30 backdrop-blur-sm z-20 custom-scrollbar">
-                    <div className="sticky top-0 bg-white/0 backdrop-blur-md py-2 z-10">
-                        <h3 className="font-black text-slate-500 uppercase tracking-widest text-xs">Community Stories</h3>
-                    </div>
-                    {galleryImages.map((img: any) => (
-                        <div key={img.id} className="group relative aspect-[3/4] rounded-2xl bg-white shadow-md overflow-hidden cursor-pointer hover:ring-4 ring-purple-200 transition-all"
-                            onClick={() => setSelectedImage(img.imageUrl)}>
-                            <img src={img.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
-                            <div className="absolute top-2 right-2 bg-black/40 text-white p-1.5 rounded-full backdrop-blur-sm">
-                                <Play className="w-3 h-3" />
-                            </div>
-                            <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                                <p className="text-white text-xs font-bold line-clamp-1">{img.meta?.title || "Untitled Story"}</p>
-                            </div>
-                        </div>
-                    ))}
-                    {galleryImages.length === 0 && (
-                        <div className="text-center p-4 text-slate-400 text-sm">Loading community stories...</div>
-                    )}
-                </div>
+                {/* Left Sidebar Removed for Cleaner Layout */}
 
                 {/* Main Center Column */}
                 <div ref={scrollRef} className="flex-1 h-full overflow-y-auto relative custom-scrollbar pb-24">
@@ -316,10 +300,24 @@ export const AudioStoryPage: React.FC = () => {
                             {step === 1 && (
                                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
                                     <div className={cn(
-                                        "bg-white rounded-3xl shadow-xl flex flex-col items-center justify-center border-4 border-dashed border-slate-200 hover:border-purple-300 transition-colors group cursor-pointer overflow-hidden mx-auto",
-                                        !imagePreview ? "w-full flex-1 p-6" : "w-fit h-auto border-purple-500"
+                                        "bg-white rounded-[130px] shadow-xl flex flex-col items-center justify-center hover:shadow-2xl transition-all group cursor-pointer overflow-hidden mx-auto relative transform hover:scale-95 duration-500",
+                                        !imagePreview ? "w-[85%] aspect-square rotate-3 hover:rotate-0" : "w-fit h-auto"
                                     )}
                                         onClick={() => document.getElementById('step1-upload')?.click()}>
+
+                                        {/* Background Video (mic3.mp4) - Only show when no image */}
+                                        {!imagePreview && (
+                                            <video
+                                                src={mic3Video}
+                                                autoPlay
+                                                loop
+                                                muted
+                                                playsInline
+                                                className="absolute inset-0 w-full h-full object-cover -rotate-3 group-hover:rotate-0 transition-transform duration-500 scale-110"
+                                                disablePictureInPicture
+                                            />
+                                        )}
+
                                         <input type="file" id="step1-upload" className="hidden" accept="image/*" onChange={handleUpload} />
                                         {imagePreview ? (
                                             <div className="relative max-w-full">
@@ -329,12 +327,10 @@ export const AudioStoryPage: React.FC = () => {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="text-center group-hover:scale-105 transition-transform">
-                                                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-600">
+                                            <div className="text-center transition-all relative z-10 -rotate-3 group-hover:rotate-0 duration-500">
+                                                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-purple-600 opacity-50 group-hover:opacity-100 transition-opacity">
                                                     <CloudUpload className="w-10 h-10" />
                                                 </div>
-                                                <h3 className="text-xl font-black text-slate-800 mb-2">Upload Photo</h3>
-                                                <p className="text-slate-500 font-medium">Create a magical story from your photo!</p>
                                             </div>
                                         )}
                                     </div>
@@ -354,131 +350,13 @@ export const AudioStoryPage: React.FC = () => {
 
                                     {!storyData ? (
                                         <>
-                                            {/* 1. Story Style */}
-                                            <div className="bg-white p-5 rounded-3xl shadow-lg">
-                                                <h3 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
-                                                    <span className="bg-yellow-400 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">1</span>
-                                                    Story Style 🧚
-                                                </h3>
-                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                    {STORY_STYLES.map(item => (
-                                                        <button key={item.id} onClick={() => setStoryStyle(item.id)}
-                                                            className={cn(
-                                                                "flex flex-col items-center gap-2 p-2 rounded-2xl border-4 transition-all group hover:bg-slate-50",
-                                                                storyStyle === item.id ? "border-yellow-400 bg-yellow-50 shadow-lg scale-105" : "border-slate-100 bg-white"
-                                                            )}>
-
-                                                            {/* Image Container */}
-                                                            <div className="relative w-full aspect-square rounded-xl overflow-hidden shadow-sm">
-                                                                {/* @ts-ignore */}
-                                                                {item.image ? (
-                                                                    /* @ts-ignore */
-                                                                    <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                                                ) : (
-                                                                    <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-                                                                        <item.icon className="w-10 h-10 text-slate-300" />
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Checkmark Overlay */}
-                                                                {storyStyle === item.id && (
-                                                                    <div className="absolute top-2 right-2 bg-yellow-500 text-white rounded-full p-1 shadow-md z-10 animate-in zoom-in">
-                                                                        <Check className="w-3 h-3 md:w-4 md:h-4" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Text Label (Below Image) */}
-                                                            <span className={cn(
-                                                                "text-xs md:text-sm font-black text-center leading-tight px-1",
-                                                                storyStyle === item.id ? "text-yellow-800" : "text-slate-600"
-                                                            )}>
-                                                                {item.labels?.en}
-                                                            </span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* 2. Mood */}
-                                            <div className="bg-white p-5 rounded-3xl shadow-lg">
-                                                <h3 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
-                                                    <span className="bg-orange-400 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">2</span>
-                                                    Mood 😊
-                                                </h3>
-                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                    {MOODS.map(item => (
-                                                        <button key={item.id} onClick={() => setMood(item.id)}
-                                                            className={cn(
-                                                                "flex flex-col items-center gap-2 p-2 rounded-2xl border-4 transition-all group hover:bg-slate-50",
-                                                                mood === item.id ? "border-orange-400 bg-orange-50 shadow-lg scale-105" : "border-slate-100 bg-white"
-                                                            )}>
-
-                                                            {/* Image Container */}
-                                                            <div className="relative w-full aspect-square rounded-xl overflow-hidden shadow-sm">
-                                                                {/* @ts-ignore */}
-                                                                {item.image ? (
-                                                                    /* @ts-ignore */
-                                                                    <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                                                ) : (
-                                                                    <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-                                                                        <item.icon className={cn("w-10 h-10 text-slate-300", mood === item.id && "text-orange-500")} />
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Checkmark */}
-                                                                {mood === item.id && (
-                                                                    <div className="absolute top-2 right-2 bg-orange-500 text-white rounded-full p-1 shadow-md z-10 animate-in zoom-in">
-                                                                        <Check className="w-3 h-3" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            <span className={cn(
-                                                                "text-[10px] font-bold text-center leading-tight px-1",
-                                                                mood === item.id ? "text-orange-700" : "text-slate-500"
-                                                            )}>
-                                                                {item.labels?.en}
-                                                            </span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* 3. Voice */}
-                                            <div className="bg-white p-5 rounded-3xl shadow-lg">
-                                                <h3 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
-                                                    <span className="bg-green-400 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">3</span>
-                                                    Narrator 🗣️
-                                                </h3>
-                                                <div className="flex flex-col gap-2">
-                                                    {VOICES.map(item => (
-                                                        <div key={item.id} className="flex gap-2 w-full">
-                                                            <button onClick={() => {
-                                                                if (item.id === 'clone') {
-                                                                    alert('🔒 This is a VIP feature. Upgrade to unlock Voice Cloning!');
-                                                                    return;
-                                                                }
-                                                                setVoice(item.id);
-                                                            }}
-                                                                className={cn("flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all", voice === item.id ? "border-green-500 bg-green-50 text-green-700" : "border-slate-100 bg-white text-slate-500")}>
-                                                                <item.icon className="w-5 h-5" />
-                                                                <span className="text-sm font-bold flex-1 text-left">{item.label}</span>
-                                                                {item.id === 'clone' && <span className="text-xs bg-black text-white px-2 py-0.5 rounded-full">Pro</span>}
-                                                            </button>
-                                                            {item.id === 'clone' && (
-                                                                <button onClick={(e) => { e.stopPropagation(); alert("Playing Voice Sample... (Placeholder)"); }} className="p-3 bg-white border-2 border-slate-100 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-purple-500 transition-colors">
-                                                                    <Play className="w-5 h-5 fill-current" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            <button onClick={generateStory} disabled={loading} className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black text-lg disabled:opacity-70 shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
-                                                {loading ? "Writing Story..." : "Generate Audio Story ✨ (FREE!)"}
-                                            </button>
+                                            <StoryBuilderPanel
+                                                imageUploaded={!!imageFile || !!imagePreview}
+                                                onGenerate={generateStory}
+                                                userId={user?.uid}
+                                                isRecharging={isRecharging}
+                                                rechargeTime={rechargeTime}
+                                            />
                                         </>
                                     ) : (
                                         /* Result View: Play & Confirm */
@@ -541,30 +419,19 @@ export const AudioStoryPage: React.FC = () => {
                             )}
                         </AnimatePresence>
 
-                        {/* Universal Exit Button */}
-                        <div className="mt-auto pt-8 pb-12 flex justify-center">
-                            <GenerationCancelButton
-                                isGenerating={loading}
-                                onCancel={() => navigate('/generate')}
-                            />
-                        </div>
+                        {/* Universal Exit Button - Only show when generating */}
+                        {loading && (
+                            <div className="mt-auto pt-8 pb-12 flex justify-center">
+                                <GenerationCancelButton
+                                    isGenerating={loading}
+                                    onCancel={() => navigate('/generate')}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Sidebar (Featured) - Optional (Keeping MakeCartoon Layout Balance) */}
-                <div className="hidden xl:flex w-80 flex-col gap-4 p-6 border-l border-slate-200/50 bg-white/30 backdrop-blur-sm z-20">
-                    <div className="sticky top-0 bg-white/0 backdrop-blur-md py-2 z-10">
-                        <h3 className="font-black text-slate-500 uppercase tracking-widest text-xs">Magic Tips</h3>
-                    </div>
-                    <div className="p-6 bg-yellow-50 rounded-3xl border-2 border-yellow-200 shadow-sm">
-                        <h4 className="font-bold text-yellow-800 mb-2">Did you know?</h4>
-                        <p className="text-sm text-yellow-700">Different voices change how the story feels! Try the 'Storyteller' for a classic vibe.</p>
-                    </div>
-                    <div className="p-6 bg-purple-50 rounded-3xl border-2 border-purple-200 shadow-sm">
-                        <h4 className="font-bold text-purple-800 mb-2">Pro Tip</h4>
-                        <p className="text-sm text-purple-700">Upload clear photos where characters are visible for the best stories.</p>
-                    </div>
-                </div>
+                {/* Right Sidebar Removed for Cleaner Layout */}
 
             </div>
 
@@ -586,6 +453,16 @@ export const AudioStoryPage: React.FC = () => {
                         />
                     </div>
                 </div>
+            )}
+
+            {/* Cropper Modal */}
+            {cropImage && (
+                <ImageCropperModal
+                    imageUrl={cropImage}
+                    onCrop={handleCropComplete}
+                    onCancel={() => setCropImage(null)}
+                    aspectRatio={1} // Or flexible? Story covers usually square or portrait. Let's start with Square.
+                />
             )}
             <BottomNav />
         </div>

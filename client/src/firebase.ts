@@ -33,6 +33,9 @@ if (!firebaseConfig.apiKey) {
         dbExports = initializeFirestore(app, { experimentalForceLongPolling: true });
         storageExports = getStorage(app);
         googleProviderExports = new GoogleAuthProvider();
+        googleProviderExports.setCustomParameters({
+            prompt: 'select_account'
+        });
         appleProviderExports = new OAuthProvider('apple.com');
     } catch (e) {
         console.error("Firebase Initialization Error:", e);

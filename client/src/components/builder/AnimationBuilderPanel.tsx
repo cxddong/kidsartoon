@@ -1,56 +1,114 @@
 import React, { useState } from 'react';
-import { Smile, Moon, Sun, Music, Box, Clapperboard, FlaskConical, Sparkles, Wand2, Star, Zap, Cloud, Camera, PenTool, Footprints, Rocket, Gift, Hand, Check } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { BouncyButton } from '../ui/BouncyButton';
+import { motion, type Variants } from 'framer-motion';
+import { Wand2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-// --- Configuration ---
-export const VIDEO_MOODS = [
-    { id: 'happy', label: 'Sunny Day', icon: Sun, color: '#FFD700', image: '/assets/mood_icons/mood_sun.jpg', promptText: 'Happy, bright, sunny, cheerful' },
-    { id: 'adventurous', label: 'Brave Heart', icon: Rocket, color: '#FF4500', image: '/assets/mood_icons/mood_racing.jpg', promptText: 'Adventurous, brave, racing, action' },
-    { id: 'calm', label: 'Sweet Dream', icon: Moon, color: '#87CEEB', image: '/assets/mood_icons/mood_teddy.jpg', promptText: 'Calm, sleepy, starry night, cozy' },
-    { id: 'mysterious', label: 'Magic Mystery', icon: Sparkles, color: '#9370DB', image: '/assets/mood_icons/mood_magic.jpg', promptText: 'Mysterious, magical, glowing, enchanted' },
-    { id: 'silly', label: 'Funny Party', icon: Gift, color: '#FF69B4', image: '/assets/mood_icons/mood_party.jpg', promptText: 'Funny, silly party, goofy, playful' },
-    { id: 'spooky', label: 'Spooky Fun', icon: Hand, color: '#4B2C20', image: '/assets/mood_icons/mood_forest.jpg', promptText: 'Spooky but safe, mysterious woods, dark but fun' },
+// --- Magic Cinema Kids Version Configuration ---
+
+// Magic Actions (Row 1)
+export const MAGIC_ACTIONS = [
+    { id: 'dance', label: 'Dance', emoji: '💃', image: '/assets/actions/dance.jpg', prompt: 'character dancing happily, rhythmic movement', motionScore: 0.8 },
+    { id: 'run', label: 'Run', emoji: '🏃‍♂️', image: '/assets/actions/fly.jpg', prompt: 'running fast, speed lines, hair blowing', motionScore: 0.8, camera: 'pan_right' },
+    { id: 'fly', label: 'Fly', emoji: '🚀', image: '/assets/actions/run.jpg', prompt: 'flying in the sky, feet off ground', camera: 'pan_up' },
+    { id: 'swim', label: 'Swim', emoji: '🏊‍♂️', image: '/assets/actions/swim.jpg', prompt: 'swimming in water, flowing movement, bubbles', motionScore: 0.7 },
+    { id: 'jump', label: 'Jump', emoji: '🦘', image: '/assets/actions/jump.jpg', prompt: 'jumping up high, bouncing', motionScore: 0.9 },
+    { id: 'silly', label: 'Silly', emoji: '🤡', image: '/assets/actions/silly.jpg', prompt: 'doing a silly dance, funny face, wiggling', motionScore: 0.8 },
+    { id: 'laugh', label: 'Laugh', emoji: '😆', image: '/assets/actions/laugh.jpg', prompt: 'laughing out loud, moving head', camera: 'zoom_in', focus: 'face' },
+    { id: 'wink', label: 'Wink', emoji: '😉', image: '/assets/actions/wink.jpg', prompt: 'winking one eye, cute smile', camera: 'zoom_in', focus: 'face' }
 ];
 
-// Custom Helper Chips
-export const PROMPT_HELPERS = [
-    "Zoom In",
-    "Zoom Out",
-    "Pan Left",
-    "Slow Motion"
-];
-
-export const RENDER_STYLES = [
-    { id: '3d', label: '3D Movie', icon: Clapperboard, value: 'cinematic' },
-    { id: 'blocks', label: 'Blocks', icon: Box, value: 'pixel_art' },
-    { id: 'clay', label: 'Clay', icon: Footprints, value: 'claymation' },
-    { id: 'crayon', label: 'Drawing', icon: PenTool, value: 'crayon' },
-];
-
-export const MAGIC_POTIONS = [
+// Magic Styles (Row 2)
+export const MAGIC_STYLES = [
     {
-        id: 'standard',
-        label: 'Magic Video',
-        subLabel: '5 Seconds',
-        icon: Sparkles,
-        cost: 80,
-        quality: 'SD',
-        duration: 5
+        id: 'clay',
+        label: 'Clay',
+        emoji: '🧸',
+        image: '/assets/styles/clay.jpg',
+        prompt: 'claymation style, handmade clay texture, soft rounded shapes, pastel colors, slightly textured surface, slow gentle movement'
     },
+    {
+        id: 'cartoon',
+        label: 'Cartoon',
+        emoji: '🎨',
+        image: '/assets/styles/cartoon.jpg',
+        prompt: 'American cartoon Q-style, thick black outlines, vibrant candy colors, exaggerated proportions with big head and small body, simple background with stars and bubbles'
+    },
+    {
+        id: 'watercolor',
+        label: 'Watercolor',
+        emoji: '🌸',
+        image: '/assets/styles/watercolor.jpg',
+        prompt: 'Japanese healing picture book style, soft watercolor blending, low saturation warm tones, fluffy clouds and grass, gentle calming atmosphere'
+    },
+    {
+        id: 'pixel',
+        label: 'Pixel',
+        emoji: '🎮',
+        image: '/assets/styles/pixel.jpg',
+        prompt: 'candy-colored pixel art style, low-res but vibrant, blocky Q-version characters, pixelated stars and candy decorations in background'
+    },
+    {
+        id: 'dreamy',
+        label: 'Dreamy',
+        emoji: '✨',
+        image: '/assets/styles/dreamy.jpg',
+        prompt: 'dreamy fairy tale style with light effects, semi-transparent glow aura, floating petals and stars, soft purple and blue dreamy colors'
+    },
+    {
+        id: 'anime',
+        label: 'Anime',
+        emoji: '⚡',
+        image: '/assets/styles/anime.jpg',
+        prompt: 'Japanese anime style, cel-shaded coloring, dynamic poses, expressive eyes with glossy highlights, speed lines and motion effects, vibrant saturated colors'
+    }
+];
 
+// Magic Effects (Row 3)
+export const MAGIC_EFFECTS = [
+    { id: 'sparkle', label: 'Sparkle', emoji: '✨', image: '/assets/effects/sparkle.jpg', prompt: 'glowing magic dust, twinkling stars, dreamy lighting' },
+    { id: 'bubbles', label: 'Bubbles', emoji: '🫧', image: '/assets/effects/bubbles.jpg', prompt: 'floating soap bubbles everywhere, colorful, fun' },
+    { id: 'hearts', label: 'Hearts', emoji: '❤️', image: '/assets/effects/hearts.jpg', prompt: 'floating red hearts, love aura, cute atmosphere' },
+    { id: 'snow', label: 'Snow', emoji: '❄️', image: '/assets/effects/snow.jpg', prompt: 'falling snow, winter vibe, cold breath' },
+    { id: 'fire', label: 'Fire', emoji: '🔥', image: '/assets/effects/fire.jpg', prompt: 'cool energy aura, flames, super power mode' },
+    { id: 'confetti', label: 'Confetti', emoji: '🎉', image: '/assets/effects/confetti.jpg', prompt: 'falling confetti, party celebration, fireworks' }
+];
+
+export const VIDEO_DURATION_OPTIONS = [
+    {
+        duration: 5 as const,
+        label: 'Short',
+        emoji: '⚡',
+        image: '/assets/duration/5s.jpg',
+        baseCredits: 50,
+        audioCredits: 30,
+        description: '5 sec'
+    },
+    {
+        duration: 8 as const,
+        label: 'Medium',
+        emoji: '🎬',
+        image: '/assets/duration/8s.jpg',
+        baseCredits: 80,
+        audioCredits: 50,
+        description: '8 sec'
+    },
+    {
+        duration: 10 as const,
+        label: 'Long',
+        emoji: '🎞️',
+        image: '/assets/duration/10s.jpg',
+        baseCredits: 100,
+        audioCredits: 60,
+        description: '10 sec'
+    }
 ];
 
 export interface AnimationBuilderData {
-    mood: string;
-    animStyle: string;
-    renderStyle: string;
-    addAudio: boolean;
-    quality: 'SD' | 'HD';
-    duration: number;
-    prompt?: string;
-    cameraFixed?: boolean;
+    action?: string;          // Optional: selected action ID (dance, run, fly, etc.)
+    style?: string;           // Optional: selected style ID (clay, cartoon, watercolor, pixel, dreamy)
+    effect?: string;          // Optional: selected effect ID (sparkle, bubbles, etc.)
+    generateAudio: boolean;   // Audio generation toggle
+    duration: 5 | 8 | 10;     // Video duration options
 }
 
 interface Props {
@@ -59,137 +117,252 @@ interface Props {
     isGenerating?: boolean;
     progress?: number;
     statusMessage?: string;
+    uploadedImage?: File | null;
 }
 
-export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUploaded, isGenerating = false, progress = 0, statusMessage = '' }) => {
-    const [mood, setMood] = useState(VIDEO_MOODS[0].id);
-    const [renderStyle, setRenderStyle] = useState(RENDER_STYLES[0].id);
-    // Removed legacy animStyle state, relying on prompt chips only
-    const [addAudio, setAddAudio] = useState(true);
-    const [quality, setQuality] = useState<'SD' | 'HD'>('SD');
-    const [duration, setDuration] = useState<number>(5); // Default 5s
-    const [customPrompt, setCustomPrompt] = useState('');
-    const [cameraFixed, setCameraFixed] = useState(false);
+export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUploaded, isGenerating, uploadedImage }) => {
+    const [action, setAction] = useState<string | undefined>(MAGIC_ACTIONS[0].id);
+    const [style, setStyle] = useState<string | undefined>(undefined);
+    const [effect, setEffect] = useState<string | undefined>(undefined);
+    const [generateAudio, setGenerateAudio] = useState(true);
+    const [duration, setDuration] = useState<5 | 8 | 10>(5);
 
-    // Helpers
-    const appendPrompt = (text: string) => {
-        setCustomPrompt(prev => {
-            const clean = prev.trim();
-            if (clean.endsWith(',') || clean.endsWith('.')) return `${clean} ${text}`;
-            if (clean.length > 0) return `${clean}, ${text}`;
-            return text;
-        });
+    const calculateCredits = (): number => {
+        const option = VIDEO_DURATION_OPTIONS.find(o => o.duration === duration);
+        if (!option) return 50;
+        return option.baseCredits + (generateAudio ? option.audioCredits : 0);
     };
 
-    const isReady = imageUploaded;
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.05,
+                delayChildren: 0.1
+            }
+        }
+    };
 
-    // Calculate Price
-    const cost = 80; // Fixed Cost for Doubao V2
+    const popInVariants: Variants = {
+        hidden: { scale: 0, opacity: 0 },
+        visible: {
+            scale: 1,
+            opacity: 1,
+            transition: {
+                type: "spring" as const,
+                stiffness: 400,
+                damping: 15
+            }
+        }
+    };
 
     return (
-        <div className="w-full flex flex-col">
-            <div className="p-4 space-y-6 pb-32">
+        <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto pb-12">
+            {/* Action Selection */}
+            <div className="space-y-3">
+                <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest flex items-center gap-2">
+                    🎬 Do what?
+                </h4>
+                <motion.div
+                    className="grid grid-cols-4 gap-2"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                    {MAGIC_ACTIONS.map(act => (
+                        <motion.button
+                            key={act.id}
+                            variants={popInVariants}
+                            onClick={() => setAction(prev => prev === act.id ? undefined : act.id)}
+                            className={cn(
+                                "aspect-square rounded-xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                action === act.id
+                                    ? "bg-blue-500/10 border-blue-500 scale-105 z-10"
+                                    : "bg-white border-slate-100 hover:border-slate-300"
+                            )}
+                        >
+                            <img src={act.image} className="w-full h-full object-cover" alt={act.label} />
+                            <div className={cn(
+                                "absolute bottom-0 left-0 right-0 py-1 transition-opacity bg-black/50 backdrop-blur-sm",
+                                action === act.id ? "opacity-100" : "opacity-100" // Always show or conditional? User said "text at bottom", usually implies visible.
+                            )}>
+                                <span className="text-white text-[10px] font-black uppercase block text-center truncate px-1">{act.label}</span>
+                            </div>
+                        </motion.button>
+                    ))}
+                </motion.div>
+            </div>
 
-                {/* Section A: Prompt Input (Core) */}
-                <section className="space-y-3">
-                    <h3 className="text-lg font-black text-slate-700 flex items-center gap-2">
-                        <Wand2 className="w-5 h-5 text-purple-500" />
-                        Make it Move!
-                    </h3>
-
-
-                    <div className="bg-purple-50 p-3 rounded-2xl border-2 border-purple-100 flex items-center justify-between">
-                        <span className="text-sm font-bold text-slate-600 flex items-center gap-2">
-                            <Camera className="w-4 h-4 text-purple-500" /> Magic Camera
-                        </span>
-                        <div className="flex bg-white rounded-xl p-1 shadow-sm border border-purple-100">
-                            <button
-                                onClick={() => setCameraFixed(false)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Style Selection */}
+                <div className="space-y-3">
+                    <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest flex items-center gap-2">
+                        🎨 Which style?
+                    </h4>
+                    <motion.div
+                        className="grid grid-cols-3 gap-2"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {MAGIC_STYLES.map(sty => (
+                            <motion.button
+                                key={sty.id}
+                                variants={popInVariants}
+                                onClick={() => setStyle(prev => prev === sty.id ? undefined : sty.id)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                    !cameraFixed ? "bg-purple-500 text-white shadow-md" : "text-slate-400 hover:bg-slate-50"
+                                    "aspect-square rounded-xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                    style === sty.id
+                                        ? "bg-emerald-500/10 border-emerald-500 scale-105 z-10"
+                                        : "bg-white border-slate-100 hover:border-slate-300"
                                 )}
                             >
-                                🎬 Movie Mode
-                            </button>
-                            <button
-                                onClick={() => setCameraFixed(true)}
+                                <img src={sty.image} className="w-full h-full object-cover" alt={sty.label} />
+                                <div className={cn(
+                                    "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-0.5 px-1 transition-opacity",
+                                    style === sty.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                )}>
+                                    <span className="text-white text-[8px] font-black uppercase block text-center truncate">{sty.label}</span>
+                                </div>
+                            </motion.button>
+                        ))}
+                    </motion.div>
+                </div>
+
+                {/* Effect Selection */}
+                <div className="space-y-3">
+                    <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest flex items-center gap-2">
+                        ✨ Magic Effects
+                    </h4>
+                    <motion.div
+                        className="grid grid-cols-3 gap-2"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {MAGIC_EFFECTS.map(eff => (
+                            <motion.button
+                                key={eff.id}
+                                variants={popInVariants}
+                                onClick={() => setEffect(prev => prev === eff.id ? undefined : eff.id)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                    cameraFixed ? "bg-purple-500 text-white shadow-md" : "text-slate-400 hover:bg-slate-50"
+                                    "aspect-square rounded-xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                    effect === eff.id
+                                        ? "bg-amber-500/10 border-amber-500 scale-105 z-10"
+                                        : "bg-white border-slate-100 hover:border-slate-300"
                                 )}
                             >
-                                🖼️ Frame Mode
-                            </button>
-                        </div>
-                    </div>
+                                <img src={eff.image} className="w-full h-full object-cover" alt={eff.label} />
+                                <div className={cn(
+                                    "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-0.5 px-1 transition-opacity",
+                                    effect === eff.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                )}>
+                                    <span className="text-white text-[8px] font-black uppercase block text-center truncate">{eff.label}</span>
+                                </div>
+                            </motion.button>
+                        ))}
+                    </motion.div>
+                </div>
+            </div>
 
-                    <div className="relative">
-                        <textarea
-                            value={customPrompt}
-                            onChange={(e) => setCustomPrompt(e.target.value)}
-                            placeholder="Tell me what you want to do? e.g. Bird flying, river flowing..."
-                            className="w-full h-32 p-4 rounded-2xl border-2 border-slate-200 bg-white focus:border-purple-400 focus:ring-4 focus:ring-purple-100 transition-all outline-none resize-none text-slate-700 font-medium text-sm shadow-inner"
-                        />
-                        <div className="absolute right-3 bottom-3 text-[10px] text-slate-400 font-bold bg-white/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                            {customPrompt.length} chars
-                        </div>
-                    </div>
-
-                    {/* Helper Chips */}
-                    {/* Default Chips - Updated to requested values */}
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {["Zoom In", "Zoom Out", "Pan Left", "Slow Motion"].map(item => (
+            {/* Bottom Controls Row: Length & Audio */}
+            <div className="flex flex-col md:flex-row gap-6">
+                {/* Length */}
+                <div className="flex-1 space-y-3">
+                    <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest">⏱️ Duration</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                        {VIDEO_DURATION_OPTIONS.map(opt => (
                             <button
-                                key={item}
-                                onClick={() => setCustomPrompt(prev => (prev.trim() + ' ' + item).trim())}
-                                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-full font-bold transition-colors border border-slate-200"
+                                key={opt.duration}
+                                onClick={() => setDuration(opt.duration)}
+                                className={cn(
+                                    "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                    duration === opt.duration
+                                        ? "bg-purple-500/20 border-purple-500 ring-4 ring-purple-500/30 scale-105"
+                                        : "bg-white border-slate-200 hover:border-slate-300"
+                                )}
                             >
-                                + {item}
+                                {opt.image ? (
+                                    <>
+                                        <img src={opt.image} className="w-full h-full object-cover" alt={opt.description} />
+                                        <div className={cn(
+                                            "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-1 px-2 transition-opacity",
+                                            duration === opt.duration ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                        )}>
+                                            <span className="text-white text-[10px] font-black uppercase block text-center">{opt.description}</span>
+                                            <span className="text-amber-400 text-[9px] font-bold block text-center">-{opt.baseCredits} pt</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-2xl">{opt.emoji}</span>
+                                        <span className="text-slate-700 text-[10px] font-black">{opt.description}</span>
+                                        <span className="text-amber-500 text-[9px] font-bold">-{opt.baseCredits} pt</span>
+                                    </>
+                                )}
                             </button>
                         ))}
                     </div>
-                </section>
-
-                <div className="h-px bg-slate-100 w-full" />
-
-                {/* Section B: Atmosphere & Style (Simplified) */}
-                {/* Section B: Atmosphere & Style (REMOVED for Kid-Friendly UI) */}
-                {/* 
-                <section className="space-y-4">
-                   ... (Hidden to match strict requirements)
-                </section> 
-                */}
-
-                {/* Generate Button or Progress */}
-                <div className="pt-2 sticky bottom-4 z-10">
-                    {isGenerating ? (
-                        <div className="w-full bg-white/90 backdrop-blur-md p-6 rounded-3xl border-2 border-purple-100 shadow-2xl flex flex-col items-center animate-in fade-in slide-in-from-bottom-4">
-                            <div className="flex items-center gap-3 mb-3 w-full">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
-                                <span className="text-sm font-bold text-slate-600 flex-1">{statusMessage || "AI is casting magic..."}</span>
-                                <span className="text-sm font-black text-purple-600">{Math.round(progress || 0)}%</span>
-                            </div>
-                            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300 ease-out"
-                                    style={{ width: `${Math.round(progress || 0)}%` }}
-                                />
-                            </div>
-                            <p className="text-xs text-slate-400 mt-2 font-medium">Please wait while we render your video...</p>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => onGenerate({ mood, animStyle: 'custom', renderStyle, addAudio, quality, duration, prompt: customPrompt, cameraFixed })}
-                            disabled={!isReady}
-                            className="w-full py-4 rounded-3xl text-white font-black text-xl tracking-wide shadow-xl shadow-purple-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 flex items-center justify-center gap-3 group"
-                        >
-                            <span className="group-hover:animate-pulse">🪄 Generate Video</span>
-                            <span className="bg-black/20 px-3 py-1 rounded-full text-sm">-{cost} pts</span>
-                        </button>
-                    )}
                 </div>
-            </div >
-        </div >
+
+                {/* Audio Toggle */}
+                <div className="flex-1 space-y-3">
+                    <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest">🔊 Sound</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setGenerateAudio(false)}
+                            className={cn(
+                                "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-2 transition-all overflow-hidden relative group",
+                                !generateAudio
+                                    ? "bg-pink-500/20 border-pink-500 ring-4 ring-pink-500/30 scale-105"
+                                    : "bg-white border-slate-200 hover:border-slate-300"
+                            )}
+                        >
+                            <img src="/assets/audio/silent.jpg" className="w-full h-full object-cover" alt="Silent" />
+                            <div className={cn(
+                                "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-1 px-2 transition-opacity",
+                                !generateAudio ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            )}>
+                                <span className="text-white text-[10px] font-black uppercase block text-center">Silent</span>
+                            </div>
+                        </button>
+                        <button
+                            onClick={() => setGenerateAudio(true)}
+                            className={cn(
+                                "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-2 transition-all overflow-hidden relative group",
+                                generateAudio
+                                    ? "bg-pink-500/20 border-pink-500 ring-4 ring-pink-500/30 scale-105"
+                                    : "bg-white border-slate-200 hover:border-slate-300"
+                            )}
+                        >
+                            <img src="/assets/audio/magic_sound.jpg" className="w-full h-full object-cover" alt="Magic Sound" />
+                            <div className={cn(
+                                "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-1 px-2 transition-opacity",
+                                generateAudio ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            )}>
+                                <div className="flex flex-col items-center leading-none">
+                                    <span className="text-white text-[10px] font-black uppercase block text-center">Magic Sound</span>
+                                    <span className="text-amber-400 text-[9px] font-bold mt-1">+{VIDEO_DURATION_OPTIONS.find(o => o.duration === duration)?.audioCredits} pt</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Generate Button */}
+            <button
+                onClick={() => onGenerate({ action, style, effect, generateAudio, duration })}
+                disabled={!imageUploaded || isGenerating}
+                className="w-full py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white rounded-3xl font-black text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale mb-8 flex flex-col items-center justify-center"
+            >
+                <div className="flex items-center gap-3">
+                    <Wand2 className="w-6 h-6" />
+                    <span>Make Movie! 🎬</span>
+                </div>
+                <span className="text-xs font-bold text-white/70 bg-black/20 px-3 py-0.5 rounded-full mt-1">-{calculateCredits()} Credits</span>
+            </button>
+        </div>
     );
 };

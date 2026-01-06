@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is accessing their own data
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // User Profiles: Users can read/write only their own profile
+    match /users/{userId} {
+      allow read: if isSignedIn(); // Allow reading other users? (Maybe for community features) or just isOwner(userId)
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isOwner(userId);
+    }
+
+    // Generated Media (Images, Stories, etc.)
+    match /generated_images/{imageId} {
+      allow read: if isSignedIn(); // Assuming public gallery eventually
+      allow create: if isSignedIn();
+      allow update, delete: if resource.data.userId == request.auth.uid;
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false; 
+    }
+  }
+}

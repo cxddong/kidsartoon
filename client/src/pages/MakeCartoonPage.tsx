@@ -2,8 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ArrowRight, BookOpen, Film, Image as ImageIcon, Volume2, RotateCw, Check, Play, Pause, Gift, Video, Castle, Wand2, Snowflake, TreeDeciduous, Footprints, Rocket, Moon, Globe, Fish, ArrowLeft, CloudUpload, Music, X, Lock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AnimationBuilderPanel, type AnimationBuilderData, RENDER_STYLES, VIDEO_MOODS } from '../components/builder/AnimationBuilderPanel'; // IMPORTED CORRECTLY
+import { AnimationBuilderPanel, type AnimationBuilderData } from '../components/builder/AnimationBuilderPanel';
+import { StoryBuilderPanel, type StoryBuilderData, STORY_STYLES, MOODS } from '../components/builder/StoryBuilderPanel';
+import { ComicBuilderPanel, type ComicBuilderData } from '../components/builder/ComicBuilderPanel';
+import { PictureBookBuilderPanel, type PictureBookBuilderData } from '../components/builder/PictureBookBuilderPanel';
+import generateVideo from '../assets/genpage.mp4';
+
+// Assets
+import video4 from '../assets/4.mp4';
+import bookVideo from '../assets/book.mp4';
 import { PureVideoPlayer } from '../components/PureVideoPlayer';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 import { VIPCover } from '../components/ui/VIPCover';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -12,18 +21,6 @@ import { BottomNav } from '../components/BottomNav';
 const backgroundUrl = '/bg_cartoon_new.jpg';
 
 // --- Configuration Options ---
-const STORY_STYLES = [
-    { id: 'castle_ball', labels: { en: '🏰 Glittering Castle Ball', fr: '🏰 Bal du Château Scintillant', es: '🏰 Baile del Castillo Brillante' }, image: '/assets/story_icons/story_castle.jpg', icon: Castle },
-    { id: 'little_wizard', labels: { en: '🧙‍♂️ Little Wizard\'s Magic School', fr: '🧙‍♂️ École de Magie du Petit Sorcier', es: '🧙‍♂️ Escuela de Magia del Pequeño Mago' }, image: '/assets/story_icons/story_wizard.jpg', icon: Wand2 },
-    { id: 'ice_kingdom', labels: { en: '❄️ Winter Adventure in the Ice Kingdom', fr: '❄️ Aventure Hivernale au Royaume de Glace', es: '❄️ Aventura Invernal en el Reino de Hielo' }, image: '/assets/story_icons/story_ice.jpg', icon: Snowflake },
-    { id: 'magic_woods', labels: { en: '🌳 Talking Magic Woods', fr: '🌳 Bois Magique Parlant', es: '🌳 Bosque Mágico Parlante' }, image: '/assets/story_icons/story_woods.png', icon: TreeDeciduous },
-    { id: 'dino_egg', labels: { en: '🦖 Dino Island: Find the Egg', fr: '🦖 Île aux Dinos : Trouve l\'Œuf', es: '🦖 Isla Dino: Encuentra el Huevo' }, image: '/assets/story_icons/story_dino.jpg', icon: Footprints },
-    { id: 'space_rescue', labels: { en: '🦸‍♂️ Superhero Space Rescue', fr: '🦸‍♂️ Sauvetage Spatial de Super-Héros', es: '🦸‍♂️ Rescate Espacial de Superhéroes' }, image: '/assets/story_icons/story_space.jpg', icon: Rocket },
-    { id: 'marshmallow_clouds', labels: { en: '☁️ Sleepy Marshmallow Clouds', fr: '☁️ Nuages de Guimauve Endormis', es: '☁️ Nubes de Malvavisco Soñolientas' }, image: '/assets/story_icons/story_clouds.png', icon: Moon },
-    { id: 'alien_base', labels: { en: '🛸 Alien Secret Base', fr: '🛸 Base Secrète Extraterrestre', es: '🛸 Base Secreta Alienígena' }, image: '/assets/story_icons/story_alien.jpg', icon: Globe },
-    { id: 'rainbow_palace', labels: { en: '🧜‍♀️ Rainbow Pearl Palace', fr: '🧜‍♀️ Palais de Perles Arc-en-ciel', es: '🧜‍♀️ Palacio de Perlas Arcoíris' }, image: '/assets/story_icons/story_underwater.jpg', icon: Fish },
-];
-
 const VOICES = [
     { id: 'female', label: 'Gentle Female', icon: Volume2 },
     { id: 'male', label: 'Warm Male', icon: Volume2 },
@@ -87,7 +84,6 @@ export const MakeCartoonPage: React.FC = () => {
 
     // Step 2 Data
     const [storyStyle, setStoryStyle] = useState(STORY_STYLES[0].id);
-    const [mood, setMood] = useState(VIDEO_MOODS[0].id);
     const [voice, setVoice] = useState(VOICES[0].id);
     const [storyData, setStoryData] = useState<any>(null); // {text, audioUrl}
 
@@ -101,21 +97,38 @@ export const MakeCartoonPage: React.FC = () => {
     // Step 4 Data
     const [visualStyle, setVisualStyle] = useState(VISUAL_STYLES[0].id);
     const [visualData, setVisualData] = useState<any>(null); // {images: [] }
-
-    // Step 5 Data
     const [videoData, setVideoData] = useState<any>(null); // {videoUrl}
+    const [serverImageUrl, setServerImageUrl] = useState<string | null>(null);
 
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [editableCaptions, setEditableCaptions] = useState<string[]>([]);
 
+    // Cropper State
+    const [cropImage, setCropImage] = useState<string | null>(null);
+
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setImageFile(file);
+            // Read for Cropper
             const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
+            reader.onloadend = () => {
+                setCropImage(reader.result as string);
+            };
             reader.readAsDataURL(file);
+
+            // Clear input
+            e.target.value = '';
         }
+    };
+
+    const handleCropComplete = (blob: Blob) => {
+        if (!cropImage) return;
+        const url = URL.createObjectURL(blob);
+        const file = new File([blob], "cartoon-input.jpg", { type: "image/jpeg" });
+
+        setImagePreview(url);
+        setImageFile(file);
+        setCropImage(null);
     };
 
     const runProgress = (durationSeconds: number = 30) => {
@@ -166,33 +179,31 @@ export const MakeCartoonPage: React.FC = () => {
         window.speechSynthesis.speak(utterance);
     };
 
-    const generateStory = async () => {
-        if (!imageFile && !imagePreview) return;
+    const generateStory = async (builderData: StoryBuilderData) => {
+        if (!imagePreview) return;
         setLoading(true);
         const interval = runProgress(45);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 90000);
 
         try {
-            const styleLabel = STORY_STYLES.find(s => s.id === storyStyle)?.labels.en || storyStyle;
-            const moodLabel = VIDEO_MOODS.find(m => m.id === mood)?.label || mood;
+            const styleLabel = STORY_STYLES.find(s => s.id === builderData.storyStyle)?.labels.en || builderData.storyStyle;
+            const moodLabel = MOODS.find(m => m.id === builderData.mood)?.labels.en || builderData.mood;
 
-            let extraKeywords = '';
-            if (storyStyle === 'little_wizard') extraKeywords = 'spells, potions, magic';
             const prompt = `
-                ANALYZE the uploaded image in detail. Create a short, engaging audio story based STRICTLY on the visible characters.
-                VISUAL ANCHORS: ${styleLabel} ${extraKeywords}
+                Analyze this image and write a short, fun children's story (max 60 words).
+                Style: ${styleLabel}
                 Mood: ${moodLabel}
-                Voice: ${voice}
-                Rules: Friendly tone, approximate 30-50 words.
+                Tags: ${builderData.contentTags.join(', ')}
+                Custom Idea: ${builderData.voiceNote}
+                Characters: Based on the characters in the image.
             `.trim();
 
             const formData = new FormData();
-            if (imageFile) formData.append('image', imageFile);
-            else if (imagePreview) formData.append('imageUrl', imagePreview);
-
+            formData.append('imageUrl', imagePreview);
             formData.append('voiceText', prompt);
-            formData.append('voice', voice);
+            formData.append('voice', builderData.voice);
+            formData.append('voiceTier', builderData.voiceTier);
             formData.append('userId', user?.uid || 'demo');
 
             const res = await fetch('/api/media/image-to-voice', {
@@ -205,15 +216,88 @@ export const MakeCartoonPage: React.FC = () => {
             if (!res.ok) throw new Error('Story generation failed');
             const data = await res.json();
             setStoryData(data);
+            if (data.imageUrl) setServerImageUrl(data.imageUrl);
             clearInterval(interval);
             setProgress(100);
-            setTimeout(() => setLoading(false), 500);
+            setTimeout(() => { setLoading(false); setStep(3); }, 500);
 
         } catch (e: any) {
             console.error(e);
             clearInterval(interval);
             setLoading(false);
             alert("Oops! Failed to write story. " + (e.message || ""));
+        }
+    };
+
+    const handleComicGenerate = async (builderData: ComicBuilderData) => {
+        if (!imagePreview) return;
+        setLoading(true);
+        const interval = runProgress(60);
+        try {
+            const formData = new FormData();
+            if (imageFile) {
+                formData.append('cartoonImage', imageFile);
+            } else {
+                formData.append('cartoonImageUrl', serverImageUrl || imagePreview);
+            }
+
+            // Build a prompt similar to ComicPage.tsx
+            const compositePrompt = `Create a 4-panel comic strip. Visual Style: ${builderData.visualStyle}. Mood: ${builderData.storyType}. Characters: ${builderData.characters.join(', ')}.`;
+
+            formData.append('prompt', compositePrompt);
+            formData.append('userId', user?.uid || 'demo');
+
+            const res = await fetch('/api/media/generate-magic-comic', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error('Comic generation failed');
+            const data = await res.json();
+
+            setVisualData({ ...data, type: 'comic' });
+            clearInterval(interval);
+            setProgress(100);
+            setTimeout(() => { setLoading(false); setStep(5); }, 500);
+        } catch (e: any) {
+            clearInterval(interval);
+            setLoading(false);
+            alert("Comic generation failed: " + e.message);
+        }
+    };
+
+    const handlePictureBookGenerate = async (builderData: PictureBookBuilderData) => {
+        if (!imagePreview) return;
+        setLoading(true);
+        const interval = runProgress(90); // Picture books take longer
+        try {
+            const body = {
+                userId: user?.uid || 'demo',
+                imageUrl: serverImageUrl || imagePreview,
+                theme: storyData?.story || 'A magical adventure',
+                pageCount: builderData.pageCount,
+                character: builderData.character,
+                vibe: builderData.vibe,
+                illustrationStyle: builderData.illustrationStyle
+            };
+
+            const res = await fetch('/api/picturebook/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) throw new Error('Picture book generation failed');
+            const data = await res.json();
+
+            setVisualData({ ...data, type: 'picturebook' });
+            clearInterval(interval);
+            setProgress(100);
+            setTimeout(() => { setLoading(false); setStep(5); }, 500);
+        } catch (e: any) {
+            clearInterval(interval);
+            setLoading(false);
+            alert("Picture book generation failed: " + e.message);
         }
     };
 
@@ -250,15 +334,21 @@ export const MakeCartoonPage: React.FC = () => {
 
     const generateAnimation = async (builderData: AnimationBuilderData) => {
         setLoading(true);
+        console.log('[MakeCartoon] Starting video generation with data:', builderData);
         try {
-            // 1. Start Task
-            const sourceImage = imagePreview; // Simplify source
+            // 1. Start Task with ALL new parameters
+            const sourceImage = imagePreview;
             const body = JSON.stringify({
                 imageUrl: sourceImage,
-                prompt: builderData.prompt || "Animation",
+                action: builderData.action,                     // NEW: simplified params
+                style: builderData.style,                       // NEW
+                effect: builderData.effect,                     // NEW
                 userId: user?.uid || 'demo',
-                quality: 'SD'
+                duration: builderData.duration || 5,
+                generateAudio: builderData.generateAudio !== false
             });
+
+            console.log('[MakeCartoon] Sending request body:', body);
 
             const startRes = await fetch('/api/media/image-to-video/task', {
                 method: 'POST',
@@ -266,6 +356,7 @@ export const MakeCartoonPage: React.FC = () => {
                 body
             });
             const startData = await startRes.json();
+            console.log('[MakeCartoon] Task started:', startData);
 
             if (startData.errorCode === 'NOT_ENOUGH_POINTS') {
                 alert("Not enough points.");
@@ -282,22 +373,35 @@ export const MakeCartoonPage: React.FC = () => {
                 try {
                     const statusRes = await fetch(`/api/media/image-to-video/status/${startData.taskId}`);
                     const statusData = await statusRes.json();
+                    console.log(`[MakeCartoon] Status check ${attempts}:`, statusData);
+
                     if (statusData.status === 'SUCCEEDED') {
+                        console.log('[MakeCartoon] Video URL received:', statusData.videoUrl);
+                        if (!statusData.videoUrl) {
+                            console.error('[MakeCartoon] ERROR: No videoUrl in response!');
+                            alert('Video generated but URL is missing. Check console.');
+                            setLoading(false);
+                            return;
+                        }
                         setVideoData({ videoUrl: statusData.videoUrl });
                         setLoading(false);
                     } else if (statusData.status === 'FAILED') {
+                        console.error('[MakeCartoon] Video generation failed:', statusData);
                         setLoading(false);
                         alert("Failed.");
                     } else {
                         attempts++;
                         setTimeout(checkStatus, 3000);
                     }
-                } catch (e) { setTimeout(checkStatus, 3000); }
+                } catch (e) {
+                    console.error('[MakeCartoon] Status check error:', e);
+                    setTimeout(checkStatus, 3000);
+                }
             };
             checkStatus();
 
         } catch (e) {
-            console.error(e);
+            console.error('[MakeCartoon] Animation start error:', e);
             setLoading(false);
             alert("Failed to start animation.");
         }
@@ -306,7 +410,19 @@ export const MakeCartoonPage: React.FC = () => {
     return (
         <div className="fixed inset-0 w-full h-full bg-slate-50 flex flex-col z-[50]">
             <div className="absolute top-0 left-0 p-4 z-50">
-                <button onClick={() => navigate('/generate')} className="p-2 bg-white/50 backdrop-blur-md rounded-full shadow-sm hover:bg-white transition-colors">
+                <button
+                    onClick={() => {
+                        // Only confirm if user has uploaded something
+                        if (imageFile || imagePreview) {
+                            if (confirm('Leave without saving your work?')) {
+                                navigate('/generate');
+                            }
+                        } else {
+                            navigate('/generate');
+                        }
+                    }}
+                    className="p-2 bg-white/50 backdrop-blur-md rounded-full shadow-sm hover:bg-white transition-colors"
+                >
                     <ArrowLeft className="w-6 h-6 text-slate-800" />
                 </button>
             </div>
@@ -317,10 +433,13 @@ export const MakeCartoonPage: React.FC = () => {
                 </div>
 
                 <div className="flex-1 h-full overflow-y-auto relative custom-scrollbar pb-24">
-                    <div className="relative z-10 p-6 pt-6 max-w-lg mx-auto min-h-full flex flex-col">
+                    <div className={cn(
+                        "relative z-10 p-6 pt-6 mx-auto min-h-full flex flex-col",
+                        step === 1 || step >= 4 ? "max-w-4xl" : "max-w-lg"
+                    )}>
 
                         {/* Progress Header */}
-                        <div className="flex items-center justify-between mb-8 px-4">
+                        <div className="flex items-center justify-between mb-8 px-4 max-w-lg w-full mx-auto">
                             {[1, 2, 3, 4, 5].map(s => (
                                 <div key={s} className="flex flex-col items-center gap-1">
                                     <div className={cn(
@@ -341,25 +460,36 @@ export const MakeCartoonPage: React.FC = () => {
                             {step === 1 && (
                                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
                                     <div className={cn(
-                                        "bg-white rounded-3xl shadow-xl flex flex-col items-center justify-center border-4 border-dashed border-slate-200 hover:border-purple-300 transition-colors group cursor-pointer overflow-hidden mx-auto",
+                                        "relative bg-slate-100 rounded-3xl shadow-xl flex flex-col items-center justify-center border-4 border-dashed border-slate-200 hover:border-purple-300 transition-colors group cursor-pointer overflow-hidden mx-auto",
                                         !imagePreview ? "w-full flex-1 p-6" : "w-fit h-auto border-purple-500"
                                     )}
                                         onClick={() => document.getElementById('step1-upload')?.click()}>
+
+                                        {/* Background Video for Step 1 - Restored */}
+                                        {!imagePreview && (
+                                            <video
+                                                src={generateVideo}
+                                                autoPlay
+                                                loop
+                                                muted
+                                                playsInline
+                                                className="absolute inset-0 z-0 w-full h-full object-cover opacity-60 rounded-3xl"
+                                            />
+                                        )}
+
                                         <input type="file" id="step1-upload" className="hidden" accept="image/*" onChange={handleUpload} />
                                         {imagePreview ? (
-                                            <div className="relative max-w-full">
+                                            <div className="relative max-w-full z-10">
                                                 <img src={imagePreview} className="max-w-full max-h-[60vh] w-auto h-auto object-contain block" />
                                                 <div className="absolute inset-x-0 bottom-0 p-2 bg-black/50 text-white text-xs text-center font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                                                     Click to Change
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="text-center group-hover:scale-105 transition-transform">
-                                                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-600">
-                                                    <CloudUpload className="w-10 h-10" />
+                                            <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-300">
+                                                <div className="w-24 h-24 flex items-center justify-center text-white drop-shadow-xl group-hover:scale-110 transition-all duration-300">
+                                                    <CloudUpload className="w-16 h-16 drop-shadow-md" />
                                                 </div>
-                                                <h3 className="text-xl font-black text-slate-800 mb-2">Upload Photo</h3>
-                                                <p className="text-slate-500 font-medium">Start your cartoon journey here!</p>
                                             </div>
                                         )}
                                     </div>
@@ -375,72 +505,155 @@ export const MakeCartoonPage: React.FC = () => {
 
                             {/* STEP 2: Story */}
                             {step === 2 && (
-                                <motion.div key="step2" className="space-y-6">
+                                <motion.div
+                                    key="step2"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                    className="flex-1 flex flex-col"
+                                >
                                     {!storyData ? (
-                                        <>
-                                            <div className="bg-white p-5 rounded-3xl shadow-lg">
-                                                <h3 className="font-black text-slate-800 mb-3">Story Style</h3>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {STORY_STYLES.slice(0, 6).map(s => (
-                                                        <button key={s.id} onClick={() => setStoryStyle(s.id)} className={cn("p-2 border-2 rounded-xl text-xs", storyStyle === s.id ? "border-purple-500 bg-purple-50" : "border-slate-100")}>
-                                                            <s.icon className="w-4 h-4 mx-auto mb-1" />
-                                                            {s.id}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <button onClick={generateStory} disabled={loading} className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black text-lg disabled:opacity-70 shadow-lg">
-                                                {loading ? "Writing..." : "Generate Story ✨"}
-                                            </button>
-                                        </>
+                                        <StoryBuilderPanel
+                                            onGenerate={generateStory}
+                                            imageUploaded={!!imagePreview}
+                                        />
                                     ) : (
                                         <div className="bg-white p-6 rounded-3xl shadow-xl flex flex-col gap-4">
-                                            <h3 className="font-black text-slate-800 text-center">Story Ready!</h3>
-                                            <div className="p-4 bg-slate-50 rounded-xl text-sm italic">"{storyData.story}"</div>
+                                            <h3 className="font-black text-slate-800 text-center">Story Ready! ✨</h3>
+                                            <div className="p-4 bg-slate-50 rounded-xl text-sm italic text-slate-700">
+                                                "{storyData.story}"
+                                            </div>
 
                                             {storyData.audioUrl && (
-                                                <button onClick={() => toggleAudio(storyData.audioUrl)} className="p-4 bg-purple-100 text-purple-700 rounded-xl font-bold flex items-center justify-center gap-2">
-                                                    {isPlaying ? <Pause /> : <Play />} {isPlaying ? "Pause" : "Play Audio"}
+                                                <button
+                                                    onClick={() => toggleAudio(storyData.audioUrl)}
+                                                    className="p-4 bg-purple-100 text-purple-700 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-purple-200 transition-colors"
+                                                >
+                                                    {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                                                    {isPlaying ? "Pause" : "Play Audio"}
                                                 </button>
                                             )}
 
-                                            <button onClick={() => { stopAudio(); setStep(3); }} className="p-4 bg-green-500 text-white rounded-xl font-bold">Next Step ➡️</button>
+                                            <div className="flex flex-wrap gap-8 md:gap-16 justify-center py-6">
+                                                <button
+                                                    onClick={() => { setStoryData(null); stopAudio(); }}
+                                                    className="flex-1 p-4 bg-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-300 transition-colors"
+                                                >
+                                                    ↺ Regenerate
+                                                </button>
+                                                <button
+                                                    onClick={() => { stopAudio(); setStep(3); }}
+                                                    className="flex-1 p-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    Select Format <ArrowRight className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                 </motion.div>
                             )}
 
-                            {/* STEP 3: Format */}
+                            {/* STEP 3: Choose Format */}
                             {step === 3 && (
                                 <motion.div key="step3" className="space-y-6">
                                     <h3 className="text-2xl font-black text-slate-800 text-center">Choose Format</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button onClick={() => setFormat('comic')} className={cn("p-6 rounded-3xl border-4 flex flex-col items-center gap-2", format === 'comic' ? "border-orange-500 bg-orange-50" : "border-white bg-white")}>
-                                            <span className="font-black">Comic Strip</span>
+                                    <div className="flex flex-wrap gap-8 md:gap-16 justify-center py-6">
+                                        {/* Comic Strip Button - Circular with Video */}
+                                        <button
+                                            onClick={() => setFormat('comic')}
+                                            className="flex flex-col items-center gap-3 group"
+                                        >
+                                            <div className={cn(
+                                                "w-32 h-32 flex items-center justify-center transition-all duration-300",
+                                                "group-hover:scale-110 group-active:scale-95",
+                                                format === 'comic'
+                                                    ? "shadow-lg rounded-full border-4 border-orange-500 ring-4 ring-orange-200"
+                                                    : ""
+                                            )}>
+                                                <div className={cn(
+                                                    "w-full h-full overflow-hidden rounded-full shadow-md",
+                                                    format === 'comic' ? "" : "bg-white/20 backdrop-blur-sm border-2 border-white/50"
+                                                )}>
+                                                    <video
+                                                        src={video4}
+                                                        autoPlay
+                                                        loop
+                                                        muted
+                                                        playsInline
+                                                        className="w-full h-full object-cover"
+                                                        style={{ scale: 1.1 }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <span className={cn(
+                                                "font-black text-lg transition-colors",
+                                                format === 'comic' ? "text-orange-600" : "text-slate-700"
+                                            )}>
+                                                Comic Strip
+                                            </span>
                                         </button>
-                                        <button onClick={() => setFormat('book')} className={cn("p-6 rounded-3xl border-4 flex flex-col items-center gap-2", format === 'book' ? "border-purple-500 bg-purple-50" : "border-white bg-white")}>
-                                            <span className="font-black">Picture Book</span>
+
+                                        {/* Picture Book Button - Circular with Video */}
+                                        <button
+                                            onClick={() => setFormat('book')}
+                                            className="flex flex-col items-center gap-3 group"
+                                        >
+                                            <div className={cn(
+                                                "w-32 h-32 flex items-center justify-center transition-all duration-300",
+                                                "group-hover:scale-110 group-active:scale-95",
+                                                format === 'book'
+                                                    ? "shadow-lg rounded-full border-4 border-purple-500 ring-4 ring-purple-200"
+                                                    : ""
+                                            )}>
+                                                <div className={cn(
+                                                    "w-full h-full overflow-hidden rounded-full shadow-md",
+                                                    format === 'book' ? "" : "bg-white/20 backdrop-blur-sm border-2 border-white/50"
+                                                )}>
+                                                    <video
+                                                        src={bookVideo}
+                                                        autoPlay
+                                                        loop
+                                                        muted
+                                                        playsInline
+                                                        className="w-full h-full object-cover"
+                                                        style={{ scale: 1.6 }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <span className={cn(
+                                                "font-black text-lg transition-colors",
+                                                format === 'book' ? "text-purple-600" : "text-slate-700"
+                                            )}>
+                                                Picture Book
+                                            </span>
                                         </button>
                                     </div>
                                     <button onClick={() => setStep(4)} disabled={!format} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-lg mt-4 disabled:opacity-50">Next: Art Style ➡️</button>
                                 </motion.div>
                             )}
 
-                            {/* STEP 4: Art Style */}
+                            {/* STEP 4: Art Style / Format Builder */}
                             {step === 4 && (
-                                <motion.div key="step4" className="space-y-6">
-                                    <h3 className="text-2xl font-black text-slate-800 text-center">Choose Art Style</h3>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {VISUAL_STYLES.slice(0, 6).map(s => (
-                                            <button key={s.id} onClick={() => setVisualStyle(s.id)} className={cn("p-2 border-2 rounded-xl text-xs flex flex-col items-center", visualStyle === s.id ? "border-pink-500 bg-pink-50" : "border-slate-100 bg-white")}>
-                                                <img src={s.iconImage} className="w-8 h-8 rounded-full mb-1 object-cover" />
-                                                {s.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <button onClick={generateVisuals} disabled={loading} className="w-full py-4 bg-pink-500 text-white rounded-2xl font-black text-lg shadow-lg disabled:opacity-70">
-                                        {loading ? "Drawing..." : "Generate Images 🎨"}
-                                    </button>
+                                <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
+                                    {format === 'comic' ? (
+                                        <ComicBuilderPanel
+                                            imageUploaded={!!imagePreview}
+                                            onGenerate={handleComicGenerate}
+                                        >
+                                            <div className="w-full h-full bg-black/5 flex items-center justify-center">
+                                                <img src={imagePreview!} className="w-full h-full object-contain" />
+                                            </div>
+                                        </ComicBuilderPanel>
+                                    ) : (
+                                        <PictureBookBuilderPanel
+                                            imageUploaded={!!imagePreview}
+                                            onGenerate={handlePictureBookGenerate}
+                                        >
+                                            <div className="w-full h-full bg-black/5 flex items-center justify-center">
+                                                <img src={imagePreview!} className="w-full h-full object-contain" />
+                                            </div>
+                                        </PictureBookBuilderPanel>
+                                    )}
                                 </motion.div>
                             )}
 
@@ -451,6 +664,7 @@ export const MakeCartoonPage: React.FC = () => {
                                         onGenerate={generateAnimation}
                                         imageUploaded={!!imagePreview}
                                         isGenerating={loading}
+                                        uploadedImage={imageFile}
                                     />
                                 </motion.div>
                             )}
@@ -458,6 +672,15 @@ export const MakeCartoonPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+            {/* Cropper Modal */}
+            {cropImage && (
+                <ImageCropperModal
+                    imageUrl={cropImage}
+                    onCrop={handleCropComplete}
+                    onCancel={() => setCropImage(null)}
+                    aspectRatio={1}
+                />
+            )}
             <BottomNav />
             {videoData && (
                 <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">

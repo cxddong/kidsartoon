@@ -37,7 +37,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, c
                         </h2>
 
                         <p className="mt-4 text-gray-600 font-medium text-center text-sm">
-                            Sparkle needs a few more Magic Crystals to cast the spell!
+                            Magic Kat needs a few more Magic Crystals to cast the spell!
                         </p>
 
                         <div className="my-6 p-4 bg-purple-50 rounded-2xl border-2 border-dashed border-purple-200">

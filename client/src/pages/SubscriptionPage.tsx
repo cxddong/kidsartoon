@@ -18,7 +18,7 @@ const PLANS = [
         headline: "Try the Magic",
         features: [
             '50 Magic Points (One-time)',
-            'Unlimited Audio Stories',
+            '3 Audio Stories / Day',
             '(Standard Voice)',
             'Read & Save Stories',
             'Try Video & Art'
@@ -41,12 +41,12 @@ const PLANS = [
         name: 'Basic',
         price: '9.99',
         period: '/mo',
-        points: 1200,
+        points: 1000,
         color: 'blue',
         icon: <Heart className="w-6 h-6 text-blue-500" />,
         headline: "Best for Comics & Stories",
         features: [
-            '1,200 Magic Points / mo',
+            '1,000 Magic Points / mo',
             'Create Stories & Comics',
             'Generate Pictures',
             'Clone Voices',
@@ -56,9 +56,9 @@ const PLANS = [
             <>
                 <div className="text-[10px] font-bold opacity-70 mb-1">Monthly creation power:</div>
                 <div className="text-xs leading-relaxed">
-                    🧩 <b>120</b> Comic Strips <span className="text-[9px] opacity-70">(4/day!)</span><br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>30</b> Storybooks <span className="text-[9px] opacity-70">(1/day)</span><br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🖼️ <b>120</b> Images
+                    🧩 <b>100</b> Comic Strips <span className="text-[9px] opacity-70">(3/day!)</span><br />
+                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>25</b> Storybooks <span className="text-[9px] opacity-70">(1/day)</span><br />
+                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🖼️ <b>100</b> Images
                 </div>
             </>
         ),
@@ -70,12 +70,12 @@ const PLANS = [
         name: 'Pro',
         price: '19.99',
         period: '/mo',
-        points: 2800,
+        points: 2200,
         color: 'purple',
         icon: <Star className="w-6 h-6 text-white" />,
         headline: "Video Magic & More",
         features: [
-            '2,800 Magic Points / mo',
+            '2,200 Magic Points / mo',
             'Everything in Basic',
             '✨ Video Animation Support',
             'Priority Generation',
@@ -85,10 +85,10 @@ const PLANS = [
             <>
                 <div className="text-[10px] font-bold opacity-70 mb-1">Monthly creation power:</div>
                 <div className="text-xs leading-relaxed">
-                    🎥 <b>23</b> Animation Videos<br />
-                    <span className="text-[9px] opacity-80 pl-4">Approx. 1 per weekday</span><br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🧩 <b>280</b> Comic Strips<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>70</b> Storybooks
+                    🎥 <b>36</b> Animation Videos<br />
+                    <span className="text-[9px] opacity-80 pl-4">Approx. 1 per day</span><br />
+                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🧩 <b>220</b> Comic Strips<br />
+                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>55</b> Storybooks
                 </div>
                 <div className="mt-1.5 p-1.5 bg-white/10 rounded-md text-[9px] leading-tight opacity-90">
                     <b>Mix & Match:</b> 10 Videos + 20 Storybooks + 80 Comics
@@ -103,12 +103,12 @@ const PLANS = [
         name: 'Yearly Pro',
         price: '99.00',
         period: '/yr',
-        points: 14000,
+        points: 12000,
         color: 'amber',
         icon: <Crown className="w-6 h-6 text-amber-600" />,
         headline: "For Schools & Power Users",
         features: [
-            '14,000 Magic Points (Instant)',
+            '12,000 Magic Points (Instant)',
             'Include All Pro Features',
             'Save $140/yr (58% OFF)',
             'Best for Schools',
@@ -118,18 +118,24 @@ const PLANS = [
             <>
                 <div className="text-[10px] font-bold opacity-70 mb-1">Yearly creation power:</div>
                 <div className="text-xs leading-relaxed">
-                    🎥 <b>116</b> Animation Videos<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🧩 <b>1,400</b> Comic Strips<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>350</b> Storybooks
+                    🎥 <b>200</b> Animation Videos<br />
+                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🧩 <b>1,200</b> Comic Strips<br />
+                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>300</b> Storybooks
                 </div>
                 <div className="mt-1.5 p-1.5 bg-yellow-100/50 rounded-md text-[9px] leading-tight text-amber-900 font-bold">
-                    Get all 14,000 points instantly!
+                    Get all 12,000 points instantly!
                 </div>
             </>
         ),
         highlight: false,
         buttonText: 'Get Yearly'
     }
+];
+
+const TOP_UPS = [
+    { title: 'Small Pouch', points: 450, price: '4.99', icon: '💰' },
+    { title: 'Treasure Chest', points: 1000, price: '9.99', icon: '💎', popular: true },
+    { title: 'Dragon Hoard', points: 2200, price: '19.99', icon: '🐲' }
 ];
 
 export const SubscriptionPage: React.FC = () => {
@@ -190,18 +196,22 @@ export const SubscriptionPage: React.FC = () => {
             {/* Main Content Container - Flex Column to fill available space */}
             <div className="flex-1 px-4 pb-4 relative z-10 flex flex-col justify-between min-h-0 overflow-hidden">
 
-                {/* Header Section - Compact */}
-                <div className="text-center mt-0 shrink-0">
-                    <h1 className="text-lg md:text-2xl font-black text-slate-800 mb-0.5 font-serif">
+                {/* Header Section - Modern */}
+                <div className="text-center mt-4 mb-8 shrink-0">
+                    <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-2 font-serif">
                         Unlock Kids' Creativity ✨
                     </h1>
-                    <p className="text-slate-600 text-[10px] md:text-xs font-medium max-w-xl mx-auto leading-tight">
-                        Subscriptions give you monthly <b>Magic Points</b> to generate stories, comics, and animation.
+                    <p className="text-slate-600 text-xs md:text-sm font-medium max-w-xl mx-auto leading-relaxed">
+                        Become a member to get monthly <b>Magic Points</b> for stories, comics, and animation!
                     </p>
                 </div>
 
-                {/* Plans Grid - Compact Padding/Margins */}
-                <div className="flex-1 flex items-center justify-center w-full max-w-7xl mx-auto my-1 px-2 md:px-4">
+                {/* Section 1: Monthly Memberships */}
+                <div className="w-full max-w-7xl mx-auto px-2 md:px-4 mb-4">
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                        <Crown className="w-5 h-5 text-indigo-500" />
+                        <h2 className="text-base font-black text-slate-700 uppercase tracking-widest">Monthly Memberships</h2>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-1.5 md:gap-2 w-full items-end">
                         {PLANS.slice(0, 4).map((plan) => (
                             <motion.div
@@ -290,6 +300,50 @@ export const SubscriptionPage: React.FC = () => {
                                 </button>
                             </motion.div>
                         ))}
+                    </div>
+
+                </div>
+
+                {/* Section 2: Top-Up Packages (Distinct Area) */}
+                <div className="w-full bg-indigo-50/50 border-t border-indigo-100 py-8 mt-8">
+                    <div className="max-w-4xl mx-auto px-4">
+                        <div className="flex items-center justify-center gap-2 mb-6">
+                            <span className="text-2xl">💎</span>
+                            <div className="text-center">
+                                <h2 className="text-base font-black text-slate-800 uppercase tracking-widest">Need a Boost?</h2>
+                                <p className="text-xs font-bold text-slate-400">One-time refill packs. No subscription needed.</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            {TOP_UPS.map((pkg, i) => (
+                                <motion.div
+                                    key={i}
+                                    whileHover={{ y: -2 }}
+                                    className={`relative bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all ${pkg.popular ? 'ring-2 ring-yellow-400 bg-yellow-50/50' : ''}`}
+                                >
+                                    {pkg.popular && (
+                                        <div className="absolute -top-2 left-4 bg-yellow-400 text-[8px] font-bold px-2 py-0.5 rounded-full text-slate-900 shadow-sm">
+                                            BEST VALUE
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-xl">
+                                            {pkg.icon}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-bold text-slate-800">{pkg.title}</h3>
+                                            <p className="text-sm font-black text-purple-600">+{pkg.points.toLocaleString()} Pts</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleSubscribe('topup_' + pkg.points)} // Handler needs update to support topups
+                                        className="bg-slate-900 text-white text-[10px] font-bold px-4 py-2 rounded-lg hover:bg-slate-800"
+                                    >
+                                        ${pkg.price}
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

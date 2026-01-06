@@ -38,15 +38,9 @@ const GenerationCancelButton: React.FC<GenerationCancelButtonProps> = ({
             )}
         >
             {isGenerating ? (
-                <>
-                    <XCircle className="w-5 h-5" />
-                    <span>Cancel & Return</span>
-                </>
+                <XCircle className="w-6 h-6" />
             ) : (
-                <>
-                    <ArrowLeft className="w-5 h-5" />
-                    <span>Return to Home</span>
-                </>
+                <ArrowLeft className="w-6 h-6" />
             )}
         </motion.button>
     );

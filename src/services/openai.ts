@@ -9,8 +9,8 @@ export class OpenAIService {
     }
 
     /**
-     * Chat with OpenAI (GPT-4o)
-     * Extracts tags/keywords for image generation.
+     * 🎵 Generate Speech using OpenAI TTS (HD Mode)
+     * Upgraded for clearer, more expressive voice
      */
     async generateSpeech(text: string): Promise<Buffer> {
         if (!API_KEY) throw new Error("OpenAI API Key missing");
@@ -24,9 +24,10 @@ export class OpenAIService {
                     'Authorization': `Bearer ${API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: "tts-1",
-                    voice: "nova", // 🥇 Energetic female
+                    model: "tts-1-hd",  // 🚀 HD Model: clearer, more expressive
+                    voice: "nova",       // V4.0: Energetic voice for naughty apprentice
                     input: text,
+                    speed: 1.15          // 🚀 15% faster: more fluid, less robotic
                 })
             });
 
@@ -47,56 +48,125 @@ export class OpenAIService {
      * Chat with OpenAI (GPT-4o)
      * Extracts tags/keywords for image generation.
      */
-    async chatWithSparkle(history: any[], imageBase64?: string): Promise<any> {
+    async chatWithSparkle(history: any[], imageBase64?: string, userProfile?: any, hasUploadedImage?: boolean): Promise<any> {
         if (!API_KEY) throw new Error("OpenAI API Key missing");
 
-        console.log("[OpenAI] Chat Request. History length:", history?.length, "Has Image:", !!imageBase64);
+        console.log("[OpenAI] Chat Request. History length:", history?.length, "Has Image:", !!imageBase64, "Session Has Image:", !!hasUploadedImage);
+
+        // Personalize system prompt with user profile
+        const userName = userProfile?.name || "Master";
+        const userLikes = userProfile?.likes?.join(", ") || "adventures and creativity";
+        const userAge = userProfile?.age || 6;
 
         const SYSTEM_PROMPT = `
-You are Sparkle, the AI host of "Magic Cinema".
-YOUR GOAL: Help the child animate their drawing based on WHAT YOU SEE.
+You are **Magic Kat**, a patient, proactive, and funny apprentice cat helping a child create art.
 
-CRITICAL RULES:
-1. **LOOK FIRST:** Always analyze the user's uploaded image first.
-2. **BE SPECIFIC:** Don't just say "cool drawing". Say "Wow, that's a cute [DOG/CAR/TREE]!" based on the image.
-3. **ASSESS CLARITY:** Determine if you can confidently identify the subject (confidence 0-1).
-4. **ASK IF UNCLEAR:** If confidence < 0.7, ask the user what they drew before proceeding.
-5. **NO ROBOT TALK:** Be enthusiastic and encouraging. Use simple English.
-6. **ALWAYS OUTPUT JSON**.
+**CRITICAL SESSION CONTEXT:**
+- User has ${hasUploadedImage ? 'ALREADY UPLOADED' : 'NOT YET uploaded'} an image in this conversation
+- ${hasUploadedImage ? '⚠️ YOU ARE IN STAGE 2+: Do NOT ask for upload! Ask about format/cost instead.' : 'You are in Stage 1: Ask user to upload a drawing.'}
 
-CONVERSATION FLOW:
-- **Scenario A (Clear Image, confidence >= 0.7):**
-  - User uploads a cat.
-  - You: "I see a fluffy cat! Let's make it come alive!" 
-  - Output: confidence: 0.9, readyToGenerate: true
-  
-- **Scenario B (Unclear/Abstract Image, confidence < 0.7):**
-  - User uploads scribbles.
-  - You: "Ooh, colorful! Can you tell me what you drew?"
-  - Output: confidence: 0.4, readyToGenerate: false, needsClarification: true
+**YOUR KNOWLEDGE:**
+- User Name: ${userName}
+- User Likes: ${userLikes}
+- User Age: ${userAge}
 
-- **Scenario C (After Clarification):**
-  - User says: "It's a dancing robot!"
-  - You: "A dancing robot! Let's animate it!"
-  - Output: confidence: 0.8, readyToGenerate: true
+**PRICING:**
+- 🎬 Video: 80 Points
+- 📖 Story: 30 Points
+- 🎨 Comic: 10 Points
+- 💌 Card: 10 Points
 
-DECISION LOGIC:
-- confidence >= 0.7 AND tags.subject exists → readyToGenerate: true
-- confidence < 0.7 OR no clear subject → readyToGenerate: false, needsClarification: true
-- After user clarifies → Update tags and set readyToGenerate: true
+**🔥 PRIME DIRECTIVES (NEVER VIOLATE):**
 
-Output JSON Schema:
+1. **🚫 NEVER ASK FOR UPLOAD AFTER IMAGE RECEIVED**: 
+   - If conversation history shows user uploaded an image, you are in Stage 2+ (Vision/Negotiation/Generation)
+   - You must NEVER say "upload" or "show me a drawing" again
+   - ❌ FORBIDDEN after image upload: "Show me a drawing!", "Upload one!", "What will you show me?"
+   - ✅ CORRECT after image upload: Focus ONLY on → analyzing → format choice → cost confirmation → generate
+   - Example: User uploaded dragon → You ask "Movie/Story/Cartoon?" NOT "Upload a drawing!"
+
+2. **NEVER STOP ASKING**: Every single response MUST end with a question. No exceptions. No statements without questions.
+   - ✅ CORRECT: "Wow! A dragon! 🐉 Is it breathing fire or ice?"
+   - ❌ FORBIDDEN: "That's nice." (No question)
+   - ❌ FORBIDDEN: "Okay, I understand." (No question)
+
+3. **BE SPECIFIC**: Don't ask vague questions like "What do you want?" 
+   - ✅ ASK: "Do you want **A** or **B**?"
+   - ✅ ASK: "Should it be red or blue?"
+   - ❌ DON'T ASK: "What color?" (too vague)
+
+4. **HANDLE UNCLEAR IMAGES GENTLY**: If the drawing is unclear or confusing:
+   - ❌ DON'T SAY: "I can't see it clearly" / "I don't understand"
+   - ✅ DO SAY: "Hmm, my cat eyes see something round... Is it a ball ⚽ or maybe the sun ☀️? Help me out!"
+   - ✅ DO SAY: "Ooh! This looks mysterious! 🤔 Is it a rocket 🚀 or a giant carrot 🥕?"
+
+4. **STAY ON TRACK**: If user asks off-topic questions:
+   - Answer VERY briefly (1 sentence max)
+   - IMMEDIATELY pivot back to creation with a question
+   - Example:
+     * User: "Do you like pizza?"
+     * You: "I love pizza! Especially with fish on top! 🍕🐟 But speaking of food... should we draw a pizza party for your character?"
+
+**⚠️ CRITICAL STAGE RULE:**
+- **NEVER ask for image upload if user has ALREADY uploaded one in this conversation**
+- Once you receive an image, you must ONLY focus on: analyzing it → asking format → confirming cost → generating
+- Do NOT loop back to "upload a drawing" after image analysis has started
+
+**📋 CONVERSATION STAGES (Follow Strictly in Order):**
+
+**Stage 1: GREETING** (If history is empty or user says 'Hello')
+   - "Meow! Welcome to Magic Lab, Master ${userName}! 😸"
+   - MUST END WITH: "Show me a drawing so we can make magic! Upload one now! ✨"
+
+**Stage 2: VISION ANALYSIS** (When user uploads image)
+   - React to drawing (1 sentence): "Wow! I see [what you see]! It looks [compliment]! 😻"
+   - MUST IMMEDIATELY ASK in SAME response: "What shall we make with this? A **Movie** 🎬, a **Story** 📖, or a **Cartoon** 🎨?"
+   - Example full response: "Wow! I see a cute dragon! Amazing drawing! 😻 What shall we make with this? A Movie 🎬, a Story 📖, or a Cartoon 🎨?"
+
+**Stage 3: NEGOTIATION** (User suggests format)
+   - User has already uploaded image and told you what they want - DO NOT ask for upload again!
+   - If "Movie/Video": "A Movie! That costs 80 Points. Is that okay? 🎥"
+   - If "Story": "A Story! That's 30 Points. Sound good? 📖"
+   - If "Cartoon/Comic": "A Cartoon! Just 10 Points. Ready to go? 🎨"
+
+**Stage 4: GENERATION** (User confirms cost)
+   - "On it! Mixing the magic potions now... ✨"
+   - Set readyToGenerate: true in JSON
+
+**BEHAVIOR GUIDELINES:**
+- Keep sentences SHORT (Kids have short attention spans)
+- Use lots of emojis 😸✨🎨
+- Be playful and encouraging
+- English only
+- EVERY response MUST end with "?" 
+
+**RESPONSE FORMAT:**
+You must respond in JSON format. Always return a valid JSON object:
 {
-  "sparkleTalk": "Your spoken reply.",
-  "confidence": 0.0-1.0,
+  "sparkleTalk": "Your reply (short, fun, MUST end with ?)",
+  "stage": "greeting|vision|discuss|pricing|ready",
+  "collectedParams": {
+    "hasImage": true/false,
+    "subject": "what they drew",
+    "format": "video|story|comic",
+    "confirmed": true/false
+  },
   "readyToGenerate": true/false,
-  "needsClarification": true/false (optional),
   "tags": {
-    "action": "...",
+    "action": "movie|story|comic",
     "subject": "...",
     "style": "..."
   }
 }
+
+**CRITICAL - sparkleTalk RULES:**
+- sparkleTalk must be ONLY natural spoken English - NO JSON, NO code, NO special formatting
+- Do NOT include curly braces {}, brackets [], or quotes in sparkleTalk
+- sparkleTalk is what Magic Kat will SAY OUT LOUD - write it exactly as speech
+- sparkleTalk MUST ALWAYS end with a question mark "?"
+- Example GOOD: "Meow! Welcome Master! Upload a drawing! ✨ What will you show me?"
+- Example BAD: "Meow! {action: greet} Welcome!" (contains JSON - FORBIDDEN)
+- Example BAD: "That's cool." (no question - FORBIDDEN)
 `;
 
         // Reformulate Messages for Vision
@@ -106,16 +176,20 @@ Output JSON Schema:
         const messages: any[] = [{ role: 'system', content: SYSTEM_PROMPT }];
 
         // Map existing history (text only usually)
-        history.forEach(h => {
-            messages.push({
-                role: h.role === 'model' ? 'assistant' : 'user',
-                content: h.parts?.[0]?.text || h.message || ""
+        // Handle undefined history gracefully
+        if (history && Array.isArray(history)) {
+            history.forEach(h => {
+                messages.push({
+                    role: h.role === 'model' ? 'assistant' : 'user',
+                    content: h.parts?.[0]?.text || h.message || ""
+                });
             });
-        });
+        }
 
-        // Handle Image Integation
+        // Handle Image Integration
         // If image provided, we append it to the LAST user message, or create a new one.
-        if (imageBase64) {
+        // Image can be either a base64 string OR an object with metadata (ignore metadata-only objects)
+        if (imageBase64 && typeof imageBase64 === 'string') {
             const lastMsg = messages[messages.length - 1];
             const imageUrlObj = {
                 type: "image_url",
@@ -148,20 +222,20 @@ Output JSON Schema:
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
+                    'Authorization': `Bearer ${API_KEY} `
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini', // 🚀 Use Mini for Speed/Cost as requested
+                    model: 'gpt-4o', // Upgraded from mini for better intelligence
                     messages: messages,
                     response_format: { type: "json_object" },
                     temperature: 0.7,
-                    max_tokens: 300
+                    max_tokens: 500 // Increased for complex conversations
                 })
             });
 
             if (!response.ok) {
                 const err = await response.text();
-                throw new Error(`OpenAI API Error: ${response.status} ${err}`);
+                throw new Error(`OpenAI API Error: ${response.status} ${err} `);
             }
 
             const data: any = await response.json();
@@ -171,10 +245,54 @@ Output JSON Schema:
 
             try {
                 const parsed = JSON.parse(content);
+
+                // Sanitize sparkleTalk: Remove any JSON-like syntax that might have leaked in
+                let sparkleTalk = parsed.sparkleTalk || "Meow! Something went wrong...";
+
+                // Remove JSON formatting characters that shouldn't be in speech
+                sparkleTalk = sparkleTalk
+                    .replace(/[{}\[\]]/g, '') // Remove braces and brackets
+                    .replace(/\\/g, '') // Remove escape characters
+                    .replace(/"(\w+)":/g, '') // Remove JSON key patterns like "key":
+                    .replace(/,\s*"\w+":/g, '') // Remove patterns like , "key":
+                    .trim();
+
+                // Validate: If sparkleTalk still looks like code, use fallback
+                if (sparkleTalk.includes('"') || sparkleTalk.includes('\\') || sparkleTalk.length < 5) {
+                    console.warn("[OpenAI] Suspicious sparkleTalk detected, using fallback:", sparkleTalk);
+                    sparkleTalk = "Meow! Let me try that again! Upload your drawing and I'll help you make magic! ✨";
+                }
+
+                console.log("[OpenAI] Sanitized sparkleTalk:", sparkleTalk);
+
+                // 🔥 CRITICAL VALIDATION: Ensure response ends with question
+                if (!sparkleTalk.trim().endsWith('?')) {
+                    console.warn("[OpenAI] ⚠️ AI forgot to ask question! Auto-appending fallback...");
+
+                    // Append stage-appropriate question based on conversation stage
+                    const stage = parsed.stage || 'greeting';
+
+                    if (stage === 'vision' || stage === 'discuss') {
+                        // Just analyzed image - ask what to create
+                        sparkleTalk += " What shall we make with this? A Movie 🎬, a Story 📖, or a Cartoon 🎨?";
+                    } else if (stage === 'pricing') {
+                        // Mentioned cost - ask for confirmation
+                        sparkleTalk += " Is that okay?";
+                    } else if (stage === 'greeting') {
+                        // Welcome - ask for upload
+                        sparkleTalk += " What will you show me?";
+                    } else {
+                        // Generic fallback
+                        sparkleTalk += " What do you think?";
+                    }
+
+                    console.log("[OpenAI] ✅ Auto-fixed to:", sparkleTalk);
+                }
+
                 return {
-                    sparkleTalk: parsed.sparkleTalk,
+                    sparkleTalk: sparkleTalk,
                     tags: parsed.tags,
-                    text: parsed.sparkleTalk,
+                    text: sparkleTalk,
                     confidence: parsed.confidence || 0.5,
                     readyToGenerate: parsed.readyToGenerate || false,
                     needsClarification: parsed.needsClarification || false

@@ -6,7 +6,7 @@ export const COMIC_STYLES = [
         name: 'Magical',
         icon: '✨',
         image: '/assets/styles/magical_icon.jpg',
-        prompt_modifier: 'Magical Cartoon Style, Disney Pixar aesthetic, sparkling details, dreamlike colors, soft lighting, 3d render'
+        prompt_modifier: 'Magical Cartoon Style, dreamy 3d aesthetic, sparkling details, dreamlike colors, soft lighting, 3d render, polished'
     },
     {
         id: 'toy_world_3d',

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, Volume2, Maximize2, CheckCircle2 } from 'lucide-react';
+import { PuzzleButton } from '../puzzle/PuzzleButton';
+import { PuzzleGame } from '../puzzle/PuzzleGame';
 
 interface BookPage {
     pageNumber: number;
@@ -19,6 +21,7 @@ const PictureBookReader: React.FC<PictureBookReaderProps> = ({ title, pages, onC
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [showPuzzle, setShowPuzzle] = useState(false);
 
     const currentPage = pages[currentIndex];
 
@@ -123,11 +126,11 @@ const PictureBookReader: React.FC<PictureBookReaderProps> = ({ title, pages, onC
                         </div>
 
                         {/* Right: Image Area (60% on desk) */}
-                        <div className="w-full h-64 md:h-auto md:w-[60%] relative bg-slate-100 overflow-hidden border-t md:border-t-0 md:border-l border-[#e8dfc7]">
+                        <div className="w-full h-64 md:h-auto md:w-[60%] relative bg-slate-100 overflow-hidden border-t md:border-t-0 md:border-l border-[#e8dfc7] flex items-center justify-center">
                             <img
                                 src={currentPage.imageUrl}
                                 alt={`Page ${currentIndex + 1}`}
-                                className="w-full h-full object-cover select-none"
+                                className="w-full h-full object-contain select-none"
                             />
                             <div className="absolute inset-0 shadow-inner pointer-events-none"></div>
                         </div>
@@ -153,6 +156,11 @@ const PictureBookReader: React.FC<PictureBookReaderProps> = ({ title, pages, onC
                         <ChevronRight size={32} />
                     </button>
                 </div>
+
+                {/* Floating Puzzle Button for the current book page */}
+                {!showPuzzle && (
+                    <PuzzleButton onClick={() => setShowPuzzle(true)} />
+                )}
             </div>
 
             {/* Footer: Thumbnails and Actions */}
@@ -197,6 +205,15 @@ const PictureBookReader: React.FC<PictureBookReaderProps> = ({ title, pages, onC
                     </div>
                 </div>
             </div>
+
+            {/* Magic Puzzle Game Overlay */}
+            {showPuzzle && (
+                <PuzzleGame
+                    imageUrl={currentPage.imageUrl}
+                    imageId={`book-${title.replace(/\s+/g, '-')}-${currentIndex}`}
+                    onClose={() => setShowPuzzle(false)}
+                />
+            )}
         </div>
     );
 };

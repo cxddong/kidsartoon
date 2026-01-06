@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 
 import { PictureBookBuilderPanel, type PictureBookBuilderData } from '../components/builder/PictureBookBuilderPanel';
 import PictureBookReader from '../components/viewer/PictureBookReader';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 import catlogoVideo from '../assets/catlogo.mp4';
 
 type Step = 'upload' | 'generating-book' | 'finished';
@@ -39,6 +40,9 @@ export const PictureBookPage: React.FC = () => {
         setStep('upload');
     }, []);
 
+    // Cropper State
+    const [cropImage, setCropImage] = useState<string | null>(null);
+
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -46,11 +50,26 @@ export const PictureBookPage: React.FC = () => {
                 alert("File is too large! Please upload under 50MB.");
                 return;
             }
-            setImageFile(file);
+
+            // Read for Cropper
             const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
+            reader.onloadend = () => {
+                setCropImage(reader.result as string);
+            };
             reader.readAsDataURL(file);
+
+            e.target.value = ''; // Reset input
         }
+    };
+
+    const handleCropComplete = (blob: Blob) => {
+        if (!cropImage) return;
+        const url = URL.createObjectURL(blob);
+        const file = new File([blob], "book-input.jpg", { type: "image/jpeg" });
+
+        setImagePreview(url);
+        setImageFile(file);
+        setCropImage(null);
     };
 
     const handleGenerate = async (builderData: PictureBookBuilderData) => {
@@ -96,10 +115,10 @@ export const PictureBookPage: React.FC = () => {
                     imageUrl: imageUrl,
                     theme: builderData.theme, // e.g. 'Fairy Tale'
                     pageCount: builderData.pageCount,
-                    // illustrationStyle: builderData.illustrationStyle, // Backend derives from image, but we could pass as hint?
-                    // pace: builderData.pace,
+                    illustrationStyle: builderData.illustrationStyle,
+                    vibe: builderData.vibe,
                     character: builderData.character,
-                    // storyText: builderData.storyText
+                    storyText: builderData.storyText
                 }),
             });
 
@@ -161,7 +180,6 @@ export const PictureBookPage: React.FC = () => {
                         <span>✨</span>
                         <span>{user?.points || 0}</span>
                     </div>
-                    <AuthButton />
                 </div>
             </header>
 
@@ -228,41 +246,28 @@ export const PictureBookPage: React.FC = () => {
                                 onGenerate={handleGenerate}
                             >
                                 {/* Embedded Upload Box */}
-                                <div className="relative w-full aspect-[4/3] flex items-center justify-end flex-col pb-0 translate-y-1 overflow-hidden hover:scale-105 transition-all group cursor-pointer border-4 border-white/30 border-dashed rounded-3xl bg-slate-800"
+                                <div className="relative w-full h-full flex items-center justify-center flex-col overflow-hidden hover:scale-105 transition-all group cursor-pointer"
                                     onClick={() => document.getElementById('book-upload')?.click()}
                                 >
-                                    {/* Video Background */}
+                                    {/* Video Background (Restored) */}
                                     <video
                                         src={catlogoVideo}
                                         autoPlay
                                         loop
                                         muted
                                         playsInline
+                                        className="absolute inset-0 w-full h-full object-cover"
                                         disablePictureInPicture
-                                        controlsList="nodownload noremoteplayback"
-                                        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
                                     />
 
                                     <input type="file" id="book-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                                    {imagePreview ? (
-                                        <img src={imagePreview} className="relative z-10 w-full h-full object-contain" />
-                                    ) : (
-                                        <div className="relative z-10 flex flex-col items-center text-white group-hover:scale-105 transition-transform">
-                                            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-md hover:bg-white/30 transition-colors cursor-pointer">
-                                                <img src="/upload_icon_v2.png" className="w-10 h-10" />
-                                            </div>
-                                        </div>
+                                    {imagePreview && (
+                                        <img src={imagePreview} className="relative z-10 w-full h-full object-cover" />
                                     )}
                                 </div>
                             </PictureBookBuilderPanel>
 
-                            {/* Universal Exit Button */}
-                            <div className="mt-8 mb-12">
-                                <GenerationCancelButton
-                                    isGenerating={false}
-                                    onCancel={() => navigate('/generate')}
-                                />
-                            </div>
+
                         </motion.div>
                     )}
                 </AnimatePresence>

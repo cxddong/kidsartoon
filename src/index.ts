@@ -87,6 +87,10 @@ import { router as feedbackRouter } from './routes/feedback.js';
 import { router as pointsRouter } from './routes/points.js';
 import { router as sparkleRouter } from './routes/sparkle.js';
 import { router as videoRouter } from './routes/video.js';
+// Removed: masterpiece router (duplicated by mentor functionality)
+import { router as checkinRouter } from './routes/checkin.js';
+import mentorRouter from './routes/mentor.js';
+import referralRouter from './routes/referral.js'; // New Import
 import { optionalApiKeyAuth } from './middleware/auth.js';
 
 // --- Health Check (Highest Priority for load balancers) ---
@@ -95,6 +99,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', version: '0.1.1', tim
 // --- API Routes ---
 app.use('/api/media', mediaRouter);
 app.use('/api/images', imageRouter);
+app.use('/api/checkin', checkinRouter); // Daily Check-in
 app.use('/api/users', userRouter);
 app.use('/api/auth', authRouter);
 app.use('/api', storyRouter);
@@ -105,6 +110,9 @@ app.use('/api/points', pointsRouter);
 app.use('/api/sparkle', optionalApiKeyAuth, sparkleRouter);
 app.use('/api/video', videoRouter);
 app.use('/api/picturebook', pictureBookRouter);
+// Removed: /api/masterpiece (duplicated by /api/mentor)
+app.use('/api/mentor', mentorRouter);
+app.use('/api/referral', referralRouter); // New Referral Router
 
 // AI Related
 const aiRouter = express.Router();

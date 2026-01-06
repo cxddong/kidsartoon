@@ -9,57 +9,71 @@ import { playUiSound } from '../../utils/SoundSynth'; // Sound Effects
 export interface SparkleVoiceRef {
     triggerSpeak: (text?: string, key?: string) => void;
     triggerAnalysis: (base64Image: string) => void;
+    triggerChat: (text: string, options?: { stage?: string, userProfile?: any }) => void;
+    resetConversation: () => void;
 }
 
 interface SparkleVoiceFabProps {
-    onTagsExtracted: (tags: any) => void;
+    onResponse?: (response: any) => void;
+    voiceTier?: 'standard' | 'premium'; // NEW: Voice quality tier
+    onTagsExtracted?: (tags: any) => void; // Made optional for backward compatibility
     className?: string;
     autoStart?: boolean;
     imageContext?: any; // Now expects Base64 if meaningful, or just description
     accessCheck?: () => boolean;
 }
 
-const WELCOME_SCRIPTS = {
-    'en-US': "Hi! I'm Sparkle. Upload your drawing, and I'll tell you what I see!",
-};
 
-const UPLOAD_SCRIPTS = {
-    'en-US': "Wow! I see your picture! It looks amazing. Tell me, what did you draw?",
-};
 
-const NUDGE_SCRIPTS = {
-    'en-US': "I'm waiting for your drawing! Or tell me what we should make!",
-};
-
-export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>(({ onTagsExtracted, className, autoStart, imageContext, accessCheck }, ref) => {
+export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>((props, ref) => {
+    const { onTagsExtracted, className, autoStart, imageContext, accessCheck, onResponse, voiceTier = 'standard' } = props;
     const { user } = useAuth();
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
 
+    // Conversation History State
+    const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+
+    // Track if image has been uploaded in this session
+    const [hasUploadedImage, setHasUploadedImage] = useState<boolean>(false);
+
     // Refs for VAD and Audio
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const abortAudioRef = useRef(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const hasUploadedImageRef = useRef<boolean>(false);  // Track image upload state
 
     // VAD Refs
     const streamRef = useRef<MediaStream | null>(null);
     const harkRef = useRef<any>(null);
     const recognitionRef = useRef<any>(null);
     const transcriptRef = useRef<string>('');
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
     // Stop all audio & recognition
     const stopEverything = () => {
-        console.log("Sparkle: stopping everything.");
+        console.log("Magic Kat: stopping everything.");
         abortAudioRef.current = true;
 
-        // Stop Audio Playback
+        // Stop audio playback (handle both types)
         if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current = null;
+            if (typeof (audioRef.current as any).stop === 'function') {
+                // Web Audio API source
+                (audioRef.current as any).stop();
+            } else if (typeof (audioRef.current as any).pause === 'function') {
+                // HTML Audio element
+                (audioRef.current as any).pause();
+                (audioRef.current as any).currentTime = 0;
+            }
+            audioRef.current = null; // Clear the ref after stopping
         }
+
         window.speechSynthesis.cancel();
+        mediaRecorderRef.current?.stop(); // Stop MediaRecorder if active
+        setIsRecording(false);
+        setIsProcessing(false); // Set processing to false
         setIsSpeaking(false);
 
         // Stop VAD & Recognition
@@ -85,22 +99,29 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
             stopEverything();
             abortAudioRef.current = false;
 
-            // Logic for 'UPLOAD' event
-            if (scriptKey === 'UPLOAD') {
-                const text = UPLOAD_SCRIPTS['en-US'];
-                speak(text, 'en-US', () => startListening());
-            } else if (textOverride) {
-                speak(textOverride, 'en-US', () => startListening()); // Always listen after speak
+            // All speech should come from AI responses, not hardcoded scripts
+            if (textOverride) {
+                speak(textOverride, 'en-US', () => startListening());
             }
         },
         triggerAnalysis: (base64Image: string) => {
-            console.log("Sparkle: Auto-Analyzing Image...");
+            console.log("Magic Kat: Auto-Analyzing Image...");
+            // Mark that image has been uploaded (using ref for immediate effect)
+            hasUploadedImageRef.current = true;
+            // DON'T reset history - we need to preserve context that image was uploaded!
             // Trigger chat with Image + Empty Text
             handleChat("", base64Image);
+        },
+        triggerChat: (text: string, options?: { stage?: string, userProfile?: any }) => {
+            console.log("Magic Kat: Command Received:", text);
+            handleChat(text, undefined, options);
+        },
+        resetConversation: () => {
+            setConversationHistory([]);
         }
     }));
 
-    // Auto-Greeting on Mount (Singleton Pattern)
+    // Auto-Start: Let AI greet naturally through OpenAI
     const hasGreetedRef = useRef(false);
 
     useEffect(() => {
@@ -109,19 +130,14 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
             hasGreetedRef.current = true;
             setHasStarted(true);
             playUiSound('pop');
-            speakWelcome();
+
+            // Start real AI conversation instead of hardcoded greeting
+            setTimeout(() => {
+                handleChat("Hello");
+            }, 500);
         }
         return () => stopEverything();
     }, []); // Empty deps to ensure only once
-
-    const speakWelcome = () => {
-        const text = WELCOME_SCRIPTS['en-US'];
-        speak(text, 'en-US', () => {
-            // User journey: "Auto listen after welcome"
-            // check req: "播放完后自动开启麦克风监听 (开启 VAD)"
-            startListening();
-        });
-    };
 
     const speak = async (text: string, lang: string, onEnd?: () => void) => {
         stopEverything();
@@ -129,36 +145,102 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
 
         // Server TTS (OpenAI Nova)
         try {
-            console.log("Sparkle: Speaking (Nova)...");
-            const response = await fetch('/api/sparkle/speak', {
+            // Choose endpoint based on voice tier
+            const endpoint = voiceTier === 'premium' ? '/api/sparkle/speak-premium' : '/api/sparkle/speak';
+            const userId = user?.uid;
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, lang })
+                body: JSON.stringify({
+                    text,
+                    lang,
+                    userId,
+                    cacheKey: userId ? `tts_${userId}_${text.substring(0, 50).replace(/\s/g, '_')}` : undefined
+                })
             });
 
-            if (abortAudioRef.current) return;
-
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
-                audioRef.current = audio;
-
-                audio.onplay = () => setIsSpeaking(true);
-                audio.onended = () => {
-                    setIsSpeaking(false);
-                    if (onEnd && !abortAudioRef.current) onEnd();
-                    URL.revokeObjectURL(url);
-                };
-
-                audio.play().catch(e => console.warn("Audio play error", e));
+            if (abortAudioRef.current) {
+                console.log("Magic Kat: Aborted before audio");
                 return;
             }
+
+            if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+
+                // ✨✨✨ USE WEB AUDIO API FOR PITCH SHIFTING ✨✨✨
+                try {
+                    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                    const audioCtx = new AudioContextClass();
+                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = audioBuffer;
+
+                    // 🎵 PITCH SHIFT: Backend 1.15x + Frontend 1.1x = Cartoon Voice
+                    source.playbackRate.value = 1.1;
+
+                    source.onended = () => {
+                        setIsSpeaking(false);
+                        if (onEnd && !abortAudioRef.current) onEnd();
+                        // Safe close: check state first
+                        try {
+                            if (audioCtx.state !== 'closed') {
+                                audioCtx.close();
+                            }
+                        } catch (e) {
+                            // AudioContext already closed, ignore
+                        }
+                    };
+
+                    source.connect(audioCtx.destination);
+                    setIsSpeaking(true);
+                    source.start(0);
+
+                    // Store for potential stop
+                    audioRef.current = {
+                        stop: () => {
+                            try {
+                                source.stop();
+                                if (audioCtx.state !== 'closed') {
+                                    audioCtx.close();
+                                }
+                            } catch (e) {
+                                // Already stopped/closed
+                            }
+                        }
+                    } as any;
+
+                    console.log("Sparkle: Nova TTS playing with pitch shift 1.2x");
+                    return; // ✅ CRITICAL: Stop here, don't fallback
+
+                } catch (audioError) {
+                    console.warn("Web Audio API failed, fallback to simple playback:", audioError);
+                    // Fallback: simple Audio element
+                    const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    audioRef.current = audio;
+
+                    audio.onplay = () => setIsSpeaking(true);
+                    audio.onended = () => {
+                        setIsSpeaking(false);
+                        if (onEnd && !abortAudioRef.current) onEnd();
+                        URL.revokeObjectURL(url);
+                    };
+
+                    await audio.play().catch(e => console.warn("Audio play error", e));
+                }
+                return;
+            } else {
+                console.warn("TTS response not OK:", response.status);
+            }
         } catch (e) {
-            console.warn("TTS failed", e);
+            console.warn("TTS fetch failed:", e);
         }
 
-        // Fallback Browser TTS
+        // Fallback Browser TTS (only if server TTS failed)
+        console.log("Sparkle: Falling back to Browser TTS");
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.onend = () => {
@@ -244,41 +326,208 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
         await handleChat(text);
     };
 
-    const handleChat = async (text: string, imageOverride?: string) => {
+    // Play Audio Buffer with Pitch Shift
+    const playAudioBuffer = async (arrayBuffer: ArrayBuffer, onEnd?: () => void) => {
+        stopEverything();
+        abortAudioRef.current = false;
+        setIsSpeaking(true);
+
+        try {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            const audioCtx = new AudioContextClass();
+
+            // Decode
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+
+            // 🎵 PITCH SHIFT: Minimax is already cute, but let's keep it slight or 1.0 depending on voice
+            // If voice is 'female-shaonv', it's already creating a character voice.
+            // Let's set to 1.0 to respect the expensive model's quality, or 1.05 for slight energy.
+            source.playbackRate.value = 1.0;
+
+            source.onended = () => {
+                setIsSpeaking(false);
+                if (onEnd && !abortAudioRef.current) onEnd();
+                // Safe close: check state first
+                try {
+                    if (audioCtx.state !== 'closed') {
+                        audioCtx.close();
+                    }
+                } catch (e) {
+                    // AudioContext already closed, ignore
+                }
+            };
+
+            source.connect(audioCtx.destination);
+            source.start(0);
+
+            // Store for potential stop
+            audioRef.current = {
+                stop: () => {
+                    try {
+                        source.stop();
+                        if (audioCtx.state !== 'closed') {
+                            audioCtx.close();
+                        }
+                    } catch (e) {
+                        // Already stopped/closed
+                    }
+                }
+            } as any;
+
+            console.log("Sparkle: Playing Minimax Audio");
+
+        } catch (audioError) {
+            console.warn("Web Audio API failed, fallback to blob:", audioError);
+            const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audioRef.current = audio;
+
+            audio.onplay = () => setIsSpeaking(true);
+            audio.onended = () => {
+                setIsSpeaking(false);
+                if (onEnd && !abortAudioRef.current) onEnd();
+                URL.revokeObjectURL(url);
+            };
+
+            await audio.play().catch(e => console.warn("Audio play error", e));
+        }
+    };
+
+    // Task ID to prevent race conditions (overlap of Welcome vs Analysis)
+    const currentTaskId = useRef(0);
+
+    /**
+     * 🧠 HYBRID PIPELINE: Brain (OpenAI) + Mouth (Minimax)
+     */
+    const handleChat = async (text: string, imageOverride?: string, options?: { stage?: string, userProfile?: any }) => {
         // CRITICAL: Stop listening first to prevent stuck state
         stopEverything();
 
-        setIsProcessing(true);
+        // Start New Task
+        const taskId = ++currentTaskId.current;
+        console.log(`[Sparkle] Starting Task #${taskId}`);
+
+        setIsProcessing(true); // "Thinking" State
         try {
-            // Send to Backend
-            const payload: any = {
-                message: text,
-                userId: user?.uid,
-                image: imageOverride || imageContext
+            // Build new history entry
+            const userMessage = text || "I just uploaded an image.";
+            const newUserMessage = {
+                role: 'user',
+                parts: [{ text: userMessage }]
             };
 
+            const updatedHistory = [...conversationHistory, newUserMessage];
+
+            // 🧠 Step 2: Brain (OpenAI)
+            const payload: any = {
+                history: updatedHistory,
+                message: text,
+                userId: user?.uid,
+                image: imageOverride || null,
+                hasUploadedImage: hasUploadedImageRef.current || !!imageOverride  // Use ref value for immediate access
+            };
+
+            console.log("Magic Kat Brain: Thinking...", { hasUploadedImage: hasUploadedImageRef.current, hasCurrentImage: !!imageOverride });
             const response = await fetch('/api/sparkle/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
+
+            // CHECK TASK ID
+            if (taskId !== currentTaskId.current) { console.log(`Task #${taskId} aborted.`); return; }
+
             const data = await response.json();
 
+            // CHECK TASK ID
+            if (taskId !== currentTaskId.current) { console.log(`Task #${taskId} aborted.`); return; }
+
             // Pass full response to parent (not just tags)
-            if (data) onTagsExtracted(data);
+            if (data && onTagsExtracted) onTagsExtracted(data);
 
             if (data.sparkleTalk) {
-                speak(data.sparkleTalk, 'en-US', () => {
-                    // Loop: Always listen after responding
-                    startListening();
+                // Add AI response to history
+                const aiMessage = {
+                    role: 'model',
+                    parts: [{ text: data.sparkleTalk }]
+                };
+                setConversationHistory([...updatedHistory, aiMessage]);
+
+                // 👄 Step 3: Mouth (Minimax)
+                console.log("Magic Kat Mouth: Generating Speech...");
+                const ttsResponse = await fetch('/api/sparkle/speak-minimax', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: data.sparkleTalk,
+                        voiceId: 'female-shaonv', // Target voice
+                        userId: user?.uid
+                    })
                 });
+
+                // CHECK TASK ID
+                if (taskId !== currentTaskId.current) { console.log(`Task #${taskId} aborted.`); return; }
+
+                if (ttsResponse.ok) {
+                    let audioBuffer: ArrayBuffer;
+                    const contentType = ttsResponse.headers.get('content-type');
+
+                    if (contentType && contentType.includes('application/json')) {
+                        const json = await ttsResponse.json();
+
+                        // CHECK TASK ID
+                        if (taskId !== currentTaskId.current) return;
+
+                        if (json.audioUrl) {
+                            console.log("Using Cached Audio:", json.audioUrl);
+                            const audioRes = await fetch(json.audioUrl);
+                            if (taskId !== currentTaskId.current) return;
+                            audioBuffer = await audioRes.arrayBuffer();
+                        } else {
+                            // Should not happen if API is correct, but safe fallback
+                            console.warn("TTS returned JSON without audioUrl?", json);
+                            audioBuffer = new ArrayBuffer(0);
+                        }
+                    } else {
+                        // Direct Buffer
+                        audioBuffer = await ttsResponse.arrayBuffer();
+                    }
+
+                    if (taskId !== currentTaskId.current) return;
+
+                    if (audioBuffer && audioBuffer.byteLength > 0) {
+                        // 🎵 Step 4: Play
+                        playAudioBuffer(audioBuffer, () => {
+                            // Loop: Always listen after responding IF task is still valid
+                            if (taskId === currentTaskId.current) {
+                                startListening();
+                            }
+                        });
+                    } else {
+                        throw new Error("Empty audio buffer");
+                    }
+
+                } else {
+                    console.warn("MinimaxTTS failed, fallback to legacy speak");
+                    if (taskId === currentTaskId.current) {
+                        speak(data.sparkleTalk, 'en-US', () => startListening());
+                    }
+                }
             }
 
         } catch (err) {
             console.error("Chat Error", err);
-            speak("My magic wand is glitching. One moment!", 'en-US');
+            if (taskId === currentTaskId.current) {
+                speak("My magic wand is glitching. One moment!", 'en-US');
+            }
         } finally {
-            setIsProcessing(false);
+            if (taskId === currentTaskId.current) {
+                setIsProcessing(false);
+            }
         }
     };
 
@@ -311,7 +560,7 @@ export const SparkleVoiceFab = forwardRef<SparkleVoiceRef, SparkleVoiceFabProps>
             ) : isSpeaking ? (
                 <div className="text-3xl animate-pulse">🗣️</div>
             ) : (
-                <div className="text-3xl">✨</div>
+                <div className="text-3xl">🐱✨</div>
             )}
         </button>
     );

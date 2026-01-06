@@ -1,43 +1,34 @@
-import { db } from './firebaseConfig.js';
-import {
-    collection,
-    doc,
-    getDoc,
-    updateDoc,
-    addDoc,
-    runTransaction,
-    query,
-    where,
-    orderBy,
-    limit,
-    getDocs,
-    Timestamp
-} from "firebase/firestore";
+import { adminDb } from './firebaseAdmin.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // --- Configuration Tables (V2 Spec) ---
 export const POINT_COSTS = {
-    COMIC_STRIP: 10,         // 4-Panel Comic (Single Image Mode)
+    COMIC_STRIP: 150,        // 4-Panel Comic (Updated to 150)
     PICTURE_BOOK_4: 30,      // Picture Book (4 Pages)
     PICTURE_BOOK_8: 50,      // Picture Book (8 Pages)
     PICTURE_BOOK_12: 70,     // Picture Book (12 Pages)
-    VIDEO_GENERATION: 80     // Video Generation
+    VIDEO_GENERATION: 60,    // Video Generation (Max logic?) - Actually dynamic
+    PREMIUM_VOICE_ADDITIONAL: 50, // Additional cost for ElevenLabs voices
+    CREATIVE_JOURNEY_VIDEO: 20   // Magic Mentor Finale Video
 };
 
 export const POINTS_COSTS: Record<string, number> = {
     'analyze_image': 0, // Free included in other services
     'generate_story': 0, // Free included in other services
-    'generate_image': 10, // Single Image
+    'generate_image': 40, // Single Image (SeaDream 4.0)
     'generate_comic': POINT_COSTS.COMIC_STRIP,
     'generate_speech': 0, // Included
     'generate_video': POINT_COSTS.VIDEO_GENERATION,
     'picture_book_4': POINT_COSTS.PICTURE_BOOK_4,
     'picture_book_8': POINT_COSTS.PICTURE_BOOK_8,
     'picture_book_12': POINT_COSTS.PICTURE_BOOK_12,
+    'premium_voice_extra': POINT_COSTS.PREMIUM_VOICE_ADDITIONAL,
 
     // Legacy mapping support
-    'generate_audio_story': 25,
+    'generate_audio_story': 25, // Standard story with OpenAI TTS
+    'generate_audio_story_premium': 25 + POINT_COSTS.PREMIUM_VOICE_ADDITIONAL, // Story with ElevenLabs
     'generate_comic_book': POINT_COSTS.PICTURE_BOOK_4,
+    'magic_mentor_video': POINT_COSTS.CREATIVE_JOURNEY_VIDEO
 };
 
 export interface PointLog {
@@ -54,7 +45,7 @@ export interface PointLog {
 export class PointsService {
 
     constructor() {
-        console.log('[PointsService] Initialized');
+        console.log('[PointsService] Initialized (Admin SDK)');
     }
 
     /**
@@ -63,10 +54,10 @@ export class PointsService {
     async getBalance(userId: string): Promise<number> {
         if (!userId) return 0;
         try {
-            const userRef = doc(db, 'users', userId);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                return userSnap.data().points || 0;
+            const userSnap = await adminDb.collection('users').doc(userId).get();
+            if (userSnap.exists) {
+                const data = userSnap.data();
+                return data?.points || 0;
             }
             return 0;
         } catch (error) {
@@ -100,20 +91,33 @@ export class PointsService {
         }
 
         try {
-            const result = await runTransaction(db, async (transaction) => {
-                const userRef = doc(db, 'users', userId);
+            const result = await adminDb.runTransaction(async (transaction) => {
+                const userRef = adminDb.collection('users').doc(userId);
                 const userDoc = await transaction.get(userRef);
 
-                if (!userDoc.exists()) {
+                if (!userDoc.exists) {
                     throw "USER_NOT_FOUND";
                 }
 
-                const userData = userDoc.data();
+                const userData = userDoc.data() || {};
                 const currentPoints = userData.points || 0;
+
+                // ADMIN BYPASS: Users with 10000+ points are admins and don't consume points
+                if (currentPoints >= 10000) {
+                    console.log(`[Points] ADMIN BYPASS: User ${userId} has ${currentPoints} points (admin). Skipping deduction.`);
+                    return { success: true, before: currentPoints, after: currentPoints };
+                }
+
+                // TEST/DEMO ACCOUNT BYPASS
+                if (userId === 'demo' || userId.includes('test') || userId.includes('debug')) {
+                    console.log(`[Points] TEST ACCOUNT BYPASS: User ${userId}. Skipping deduction.`);
+                    return { success: true, before: currentPoints, after: currentPoints };
+                }
+
                 const totalSpent = userData.totalSpentPoints || 0;
 
                 if (currentPoints < cost) {
-                    throw "NOT_ENOUGH_POINTS"; // Will be caught below
+                    throw "NOT_ENOUGH_POINTS";
                 }
 
                 const newPoints = currentPoints - cost;
@@ -125,10 +129,8 @@ export class PointsService {
                     totalSpentPoints: newTotalSpent
                 });
 
-                // 2. Create Log (In same transaction ideally, or we can simply addDoc)
-                // Firestore transactions require reads first, but writes can be bundled. 
-                // Since logs is a separate collection, we can just do a write.
-                const logRef = doc(collection(db, 'points_logs'));
+                // 2. Create Log
+                const logRef = adminDb.collection('points_logs').doc();
                 transaction.set(logRef, {
                     logId: uuidv4(),
                     userId,
@@ -146,7 +148,7 @@ export class PointsService {
             return result;
 
         } catch (e) {
-            if (e === "NOT_ENOUGH_POINTS") {
+            if (e === "NOT_ENOUGH_POINTS" || (e as any)?.message?.includes('NOT_ENOUGH_POINTS')) {
                 return { success: false, error: 'NOT_ENOUGH_POINTS' };
             }
             console.error('[Points] Transaction Failed:', e);
@@ -162,20 +164,17 @@ export class PointsService {
         if (!amount) return { success: false };
 
         try {
-            await runTransaction(db, async (transaction) => {
-                const userRef = doc(db, 'users', userId);
+            await adminDb.runTransaction(async (transaction) => {
+                const userRef = adminDb.collection('users').doc(userId);
                 const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) throw "USER_NOT_FOUND";
+                if (!userDoc.exists) throw "USER_NOT_FOUND";
 
-                const current = userDoc.data().points || 0;
+                const current = userDoc.data()?.points || 0;
                 const newPoints = current + amount;
-
-                // Decrement spent? Maybe, or just track refund. User spec didn't specify refund logic for totalSpent.
-                // We will leave totalSpent as is (historical consumption), but restore balance.
 
                 transaction.update(userRef, { points: newPoints });
 
-                const logRef = doc(collection(db, 'points_logs'));
+                const logRef = adminDb.collection('points_logs').doc();
                 transaction.set(logRef, {
                     logId: uuidv4(),
                     userId,
@@ -193,7 +192,6 @@ export class PointsService {
             console.error('[Points] Refund Failed:', e);
             return { success: false };
         }
-        return { success: false };
     }
 
     /**
@@ -202,17 +200,17 @@ export class PointsService {
     async grantPoints(userId: string, amount: number, action: string, reason?: string): Promise<{ success: boolean }> {
         if (amount <= 0) return { success: false };
         try {
-            await runTransaction(db, async (transaction) => {
-                const userRef = doc(db, 'users', userId);
+            await adminDb.runTransaction(async (transaction) => {
+                const userRef = adminDb.collection('users').doc(userId);
                 const userDoc = await transaction.get(userRef);
-                if (!userDoc.exists()) throw "USER_NOT_FOUND";
+                if (!userDoc.exists) throw "USER_NOT_FOUND";
 
-                const current = userDoc.data().points || 0;
+                const current = userDoc.data()?.points || 0;
                 const newPoints = current + amount;
 
                 transaction.update(userRef, { points: newPoints });
 
-                const logRef = doc(collection(db, 'points_logs'));
+                const logRef = adminDb.collection('points_logs').doc();
                 transaction.set(logRef, {
                     logId: uuidv4(),
                     userId,
@@ -237,13 +235,12 @@ export class PointsService {
      */
     async getLogs(userId: string, limitCount = 20): Promise<PointLog[]> {
         try {
-            const q = query(
-                collection(db, 'points_logs'),
-                where('userId', '==', userId),
-                // orderBy('createdAt', 'desc'), // Cause index error if not configured
-                limit(limitCount)
-            );
-            const snap = await getDocs(q);
+            const snap = await adminDb.collection('points_logs')
+                .where('userId', '==', userId)
+                // .orderBy('createdAt', 'desc') // Requires index
+                .limit(limitCount)
+                .get();
+
             const logs = snap.docs.map(d => d.data() as PointLog);
             return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         } catch (e) {

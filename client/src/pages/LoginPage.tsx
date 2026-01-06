@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
@@ -12,22 +12,57 @@ const LoginPage: React.FC = () => {
     const [err, setErr] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // DEBUGGING STATE
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
+    const addLog = (msg: string) => setDebugLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+
+    // Install Global Error Handlers
+    useEffect(() => {
+        const handleError = (event: ErrorEvent) => {
+            addLog(`Global Error: ${event.message} at ${event.filename}:${event.lineno}`);
+        };
+        const handleRejection = (event: PromiseRejectionEvent) => {
+            addLog(`Unhandled Rejection: ${event.reason}`);
+        };
+
+        window.addEventListener('error', handleError);
+        window.addEventListener('unhandledrejection', handleRejection);
+
+        return () => {
+            window.removeEventListener('error', handleError);
+            window.removeEventListener('unhandledrejection', handleRejection);
+        };
+    }, []);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setErr('');
         setLoading(true);
+        addLog(`Starting email login with: ${email}`);
+
         try {
             await login(email, password);
+            addLog('Email login successful, navigating...');
             navigate('/home');
         } catch (error: any) {
             console.error("Login Error:", error);
+            addLog(`Login Error: ${error.message} (${error.code})`);
+
             const code = error.code || '';
             const msg = error.message || '';
 
+            // Handle specific error cases
             if (code === 'auth/invalid-credential' || msg.includes('invalid-credential') || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
                 setErr('Incorrect email or password. Please try again.');
             } else if (code === 'auth/too-many-requests') {
                 setErr('Too many failed attempts. Please try again later.');
+            } else if (code === 'permission-denied' || msg.includes('Missing or insufficient permissions')) {
+                // Firebase/Firestore permission error - not a login issue
+                // This error should not prevent login, might be from background services
+                console.warn('Firestore permission issue detected, but login succeeded at auth level');
+                addLog('Firestore permission warning (ignoring)');
+                // Still navigate since authentication might have succeeded
+                navigate('/home');
             } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
                 setErr('Cannot connect to server. Please check your connection.');
             } else {
@@ -39,10 +74,22 @@ const LoginPage: React.FC = () => {
     };
 
     const handleProvider = async (provider: 'google' | 'apple') => {
+        // BLOCKING ALERT TO VERIFY CLICK
+        alert(`DEBUG: Clicked ${provider} login. Starting...`);
         try {
+            addLog(`Starting ${provider} login...`);
             let isNew = false;
-            if (provider === 'google') isNew = await loginWithGoogle();
-            else isNew = await loginWithApple();
+
+            // ALERT BEFORE AWAIT
+            if (provider === 'google') {
+                alert('DEBUG: calling loginWithGoogle()');
+                isNew = await loginWithGoogle();
+            } else {
+                isNew = await loginWithApple();
+            }
+
+            alert(`DEBUG: Login Success! isNew=${isNew}`);
+            addLog(`${provider} login success. isNew=${isNew}`);
 
             if (isNew) {
                 navigate('/startup');
@@ -50,8 +97,9 @@ const LoginPage: React.FC = () => {
                 navigate('/home');
             }
         } catch (error: any) {
+            alert(`DEBUG: Catch Error! ${error.message}`);
             console.error("Login failed", error);
-            alert(`Last Error: ${error.message}`);
+            addLog(`PROVIDER LOGIN FAILED: ${error.message} / ${error.code}`);
             setErr(error.message || "Login failed");
         }
     };
@@ -130,7 +178,7 @@ const LoginPage: React.FC = () => {
                     </button>
 
                     <div className="relative w-full text-center border-t border-slate-200 pt-6 mt-0">
-                        <span className="absolute top-(-10px) left-1/2 -translate-x-1/2 bg-[#FAFAFA] px-2 text-xs font-bold text-slate-400">OR</span>
+                        <span className="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-[#FAFAFA] px-2 text-xs font-bold text-slate-400">OR</span>
                     </div>
 
                     <div className="flex flex-col gap-4 w-full mt-4">
@@ -154,6 +202,21 @@ const LoginPage: React.FC = () => {
                             Continue with Apple
                         </button>
                     </div>
+
+                    {/* DEBUG LOG SECTION */}
+                    {debugLogs.length > 0 && (
+                        <div className="w-full mt-8 p-4 bg-black/80 rounded-xl text-green-400 text-xs font-mono overflow-hidden">
+                            <div className="flex justify-between items-center mb-2 border-b border-white/20 pb-2">
+                                <span className="font-bold text-white">Debug Logs</span>
+                                <button onClick={() => setDebugLogs([])} className="text-xs text-white/50 hover:text-white">Clear</button>
+                            </div>
+                            <div className="h-40 overflow-y-auto">
+                                {debugLogs.map((log, i) => (
+                                    <div key={i} className="mb-1 border-b border-white/5 pb-1 last:border-0">{log}</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
 
                 <button

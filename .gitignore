@@ -71,3 +71,7 @@ node_modules/
 # Build output
 dist/
 dist
+
+# Firebase Admin Service Account (SENSITIVE - DO NOT COMMIT)
+firebase-admin-key.json
+*-firebase-adminsdk-*.json

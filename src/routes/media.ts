@@ -1,10 +1,14 @@
 
+
 import { Router } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { doubaoService } from '../services/doubao.js';
 import { baiduService } from '../services/baidu.js';
 import { geminiService } from '../services/gemini.js';
+import { openAIService } from '../services/openai.js'; // OpenAI TTS
+import { elevenLabsService, VOICE_IDS } from '../services/elevenlabs.js';
+import { minimaxService } from '../services/minimax.js'; // Premium voices
 import { seedanceService } from '../services/seedance.js';
 import { databaseService } from '../services/database.js';
 import { pointsService, POINT_COSTS } from '../services/points.js';
@@ -12,8 +16,117 @@ import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
 
+import { adminStorageService } from '../services/adminStorage.js';
+
 export const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+// Generic File Upload Endpoint (Admin SDK)
+router.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const userId = req.body.userId;
+    const type = req.body.type || 'upload';
+
+    if (!req.file) {
+      // Handle metadata-only save if imageUrl provides (legacy support)
+      if (req.body.imageUrl && userId) {
+        const newImage = await databaseService.saveImageRecord(
+          userId,
+          req.body.imageUrl,
+          type,
+          req.body.prompt || 'User Upload'
+        );
+        return res.json(newImage);
+      }
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: 'UserId required' });
+    }
+
+    console.log(`[Upload] Uploading file for user ${userId}...`);
+
+    // 1. Upload to Firebase Storage via Admin SDK
+    const publicUrl = await adminStorageService.uploadFile(
+      req.file.buffer,
+      req.file.mimetype,
+      `uploads/${userId}`
+    );
+
+    // 2. Save Record to DB
+    const newImage = await databaseService.saveImageRecord(
+      userId,
+      publicUrl,
+      type,
+      req.file.originalname
+    );
+
+    console.log(`[Upload] Success: ${publicUrl}`);
+    res.json(newImage);
+
+  } catch (error: any) {
+    console.error('[Upload] Failed:', error);
+    res.status(500).json({ error: 'Upload failed', details: error.message, stack: error.stack });
+  }
+});
+
+// ========== VIDEO GENERATION HELPERS ==========
+
+/**
+ * Video keyword configuration (matches frontend)
+ */
+const VIDEO_KEYWORDS = {
+  actions: [
+    { id: 'running', en: 'character running' },
+    { id: 'spinning', en: 'spinning around' },
+    { id: 'waving', en: 'waving hands' },
+    { id: 'jumping', en: 'jumping up and down' }
+  ],
+  camera: [
+    { id: 'zoom_in', en: 'zoom in slowly' },
+    { id: 'zoom_out', en: 'zoom out slowly' },
+    { id: 'pan_left', en: 'pan left' },
+    { id: 'pan_right', en: 'pan right' }
+  ],
+  effects: [
+    { id: 'glowing', en: 'glowing with sparkles' },
+    { id: 'rainbow', en: 'rainbow flying around' },
+    { id: 'snowing', en: 'snow falling gently' },
+    { id: 'fireworks', en: 'fireworks exploding' }
+  ]
+};
+
+const VIDEO_DURATION_OPTIONS = [
+  { duration: 5, baseCredits: 50, audioCredits: 30 },
+  { duration: 8, baseCredits: 80, audioCredits: 50 },
+  { duration: 10, baseCredits: 100, audioCredits: 60 }
+];
+
+/**
+ * Build full video prompt by combining user prompt with selected keywords
+ */
+function buildVideoPrompt(userPrompt: string, keywordEffects: string[] = []): string {
+  const allKeywords = [...VIDEO_KEYWORDS.actions, ...VIDEO_KEYWORDS.camera, ...VIDEO_KEYWORDS.effects];
+  const selectedEffects = keywordEffects
+    .map(id => allKeywords.find(kw => kw.id === id))
+    .filter(Boolean)
+    .map(kw => kw!.en);
+
+  return [userPrompt, ...selectedEffects].filter(Boolean).join(', ');
+}
+
+/**
+ * Calculate credit cost based on duration and audio
+ */
+function calculateVideoCredits(duration: 5 | 8 | 10, generateAudio: boolean): number {
+  const option = VIDEO_DURATION_OPTIONS.find(o => o.duration === duration);
+  if (!option) return 50;
+
+  return option.baseCredits + (generateAudio ? option.audioCredits : 0);
+}
+
+// ========== END VIDEO HELPERS ==========
 
 // --- Likes ---
 router.post('/like', async (req, res) => {
@@ -24,6 +137,50 @@ router.post('/like', async (req, res) => {
     res.json({ liked });
   } catch (e) {
     res.status(500).json({ error: "Like failed" });
+  }
+});
+
+// Quick Image Analysis for Smart Prompts
+router.post('/analyze-image', upload.single('image'), async (req, res) => {
+  try {
+    const imageBuffer = req.file?.buffer;
+    if (!imageBuffer) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    // Convert to base64
+    const base64Image = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+
+    // Analyze with Doubao Vision
+    console.log('[Analyze] Quick analysis for smart prompt...');
+    const description = await doubaoService.analyzeImage(
+      base64Image,
+      "Identify the main subject in this image in ONE or TWO words (e.g., 'dog', 'car', 'person', 'abstract drawing'). If unclear or abstract, respond 'unclear'."
+    );
+
+    console.log('[Analyze] Result:', description);
+
+    // Determine confidence
+    const subject = description.trim().toLowerCase();
+    const isUnclear = subject.includes('unclear') ||
+      subject.includes('abstract') ||
+      subject.includes('cannot') ||
+      subject.includes('difficult') ||
+      subject.length > 30;
+
+    const confidence = isUnclear ? 'low' : 'high';
+    const cleanSubject = isUnclear ? '' : subject.replace(/^(a|an|the)\s+/i, '').trim();
+
+    res.json({
+      subject: cleanSubject,
+      confidence: confidence,
+      description: description
+    });
+
+  } catch (error: any) {
+    console.error('Image analysis error:', error);
+    // Fail gracefully - return low confidence
+    res.json({ confidence: 'low', subject: '', description: '' });
   }
 });
 
@@ -59,8 +216,24 @@ router.post('/image-to-voice', upload.single('image'), async (req, res) => {
       isVIP = plan === 'pro' || plan === 'yearly_pro' || plan === 'admin';
     }
 
-    // 1. Deduct Points (FREE for Audio Story)
-    console.log(`[Points] Audio Story Generation is FREE for ${userId}. VIP Mode: ${isVIP}`);
+    // 1. Deduct Points
+    const action = (req.body.voiceTier === 'premium') ? 'generate_audio_story_premium' : 'generate_audio_story';
+    console.log(`[Points] Deducting for ${action}. User: ${userId}. VIP: ${isVIP}`);
+
+    // Admins or specific test users might be free, but consumePoints handles the 10000+ points bypass already.
+    const deduction = await pointsService.consumePoints(userId, action);
+    if (!deduction.success) {
+      if (deduction.error === 'NOT_ENOUGH_POINTS') {
+        const { current, required } = await pointsService.hasEnoughPoints(userId, action);
+        return res.status(200).json({
+          success: false,
+          errorCode: 'NOT_ENOUGH_POINTS',
+          required,
+          current
+        });
+      }
+      return res.status(500).json({ error: 'Points transaction failed' });
+    }
 
     let imageDescription = "A creative drawing by a child.";
     let savedImageUrl = "";
@@ -169,6 +342,7 @@ and user context: ${userVoiceText}.
   - Output plain text only, no title, no notes.
 - Continuous text(single paragraph).
 - Length: Minimum 300 words.Make it detailed and engaging.
+5. **Language Constraint**: STRICTLY ENGLISH ONLY. Do not use any Chinese characters (Hanzi).
 `;
     } else {
       prompt = `
@@ -241,55 +415,82 @@ and user context: ${userVoiceText}.
       }
     }
 
-    // 2. Generate Audio (Doubao TTS)
-    // Audio generation follows...
-
-    // 2. Generate Audio (Doubao TTS)
+    // 2. Generate Audio using Voice Tier System
     let audioUrl = '';
 
-    // ALLOW ALL USERS to generate audio for now (Fix for missing audio issue)
-    // if (isFree) {
-    //   console.log("Free User: Skipping Server TTS (Will use Client System TTS).");
-    // } else {
-    {
-      console.log(`Generating Speech for lang: ${lang}...`);
-      console.log(`Generating Speech for lang: ${lang}...`);
+    const voiceId = req.body.voice || 'standard'; // From frontend
+    const voiceTier = req.body.voiceTier || 'standard'; // standard | premium
 
-      try {
-        let audioBuffer: Buffer;
+    console.log(`Generating Speech for lang: ${lang}, Voice: ${voiceId}, Tier: ${voiceTier}...`);
 
-        const userVoice = req.body.voice || 'female';
-        let voiceName = 'en-US-Neural2-F'; // Default Female
+    try {
+      let audioBuffer: Buffer;
 
-        // 2. Generate Audio (Xunfei TTS Switch for Human-like Quality)
-        console.log(`[TTS] Generating Audio via Xunfei (Lang: ${lang})...`);
-        const { xunfeiTTS } = await import('../services/xunfei');
+      if (voiceTier === 'premium') {
+        // Minimax Handling for Kiki/Aiai/Titi
+        if (voiceId === 'kiki' || voiceId === 'aiai' || voiceId === 'titi') {
+          console.log(`[TTS] Using Minimax Voice: ${voiceId}...`);
+          // Minimax Service takes (text, voiceKey) and maps internally to IDs provided by user
+          audioBuffer = await minimaxService.generateSpeech(story, voiceId);
+
+          // Save audio file
+          const fs = await import('fs');
+          const path = await import('path');
+          const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
+          if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
+
+          const filename = `audio-${id}.mp3`;
+          const outputPath = path.join(outputDir, filename);
+          fs.writeFileSync(outputPath, audioBuffer);
+          audioUrl = `/generated/${filename}`;
+          console.log('[TTS] Minimax Audio Generated:', audioUrl);
+
+        } else {
+          // Existing Premium Voice (ElevenLabs) - Map voice IDs
+          const voiceMapping: Record<string, string> = {
+            'titi': VOICE_IDS.TITI,
+            'standard': VOICE_IDS.KIKI // Fallback
+          };
+
+          const elevenLabsVoiceId = voiceMapping[voiceId] || VOICE_IDS.KIKI;
+          console.log(`[TTS] Using ElevenLabs Premium Voice: ${voiceId} (${elevenLabsVoiceId})...`);
+
+          audioBuffer = await elevenLabsService.speak(story, elevenLabsVoiceId);
+
+          // Save audio file
+          const fs = await import('fs');
+          const path = await import('path');
+          const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
+          if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
+
+          const filename = `audio-${id}.mp3`;
+          const outputPath = path.join(outputDir, filename);
+          fs.writeFileSync(outputPath, audioBuffer);
+          audioUrl = `/generated/${filename}`;
+          console.log('[TTS] ElevenLabs Audio Generated:', audioUrl);
+        }
+
+      } else {
+        // Standard Voice (OpenAI TTS - Nova)
+        console.log(`[TTS] Using OpenAI Standard Voice (Nova HD)...`);
+        audioBuffer = await openAIService.generateSpeech(story);
+
+        // Save audio file
         const fs = await import('fs');
         const path = await import('path');
-
         const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
         if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
 
         const filename = `audio-${id}.mp3`;
         const outputPath = path.join(outputDir, filename);
-
-        // Generate and Save (Returns path)
-        try {
-          // VIPs get slightly more dynamic speed if needed (e.g. 45 vs 40) or just better text
-          await xunfeiTTS(story, outputPath, lang, isVIP ? { speed: 45, volume: 60 } : {});
-          audioUrl = `/generated/${filename}`;
-          console.log('[TTS] Xunfei Audio Generated:', audioUrl);
-        } catch (ttsErr) {
-          console.error('[TTS] Xunfei Failed, falling back to Browser TTS:', ttsErr);
-          // audioUrl remains empty -> Frontend triggers "Read for Me (Browser)"
-        }
-      } catch (ttsError: any) {
-        console.error('TTS Implementation Failed (Soft Fail):', ttsError);
-        // Fallback: Proceed without server-side audio. Client will handle it.
-        audioUrl = '';
-        // Partial Refund logic if cost was > 0
-        // await pointsService.refundPoints(userId, 'generate_speech', 'tts_failed');
+        fs.writeFileSync(outputPath, audioBuffer);
+        audioUrl = `/generated/${filename}`;
+        console.log('[TTS] OpenAI Audio Generated:', audioUrl);
       }
+    } catch (ttsError: any) {
+      console.error('TTS Implementation Failed (Soft Fail):', ttsError);
+      // Fallback: Proceed without server-side audio. Client will handle it.
+      audioUrl = '';
     }
 
     // ALWAYS SAVE (Even if audio failed, we have the story)
@@ -381,54 +582,58 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
         console.log("Analyzing image for Greeting Card...");
         imageDescription = await doubaoService.analyzeImage(base64Image,
           "Describe the main subject, composition, and colors of this image. If there are people or faces, describe them clearly.");
-        console.log("Greeting Card Vision:", imageDescription.substring(0, 50));
+        console.log("Greeting Card Vision (length:", imageDescription.length, "):", imageDescription);
       } catch (e) {
-        console.warn("Vision analysis failed, skipping:", e);
+        console.error("Vision analysis failed:", e);
+        imageDescription = ''; // Ensure it's defined
       }
     }
 
-    // Construct a more intelligent prompt using Doubao Pro 1.8 (Requested Update)
+
+    // Construct greeting card prompt
     let finalPrompt = '';
-    try {
-      console.log(`[Media] Optimizing prompt for children (Doubao Pro 1.8)...`);
 
-      // Combine user input with vision data if available
-      let combinedInput = userPrompt;
-      if (imageDescription && imageDescription.length > 5) {
-        combinedInput += `\n\nContext from Reference Image: ${imageDescription}`;
+    // If frontend sent a detailed prompt, use it.
+    if (userPrompt && userPrompt.length > 50) {
+      console.log(`[Media] Using detailed frontend prompt...`);
+      finalPrompt = userPrompt;
+
+      // If we have vision analysis, maybe append it for context if not already there? 
+      // But the frontend is usually specific (Fusion Mode etc). 
+      // Let's trust the frontend. The frontend prompt includes explicit instructions.
+
+      // Append strict text rule just in case (though frontend adds it too)
+      finalPrompt += " IMPORTANT: The final output image and any text inside it MUST be in ENGLISH only.";
+    } else {
+      // Fallback: Logic for simple prompts or external calls
+      if (imageDescription && imageDescription.length > 20) {
+        finalPrompt = `Create a magical greeting card. 
+Main subject (MUST match reference): ${imageDescription}
+User Request: ${userPrompt}
+Style: Disney Pixar 3D, heartwarming, high quality.
+Elements: fireworks, sparkles, magical atmosphere.
+Text: English only.`;
+      } else {
+        finalPrompt = `${userPrompt}. Style: Disney Pixar 3D, magical atmosphere, high quality. Text MUST be English Only.`;
       }
-
-      finalPrompt = await doubaoService.generateChildFriendlyPrompt(combinedInput);
-
-      // Preserve "Identity" constraint if it was heavily implied by vision (e.g. "face")
-      if (imageDescription.toLowerCase().includes('face') || imageDescription.toLowerCase().includes('person')) {
-        finalPrompt += " (Keep the main character's features recognizable).";
-      }
-
-      console.log(`[Media] Optimized Prompt: ${finalPrompt}`);
-    } catch (optErr) {
-      console.warn("[Media] Prompt optimization failed, fallback to manual:", optErr);
-
-      // Fallback
-      let instructions = "Style: Cartoon/Illustration. Quality: High.";
-      if (imageDescription.toLowerCase().includes('face') || imageDescription.toLowerCase().includes('person')) {
-        instructions += " CRITICALLY IMPORTANT: Preserve the facial features and identity of the person in the reference image. Do not change the face significantly, just apply the artistic style.";
-      }
-      finalPrompt = `${instructions}
-      Reference Image Context: ${imageDescription}.
-      User Specific Request: ${userPrompt}.
-      Output: A high-quality greeting card image blending the reference content with the requested style/theme.`;
     }
+
+    console.log(`[Media] Final Prompt: ${finalPrompt.substring(0, 150)}...`);
 
     let cartoonImageUrl;
     try {
       // Use actual Image-to-Image generation
       const base64Image = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : '';
 
+      // Extract imageStrength parameter (default: 0.5)
+      const imageStrength = req.body.imageStrength ? parseFloat(req.body.imageStrength) : 0.5;
+      console.log(`[Media] Image Strength: ${imageStrength}`);
+
       if (base64Image) {
         console.log('Generating cartoon using Doubao Img2Img...');
-        // Use Doubao Service (prompt, image, size)
-        cartoonImageUrl = await doubaoService.generateImageFromImage(finalPrompt, base64Image, '2K');
+        // Use Doubao Service (prompt, image, size, seed, imageWeight)
+        // Pass undefined for seed, imageStrength as imageWeight
+        cartoonImageUrl = await doubaoService.generateImageFromImage(finalPrompt, base64Image, '2K', undefined, imageStrength);
       } else {
         console.log('No image file, falling back to Doubao Text-to-Image...');
         cartoonImageUrl = await doubaoService.generateImage(finalPrompt, '2K');
@@ -436,7 +641,7 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
     } catch (genError) {
       console.error('Image generation failed, falling back to mock:', genError);
       import('fs').then(fs => {
-        fs.appendFileSync('server_error.log', `${new Date().toISOString()} - Image Gen Error: ${genError}\n`);
+        fs.appendFileSync('server_error.log', `${new Date().toISOString()} - Image Gen Error: ${genError} \n`);
       });
       // CRITICAL: Refund logic should be here if we consider fallback a failure?
       // Spec: "API failed -> Full Refund... Partial success -> Deduct".
@@ -453,24 +658,27 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
         // ...
       }
       if (cartoonImageUrl && !cartoonImageUrl.includes('placehold')) {
-        // Fix: Upload to Firebase Storage for persistence
+        // Upload to Firebase Storage using Admin SDK (bypasses security rules)
         try {
-          console.log('[Media] Uploading cartoon to storage...');
+          console.log('[Media] Uploading cartoon to storage via Admin SDK...');
           const imgRes = await fetch(cartoonImageUrl);
           if (imgRes.ok) {
             const arrayBuffer = await imgRes.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
-            // Overwrite with permanent URL
-            cartoonImageUrl = await databaseService.uploadFile(buffer, 'image/png', 'cartoons');
+            // Use Admin SDK for reliable uploads
+            cartoonImageUrl = await adminStorageService.uploadFile(buffer, 'image/png', 'cartoons');
+            console.log('[Media] Upload successful:', cartoonImageUrl);
           }
         } catch (uploadErr) {
-          console.error('[Media] Failed to upload cartoon to storage:', uploadErr);
+          console.error('[Media] Admin SDK upload failed:', uploadErr);
+          // If Admin SDK fails, it's a critical error - log but continue with Doubao URL
+          // The URL will still be saved to DB, though it may expire
         }
 
         await databaseService.saveImageRecord(
           userId || 'anonymous',
           cartoonImageUrl,
-          'generated',
+          'cards',
           finalPrompt,
           { originalImageUrl: savedOriginalUrl }
         );
@@ -504,29 +712,50 @@ router.post('/image-to-video/task', (req, res, next) => {
     next();
   });
 }, async (req, res) => {
-  console.log('[API] /image-to-video/task hit (Baidu). Processing request...');
-  let cost = 0; // Scope for error handling
+  console.log('[API] /image-to-video/task hit (Magic Cinema). Processing request...');
+  let cost = 0;
   try {
-    const userPrompt = req.body.prompt ?? '';
     const userId = req.body.userId;
-    // const quality = req.body.quality === 'HD' ? 'HD' : 'SD'; // Ignored
+
+    // NEW: Extract action, style, effect parameters (Kids Version)
+    const action = req.body.action;           // Required
+    const style = req.body.style;             // Optional
+    const effect = req.body.effect;           // Optional
     const durationParam = parseInt(req.body.duration || '5');
-    // MuseSteamer supports 5 or 10. Default 5.
-    const duration = (durationParam >= 8) ? 10 : 5;
+    const duration: 5 | 8 | 10 = (durationParam === 10 ? 10 : durationParam === 8 ? 8 : 5);
+    const generateAudio = req.body.generateAudio !== false; // Default true
+
+    console.log(`[Video Magic] Action='${action}', Style='${style || 'none'}', Effect='${effect || 'none'}', Duration=${duration}s, Audio=${generateAudio}`);
 
     if (!userId) {
       return res.status(401).json({ error: 'User ID required', errorCode: 'AUTH_REQUIRED' });
     }
 
-    // 1. Calculate Cost
-    cost = duration >= 8 ? 40 : 20; // 20 pts for SD, 40 for HD
+    if (!action) {
+      return res.status(400).json({ error: 'Action parameter is required', errorCode: 'MISSING_ACTION' });
+    }
 
-    // 2. Consume Points
-    const action = 'generate_video';
-    const deduction = await pointsService.consumePoints(userId, action, cost);
+    // Calculate Cost (Dynamic based on duration/spell)
+    // 4s = 15, 8s = 30, 12s = 60
+    let baseCredits = 15;
+    if (duration === 8) baseCredits = 30;
+    if (duration === 10 || duration === 12) baseCredits = 60; // 10 is legacy, 12 is cinema
+
+    // Audio cost addition? User spec said: "Video - Quick (4s): Deduct 15 Credits." implying total.
+    // "Video - Story (8s): Deduct 30 Credits."
+    // "Video - Cinema (12s/720p): Deduct 60 Credits."
+    // Assuming these are TOTAL costs including audio if default.
+    // Let's stick to the flat rates requested.
+    cost = baseCredits;
+
+    console.log(`[Video Magic]  Credit Cost: ${cost} pts (Duration: ${duration}s)`);
+
+    // Consume Points
+    const actionType = 'generate_video';
+    const deduction = await pointsService.consumePoints(userId, actionType, cost);
     if (!deduction.success) {
       if (deduction.error === 'NOT_ENOUGH_POINTS') {
-        const { current } = await pointsService.hasEnoughPoints(userId, action);
+        const { current } = await pointsService.hasEnoughPoints(userId, actionType);
         return res.status(200).json({
           success: false,
           errorCode: 'NOT_ENOUGH_POINTS',
@@ -538,12 +767,10 @@ router.post('/image-to-video/task', (req, res, next) => {
     }
 
     let finalImageUrl = '';
-
-    // Revert to Base64 logic (Bypass Storage)
     let originalImageUrl = '';
 
+    // Process image upload (same as before)
     if (req.file) {
-      console.log(`[API] File received. Processing for Baidu (Base64)...`);
       try {
         const sharp = (await import('sharp')).default;
         const compressedBuffer = await sharp(req.file.buffer)
@@ -552,7 +779,6 @@ router.post('/image-to-video/task', (req, res, next) => {
           .toBuffer();
         finalImageUrl = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
 
-        // Save for History
         const fs = await import('fs');
         const path = await import('path');
         const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
@@ -560,17 +786,15 @@ router.post('/image-to-video/task', (req, res, next) => {
         const filename = `anim-input-${Date.now()}.jpg`;
         fs.writeFileSync(path.join(outputDir, filename), compressedBuffer);
         originalImageUrl = `/generated/${filename}`;
-
       } catch (e) {
         console.error('Sharp error:', e);
         finalImageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       }
     } else if (req.body.imageUrl) {
       let imgUrl = req.body.imageUrl as string;
-      originalImageUrl = imgUrl; // Capture for history
+      originalImageUrl = imgUrl;
 
       if (imgUrl.startsWith('http')) {
-        // If localhost, fetch and convert to base64, otherwise pass thru
         if (imgUrl.includes('localhost') || imgUrl.includes('127.0.0.1')) {
           try {
             const fetch = (await import('node-fetch')).default;
@@ -587,75 +811,49 @@ router.post('/image-to-video/task', (req, res, next) => {
       } else if (imgUrl.startsWith('data:')) {
         finalImageUrl = imgUrl;
       } else {
-        // Local path
         try {
           const fs = await import('fs');
           const path = await import('path');
           let buf: Buffer | null = null;
-          // Check various paths
           const paths = [
             path.join(process.cwd(), 'client', 'public', imgUrl),
             path.join(process.cwd(), imgUrl),
             path.join(process.cwd(), 'client', imgUrl)
           ];
-
           for (const p of paths) {
             if (fs.existsSync(p)) {
               buf = fs.readFileSync(p);
               break;
             }
           }
-
           if (buf) {
-            // Assume jpeg for simplicity or detect ext
             finalImageUrl = `data:image/jpeg;base64,${buf.toString('base64')}`;
           }
         } catch (e) { console.error("Local handling failed", e); }
       }
     }
 
-    // --- Analyze-then-Animate Pipeline ---
-    console.log(`[API] Starting Analyze-then-Animate Pipeline...`);
-    let actionPrompt = userPrompt;
+    console.log(`[API Magic] Calling Doubao with simplified params...`);
 
-    try {
-      // Step 1: Vision Analysis (Doubao)
-      // Note: Doubao Vision handles Data URIs in image_url usually.
-      const description = await doubaoService.analyzeImage(
-        finalImageUrl,
-        "Describe the main character and the setting in this image briefly. Format: [Character Description], [Setting]."
-      );
-      console.log(`[Pipeline] Vision Description: ${description}`);
-
-      // Step 2: Action Imagination (Doubao LLM)
-      const systemInstruction = "You are an animation director. Generate a SHORT, DYNAMIC, ENGLISH action prompt (max 20 words) for a video based on the character. Focus on visible movement (e.g., jumping, waving, running, blinking). Output ONLY the prompt. CRITICAL: MAKE IT EXAGGERATED AND LIVELY (Disney Style Squash & Stretch).";
-      const llmPrompt = `Character: ${description}.\nUser Context: ${userPrompt || "Create a fun, natural movement"}.\nAction Prompt:`;
-
-      const generatedPrompt = await doubaoService.generateSimpleText(llmPrompt, systemInstruction);
-      console.log(`[Pipeline] Generated Action Prompt: ${generatedPrompt}`);
-
-      if (generatedPrompt && generatedPrompt.length > 2) {
-        actionPrompt = generatedPrompt.replace(/^["']|["']$/g, '').trim();
-      }
-    } catch (pipelineError) {
-      console.warn(`[Pipeline] Analysis failed, falling back to original prompt:`, pipelineError);
-      actionPrompt = userPrompt || "High quality animation, cinematic moving, 4k";
-    }
-
-    console.log(`[API] Calling doubaoService.createSeedanceVideoTask (Model: 1.5, Res: 480p, Dur: 4s) with Prompt: "${actionPrompt}"...`);
-
-    // Call Doubao Seedance 1.5 Service
-    // Force lowest parameters: 4s, 480p
-    const taskId = await doubaoService.createSeedanceVideoTask(finalImageUrl, actionPrompt, {
-      duration: 4,
-      resolution: '480p',
-      cameraFixed: false
+    // Call NEW Doubao Seedance Service (Kids Version)
+    const taskId = await doubaoService.createSeedanceVideoTask(finalImageUrl, {
+      action: action,           // Required: 'dance', 'run', 'fly', etc.
+      style: style,             // Optional: 'clay', 'cartoon', etc.
+      effect: effect,           // Optional: 'sparkle', 'bubbles', etc.
+      duration: duration,       // 5 | 8 | 10
+      generateAudio: generateAudio
     });
 
-    console.log(`[API] Doubao Seedance Task created: ${taskId}`);
+    console.log(`[API Magic] Task created: ${taskId}`);
 
-    // Track task
-    await databaseService.saveVideoTask(taskId, userId, cost, userPrompt, { originalImageUrl, engine: 'doubao-seedance-1.5' });
+    // Track task (Flatten meta to avoid Firestore nested entity errors)
+    await databaseService.saveVideoTask(taskId, userId, cost, `${action}${style ? '+' + style : ''}${effect ? '+' + effect : ''}`, {
+      originalImageUrl: originalImageUrl || '',
+      engine: 'doubao-seedance-1.5',
+      action: action || '',
+      style: style || '',
+      effect: effect || ''
+    });
 
     // Return extended info (usedModel: doubao-seedance-1-5-pro-251215)
     res.json({ taskId, usedModel: 'doubao-seedance-1-5-pro-251215', status: 'PENDING' });
@@ -791,7 +989,36 @@ router.post('/image-to-video', upload.single('image'), async (req, res) => {
       finalImageUrl = imgUrl;
     }
 
-    const videoUrl = await doubaoService.generateVideo(finalImageUrl, userPrompt);
+    // Updated Video Generation Logic with Spell/AudioMode support
+    let videoUrl = '';
+
+    // Check if using new Doubao 1.5 parameters (Spell/AudioMode)
+    if (req.body.spell && req.body.audioMode) {
+      console.log(`[API] Using Doubao 1.5 Video Generation: Spell=${req.body.spell}, Mode=${req.body.audioMode}`);
+      const taskId = await doubaoService.createSeedanceVideoTask1_5(finalImageUrl, {
+        spell: req.body.spell,
+        audioMode: req.body.audioMode,
+        textInput: req.body.textInput || req.body.prompt, // Fallback to prompt if textInput missing
+        voiceStyle: req.body.voiceStyle,
+        sceneMood: req.body.sceneMood
+      });
+
+      // Polling logic would typically be handled by client using taskId, 
+      // but existing legacy route expects a result or ID.
+      // Existing frontend expects { id, videoUrl } OR { id, taskId }.
+      // If we return taskId, frontend needs to poll.
+      // Let's defer to the existing "Magic Cinema" pattern if possible on frontend side.
+      // BUT, legacy `generateVideo` (line 928) waited for result? 
+      // No, `doubaoService.generateVideo` (legacy) waited for completion or returned URL.
+      // `createSeedanceVideoTask1_5` returns a Task ID.
+      // So we must return taskId and let frontend poll.
+
+      return res.json({ id, taskId, status: 'processing' });
+
+    } else {
+      // Legacy fallback
+      videoUrl = await doubaoService.generateVideo(finalImageUrl, userPrompt);
+    }
 
     if (videoUrl) {
       try {
@@ -1507,14 +1734,50 @@ router.post('/favorite', async (req, res) => {
     const { id, userId } = req.body;
     if (!id || !userId) return res.status(400).json({ error: 'Missing id or userId' });
 
-    const updated = await databaseService.toggleFavorite(id, userId);
-    if (updated) {
-      res.json(updated);
-    } else {
-      res.status(404).json({ error: 'Image not found' });
+    await databaseService.toggleFavorite(userId, id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Toggle favorite failed' });
+  }
+});
+
+// Cleanup Failed Records
+router.delete('/cleanup-failed', async (req, res) => {
+  try {
+    const userId = req.query.userId as string;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+    console.log(`[API] Cleaning up failed records for user: ${userId}`);
+
+    // Get all user images
+    const images = await databaseService.getUserImages(userId);
+
+    // Filter failed records
+    const failedIds = images.filter(img => {
+      const url = img.imageUrl || '';
+      return !url ||
+        url.length < 10 ||
+        url.includes('undefined') ||
+        url.includes('null') ||
+        url === 'https://' ||
+        (!url.startsWith('http://') && !url.startsWith('https://'));
+    }).map(img => img.id);
+
+    console.log(`[API] Found ${failedIds.length} failed records to delete`);
+
+    // Delete each failed record
+    for (const id of failedIds) {
+      await databaseService.deleteImage(userId, id);
     }
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to toggle favorite' });
+
+    res.json({
+      success: true,
+      deleted: failedIds.length,
+      message: `Deleted ${failedIds.length} failed records`
+    });
+  } catch (e) {
+    console.error('[API] Cleanup failed:', e);
+    res.status(500).json({ error: 'Cleanup failed' });
   }
 });
 
@@ -1586,7 +1849,7 @@ router.post('/cocreate', async (req, res) => {
 
 // --- MAGIC CREATIVE DIRECTOR ENDPOINTS (Gemini 3 Flash Brain) ---
 
-// 1. Magic Comic (4-Panel)
+// 1. Magic Comic (4-Panel Single Grid)
 router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, res) => {
   try {
     const userId = req.body.userId;
@@ -1607,13 +1870,12 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
       return res.status(500).json({ error: 'Points transaction failed' });
     }
 
-    console.log(`[MagicComic] Starting Creative Director Flow for ${userId}...`);
+    console.log(`[MagicComic] Starting Single-Grid Flow for ${userId}...`);
 
     // 2. Handle Reference Image
     let base64Reference = '';
-    let originalImageUrl = ''; // To return for persistence/display
+    let originalImageUrl = '';
 
-    // Ensure upload dir exists
     const fs = await import('fs');
     const path = await import('path');
     const uploadDir = path.join(process.cwd(), 'client', 'public', 'uploads');
@@ -1621,15 +1883,11 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
 
     if (req.file) {
       base64Reference = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-
-      // Save original file for persistence
       const ext = req.file.mimetype.split('/')[1] || 'png';
       const filename = `input-${id}.${ext}`;
-      const filePath = path.join(uploadDir, filename);
-      fs.writeFileSync(filePath, req.file.buffer);
+      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
       originalImageUrl = `/uploads/${filename}`;
     } else if (req.body.cartoonImageUrl) {
-      // Fetch if URL provided
       try {
         const fetch = global.fetch;
         const resp = await fetch(req.body.cartoonImageUrl);
@@ -1637,202 +1895,115 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
           const arrayBuffer = await resp.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
           base64Reference = `data:${resp.headers.get('content-type') || 'image/jpeg'};base64,${buffer.toString('base64')}`;
-
-          // Save fetched file too
           const filename = `input-${id}.png`;
-          const filePath = path.join(uploadDir, filename);
-          fs.writeFileSync(filePath, buffer);
+          fs.writeFileSync(path.join(uploadDir, filename), buffer);
           originalImageUrl = `/uploads/${filename}`;
         }
-      } catch (e) { console.error("URL Fetch failed", e); }
+      } catch (e) {
+        console.error("URL Fetch failed", e);
+        base64Reference = ''; // Ensure empty string on fail
+      }
     }
 
-    // 3. Creative Director: Generate Script
-    let creativeContent;
+    // 3. Generate Script (4 Panels)
+    let panels = [];
     try {
-      // Extract character traits from image (Mock or Vision) - we'll let Gemini Vision handle it if we pass image description
-      // For now, pass base64Reference to Gemini Vision if desired, or simpler: 
-      // We pass the userPrompt as "Theme".
-      // Ideally we'd analyze image first. Let's do a quick analysis if we have image.
-      let charDesc = "A cute character";
-      if (base64Reference) {
-        try {
-          charDesc = await geminiService.analyzeImage(base64Reference, "Describe the main character's appearance (hair, eyes, clothes) for consistency.");
-        } catch (e) { }
-      }
-
-      const userInput = {
-        character_description: charDesc,
-        theme: userPrompt
-      };
-
-      creativeContent = await geminiService.generateCreativeContent('Comic_4_Panel', userInput);
-      console.log('[MagicComic] Creative Brief:', (creativeContent as any).theme);
-
-    } catch (brainErr) {
-      console.error('[MagicComic] Brain Freeze (Gemini Failed), using Doubao fallback:', brainErr);
-      // RELIABLE FALLBACK: Use Doubao to generate the 4-panel script if Gemini fails
-      try {
-        const panels = await doubaoService.summarizeStoryToComicPanels(userPrompt);
-        creativeContent = {
-          theme: userPrompt,
-          character_lock: "The character from the image",
-          content: panels.map((p: any) => ({
-            image_prompt: p.sceneDescription,
-            text_overlay: p.caption
-          }))
-        };
-      } catch (fbErr) {
-        console.error('[MagicComic] Doubao Story Fallback Failed:', fbErr);
-        // Final last-resort content
-        creativeContent = {
-          theme: userPrompt,
-          content: [
-            { image_prompt: userPrompt, text_overlay: "Once upon a time..." },
-            { image_prompt: userPrompt + " adventure", text_overlay: "Something happened..." },
-            { image_prompt: userPrompt + " climax", text_overlay: "Then..." },
-            { image_prompt: userPrompt + " ending", text_overlay: "The End." }
-          ]
-        };
-      }
+      // Use Doubao to summarize/create 4 panels directly
+      panels = await doubaoService.summarizeStoryToComicPanels(userPrompt);
+    } catch (scriptErr) {
+      console.error('[MagicComic] Script Gen Failed:', scriptErr);
+      // Fallback
+      panels = [
+        { panel: 1, caption: "Once upon a time...", sceneDescription: "A cute character startng an adventure" },
+        { panel: 2, caption: "Something happened!", sceneDescription: "The character facing a challenge" },
+        { panel: 3, caption: "Then a twist...", sceneDescription: "A surprising turn of events" },
+        { panel: 4, caption: "The End.", sceneDescription: "A happy ending" }
+      ];
     }
 
-    // 4. Execution: Generate Visuals (Parallel)
-    const episodes = (creativeContent as any).content || []; // New Schema: "content" array
-    console.log(`[MagicComic] Generating ${episodes.length} panels via Doubao...`);
+    // 4. Generate ONE Single Grid Image
+    const panelDescriptions = panels.map((p, i) => `Panel ${i + 1}: ${p.sceneDescription}`).join(' | ');
+    // Important: Ask for "grid layout" explicitly
+    const gridPrompt = `A 4-panel comic strip (2x2 grid layout). ${userPrompt}.
+    Panels: ${panelDescriptions}.
+    Style: High quality comic book illustration, colorful, clear panel borders, consistent character design.
+    --no text bubbles, --no words`;
 
-    const imagePromises = episodes.slice(0, 4).map((episode: any, i: number) => {
-      // Inject style enforcement (Antigravity Visual Preset)
-      // Architecture C: Text-First - Request empty space/no-text from AI
-      const comicSuffix = ", (high quality comic art style, cell shaded, thick outlines, expressive, cinematic action shots, 4k, superhero vibrant palette). --no text, speech bubble, dialogue box, words, watermark, signature";
-      const fullPrompt = `${episode.image_prompt}${comicSuffix}`;
-
-      if (base64Reference) {
-        // Vary reference influence? (Internal logic for SeaDream uses this as prompt context)
-        console.log(`[MagicComic] Img2Img Panel ${i + 1}...`);
-        return doubaoService.generateImageFromImage(fullPrompt, base64Reference, '2K')
-          .catch((err) => {
-            console.warn(`[MagicComic] Img2Img Fail for Panel ${i + 1}, trying T2I.`, err);
-            return doubaoService.generateImage(fullPrompt, '2K');
-          })
-          .catch(() => `https://placehold.co/1024x1024/png?text=Panel+${i + 1}`);
-      } else {
-        return doubaoService.generateImage(fullPrompt, '2K').catch(() => `https://placehold.co/1024x1024/png?text=Panel+${i + 1}`);
-      }
-    });
-
-    const panelImages = await Promise.all(imagePromises);
-
-    // 5. Assemble Result
-    // We return the separate images and the dialogue for the frontend "Comic Bubble" feature.
-    // We also create a grid for the "Result" view.
-
-    // ... (Reuse Sharp Grid Logic from previous implementation or skip grid if frontend handles layout)
-    // Let's create a quick grid for social sharing compatibility
+    console.log('[MagicComic] Generating Single Grid Image...');
     let gridImageUrl = '';
+
     try {
-      if (panelImages.length === 4) {
-        const sharp = (await import('sharp')).default;
-
-        // Fetch buffers
-        const bufs = await Promise.all(panelImages.map(async (url: any) => {
-          const r = await fetch(url);
-          return Buffer.from(await r.arrayBuffer());
-        }));
-
-        const resized = await Promise.all(bufs.map((b: any) => sharp(b).resize(512, 512).toBuffer()));
-
-        // Create Text Overlays (Architecture C: "Burn-in")
-        // Create Text Overlays (Architecture C: "Burn-in") - DISABLED FOR V2 SPEC (Frontend Overlay)
-        // const overlays = episodes.slice(0, 4).map((e: any, i: number) => { ... });
-        const overlays: any[] = [];
-
-        const grid = await sharp({
-          create: { width: 1024, height: 1024, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } }
-        })
-          .composite([
-            { input: resized[0], top: 0, left: 0 },
-            { input: resized[1], top: 0, left: 512 },
-            { input: resized[2], top: 512, left: 0 },
-            { input: resized[3], top: 512, left: 512 },
-            ...overlays
-          ])
-          .jpeg({ quality: 90 })
-          .toBuffer();
-
-        const fs = await import('fs');
-        const path = await import('path');
-        const outDir = path.join(process.cwd(), 'client', 'public', 'generated');
-        if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-        const fname = `magic-comic-${id}.jpg`;
-        fs.writeFileSync(path.join(outDir, fname), grid);
-        gridImageUrl = `/generated/${fname}`;
+      if (base64Reference) {
+        // Use Img2Img with the reference
+        gridImageUrl = await doubaoService.generateImageFromImage(gridPrompt, base64Reference, '4K');
+      } else {
+        gridImageUrl = await doubaoService.generateImage(gridPrompt, '4K');
       }
-    } catch (gridErr) { console.error("Grid Assembly Failed:", gridErr); }
+    } catch (genErr) {
+      console.error('[MagicComic] Image Gen Failed:', genErr);
+      gridImageUrl = 'https://placehold.co/1024x1024/png?text=Comic+Gen+Failed';
+    }
 
-    // Save Record
-    const finalUrl = gridImageUrl || panelImages[0];
-
-    // Parse tags if sent (handle both stringified JSON or direct values)
-    let characterTags = [];
-    try {
-      if (req.body.characters) {
-        characterTags = JSON.parse(req.body.characters);
-      }
-    } catch (e) { characterTags = [req.body.characters]; }
+    // 5. Save Record
+    // Map panels to the structure expected by frontend
+    const episodes = panels.map(p => ({
+      imageUrl: gridImageUrl, // All panels share the same grid image
+      text_overlay: p.caption || '', // Ensure no undefined
+      image_prompt: p.sceneDescription || ''
+    }));
 
     const tags = {
       storyType: req.body.storyType || 'Comic',
       visualStyle: req.body.visualStyle || 'Classic',
-      characters: characterTags.length ? characterTags : ['Original']
+      characters: ['Original'] // simplified
     };
 
+    console.log(`[MagicComic] Saving Record. URL: ${gridImageUrl}`);
+
     await databaseService.saveImageRecord(
-      userId, finalUrl, 'comic', userPrompt,
+      userId, gridImageUrl, 'comic', userPrompt,
       {
-        title: (creativeContent as any).theme || userPrompt || "Untitled Comic",
-        character_lock: (creativeContent as any).character_lock || "Original",
+        title: userPrompt || "Untitled Comic",
+        character_lock: "Original",
+        gridImageUrl: gridImageUrl,
+        // Frontend "Comic Bubble" uses bookData.pages
         bookData: {
-          pages: episodes.map((e: any, i: number) => ({
-            imageUrl: panelImages[i],
-            text: e.text_overlay
+          pages: episodes.map((e, i) => ({
+            imageUrl: gridImageUrl,
+            text: e.text_overlay || ''
           })),
-          storyCaptions: episodes.map((e: any) => e.text_overlay)
+          storyCaptions: episodes.map(e => e.text_overlay || '')
         },
-        scenes: episodes.map((e: any, i: number) => ({
-          imageUrl: panelImages[i],
-          text: e.text_overlay,
-          visual_prompt: e.image_prompt
+        scenes: episodes.map((e, i) => ({
+          imageUrl: gridImageUrl,
+          text: e.text_overlay || '',
+          visual_prompt: e.image_prompt || ''
         })),
-        isMagicComic: true,
-        isStoryBook: true, // Mark as storybook for History logic
-        isTextBurnedIn: false, // NEW: Frontend knows text is already in image
+        isMagicComic: true, // Identify this mode
+        isStoryBook: false,
+        isTextBurnedIn: false,
         tags: tags,
-        originalImageUrl: originalImageUrl
+        originalImageUrl: originalImageUrl || '' // Ensure no undefined
       }
     );
 
     res.json({
       id,
-      title: (creativeContent as any).theme,
-      pages: episodes.map((e: any, i: number) => ({
-        imageUrl: panelImages[i],
+      title: userPrompt,
+      pages: episodes.map(e => ({
+        imageUrl: gridImageUrl,
         text: e.text_overlay
       })),
-      panels: episodes.map((e: any, i: number) => ({
-        panel: i + 1,
-        caption: e.text_overlay
-      })),
-      storyCaptions: episodes.map((e: any) => e.text_overlay),
-      gridImageUrl: gridImageUrl || panelImages[0],
+      panels: panels,
+      gridImageUrl: gridImageUrl,
       isTextBurnedIn: false,
       tags: tags
     });
 
   } catch (error: any) {
-    console.error('[MagicComic] Error:', error);
+    console.error('[MagicComic] Critical Error:', error);
     const userId = req.body.userId;
-    if (userId) await pointsService.refundPoints(userId, 'generate_comic_book', 'magic_failed');
+    if (userId) await pointsService.refundPoints(userId, 'generate_comic_book', 'magic_crash');
     res.status(500).json({ error: error.message });
   }
 });
@@ -2048,7 +2219,7 @@ router.post('/generate-magic-book', upload.single('cartoonImage'), async (req, r
     // 5. Save and Return
     const finalCharacterLock = creativeContent.character_lock || charDesc || characterRole;
     await databaseService.saveImageRecord(
-      userId, pages[0].imageUrl, 'comic', theme,
+      userId, pages[0].imageUrl, 'picturebook', theme,
       {
         title: finalTitle,
         character_lock: finalCharacterLock,
@@ -2115,6 +2286,33 @@ router.post('/speak', async (req, res) => {
   } catch (error) {
     console.error('Speak Error:', error);
     res.status(500).json({ error: 'Failed to generate speech' });
+  }
+});
+// --- UTILITY ENDPOINTS ---
+
+// Proxy endpoint for CORS images (e.g. Puzzle Game)
+router.get('/proxy/image', async (req, res) => {
+  try {
+    const imageUrl = req.query.url as string;
+    if (!imageUrl) return res.status(400).send('URL required');
+
+    const fetch = global.fetch; // Use native fetch
+    const response = await fetch(imageUrl);
+
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow canvas usage
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for performance
+
+    // Stream the buffer
+    const arrayBuffer = await response.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
+
+  } catch (error) {
+    console.error('Proxy Error:', error);
+    res.status(500).send('Proxy Failed');
   }
 });
 

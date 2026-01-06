@@ -12,24 +12,24 @@ export const QuickChips: React.FC<QuickChipsProps> = ({ isVisible, onSelect }) =
         {
             id: 'movie' as const,
             icon: Film,
-            label: 'Movie',
-            labelZh: '做个动画',
+            label: 'Command:',
+            labelZh: 'Animate It',
             color: 'from-blue-500 to-cyan-500',
             emoji: '🎬'
         },
         {
             id: 'story' as const,
             icon: BookOpen,
-            label: 'Story',
-            labelZh: '写个绘本',
+            label: 'Command:',
+            labelZh: 'Create Story',
             color: 'from-green-500 to-emerald-500',
-            emoji: '📖'
+            emoji: '📜'
         },
         {
             id: 'comic' as const,
             icon: Palette,
-            label: 'Comic',
-            labelZh: '画个漫画',
+            label: 'Command:',
+            labelZh: 'Comicify',
             color: 'from-purple-500 to-pink-500',
             emoji: '🎨'
         }

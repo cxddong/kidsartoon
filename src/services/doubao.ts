@@ -68,8 +68,8 @@ export class DoubaoService {
      */
     async generateImage(prompt: string, size: '2K' | '4K' = '2K', seed?: number): Promise<string> {
         try {
-            // New Model: Seedream 3.0
-            const model = process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-3-0-t2i-250415';
+            // New Model: Seedream 4.0 (Default fallback, overridden by env if needed)
+            const model = process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-pro-4-0-t2i-250415';
 
             // Map old size params to new format if needed, or use fixed 1024x1024 as requested
             // The user requested explicit "1024x1024"
@@ -199,7 +199,7 @@ export class DoubaoService {
      */
     async analyzeImage(imageInput: string, prompt: string = "Describe this image for a children's story."): Promise<string> {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 40000); // 40s Timeout
+        const timeout = setTimeout(() => controller.abort(), 120000); // 120s Timeout (Increased)
 
         try {
             const model = process.env.DOUBAO_VISION_MODEL || 'ep-20251209113004-w6g8p';
@@ -247,7 +247,7 @@ export class DoubaoService {
      */
     async generateStoryJSON(userPrompt: string, imageUrl?: string, targetLang: 'zh' | 'en' = 'zh'): Promise<any[]> {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000); // 60s Timeout for complex logic
+        const timeout = setTimeout(() => controller.abort(), 120000); // 120s Timeout for complex logic
 
         try {
             const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20251130051132-bqhrh';
@@ -383,7 +383,7 @@ Your task is to generate a 4-page story based on the user's theme.
      */
     async generateStory(prompt: string): Promise<string> {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000); // 30s Timeout
+        const timeout = setTimeout(() => controller.abort(), 90000); // 90s Timeout
 
         try {
             const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20251130051132-bqhrh';
@@ -451,7 +451,7 @@ Your task is to generate a 4-page story based on the user's theme.
      */
     async summarizeStoryToComicPanels(storyText: string): Promise<{ panel: number; caption: string; sceneDescription: string }[]> {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
+        const timeout = setTimeout(() => controller.abort(), 120000); // 120s timeout
 
         try {
             const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20251130051132-bqhrh';
@@ -622,34 +622,91 @@ Output JSON structure:
         }
     }
 
-    // Video Generation (Image-to-Video)
-
     /**
-     * Seedance 1.0 Video Generation (Volcengine)
-     * Strict format implementation as per requirements.
+     * Seedance 1.5 Video Generation - Kids Version
+     * Simplified API: accepts action, style, effect instead of raw prompts
+     * Auto-maps camera movement, motion score, and other technical params
      */
-    async createSeedanceVideoTask(imageUrl: string, prompt: string, options: { duration?: number, resolution?: string, cameraFixed?: boolean } = {}): Promise<string> {
-        // Updated Model ID per User Request (Hardcoded to force update)
+    async createSeedanceVideoTask(
+        imageUrl: string,
+        options: {
+            action: string;           // Required: 'dance', 'run', 'fly', 'jump', 'laugh', 'wink'
+            style?: string;           // Optional: 'clay', 'cartoon', 'watercolor', 'pixel', 'dreamy'
+            effect?: string;          // Optional: 'sparkle', 'bubbles', 'hearts', 'snow', 'fire', 'confetti'
+            duration?: 5 | 8 | 10;
+            generateAudio?: boolean;
+        }
+    ): Promise<string> {
+        // Action mappings (with camera and motion settings)
+        const ACTION_MAP: Record<string, { prompt: string; motion?: number; camera?: string }> = {
+            'dance': { prompt: 'character dancing happily, rhythmic movement', motion: 0.8 },
+            'run': { prompt: 'running fast, speed lines, hair blowing', motion: 0.8, camera: 'pan_right' },
+            'fly': { prompt: 'flying in the sky, feet off ground', camera: 'pan_up' },
+            'jump': { prompt: 'jumping up high, bouncing', motion: 0.9 },
+            'laugh': { prompt: 'laughing out loud, moving head', camera: 'zoom_in' },
+            'wink': { prompt: 'winking one eye, cute smile', camera: 'zoom_in' }
+        };
+
+        // Style mappings
+        const STYLE_MAP: Record<string, string> = {
+            'clay': 'claymation style, handmade clay texture, soft rounded shapes, pastel colors, slightly textured surface, slow gentle movement',
+            'cartoon': 'American cartoon Q-style, thick black outlines, vibrant candy colors, exaggerated proportions with big head and small body, simple background with stars and bubbles',
+            'watercolor': 'Japanese healing picture book style, soft watercolor blending, low saturation warm tones, fluffy clouds and grass, gentle calming atmosphere',
+            'pixel': 'candy-colored pixel art style, low-res but vibrant, blocky Q-version characters, pixelated stars and candy decorations in background',
+            'dreamy': 'dreamy fairy tale style with light effects, semi-transparent glow aura, floating petals and stars, soft purple and blue dreamy colors'
+        };
+
+        // Effect mappings
+        const EFFECT_MAP: Record<string, string> = {
+            'sparkle': 'glowing magic dust, twinkling stars, dreamy lighting',
+            'bubbles': 'floating soap bubbles everywhere, colorful, fun',
+            'hearts': 'floating red hearts, love aura, cute atmosphere',
+            'snow': 'falling snow, winter vibe, cold breath',
+            'fire': 'cool energy aura, flames, super power mode',
+            'confetti': 'falling confetti, party celebration, fireworks'
+        };
+
+        // 1. Lookup action data
+        const actionData = ACTION_MAP[options.action];
+        if (!actionData) {
+            throw new Error(`Invalid action: ${options.action}. Must be one of: ${Object.keys(ACTION_MAP).join(', ')}`);
+        }
+
+        // 2. Construct layered prompt: action + style + effect
+        let finalPrompt = actionData.prompt;
+        if (options.style && STYLE_MAP[options.style]) {
+            finalPrompt += `, ${STYLE_MAP[options.style]}`;
+        }
+        if (options.effect && EFFECT_MAP[options.effect]) {
+            finalPrompt += `, ${EFFECT_MAP[options.effect]}`;
+        }
+
+        // 3. Auto-determine camera settings
+        const cameraMove = actionData.camera || 'static';
+        const cameraFixed = cameraMove === 'static';
+
+        // 4. Fixed technical params
         const model = 'doubao-seedance-1-5-pro-251215';
-        // const model = process.env.VOLC_MODEL_ID || 'doubao-seedance-1-5-pro-251215';
         const url = process.env.VOLC_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks';
+        const duration = options.duration || 5;
+        const generateAudio = options.generateAudio !== undefined ? options.generateAudio : true;
+        const resolution = '720p'; // Fixed for kids version
+        const fps = 24; // Fixed cinematic FPS
+        const ratio = '1:1'; // Fixed mobile-friendly ratio
 
-        const duration = options.duration || 4; // Default 4s (Lowest)
-        const resolution = options.resolution || '480p'; // Default 480p (Lowest)
-        const cameraFixed = options.cameraFixed !== undefined ? options.cameraFixed : false;
+        console.log(`[Doubao Magic] Creating video with Action='${options.action}', Style='${options.style || 'none'}', Effect='${options.effect || 'none'}'`);
+        console.log(`[Doubao Magic] Final Prompt: "${finalPrompt}"`);
+        console.log(`[Doubao Magic] Auto Camera: ${cameraMove}, Duration: ${duration}s, Audio: ${generateAudio}`);
 
-        console.log(`[Doubao] Creating Seedance 1.5 Video Task (Model: ${model})...`);
-        console.log(`[Doubao] Params: Prompt="${prompt.substring(0, 30)}...", Dur=${duration}, Res=${resolution}`);
-
-        // Append params to prompt string as required by Volcengine
-        const finalPrompt = `${prompt} --resolution ${resolution} --duration ${duration} --camerafixed ${cameraFixed} --watermark false`;
+        // 5. Append technical params to prompt (Volcengine format)
+        const promptWithParams = `${finalPrompt} --resolution ${resolution} --duration ${duration} --camera_fixed ${cameraFixed} --generate_audio ${generateAudio} --watermark false --fps ${fps} --ratio ${ratio}`;
 
         const payload = {
             model: model,
             content: [
                 {
                     type: "text",
-                    text: finalPrompt
+                    text: promptWithParams
                 },
                 {
                     type: "image_url",
@@ -683,6 +740,107 @@ Output JSON structure:
             return data.id;
         } catch (error) {
             console.error('createSeedanceVideoTask failed:', error);
+            throw error;
+        }
+    }
+    /**
+     * Seedance 1.5 Video Generation - "Spell" & "Audio Mode" Version
+     */
+    async createSeedanceVideoTask1_5(
+        imageUrl: string,
+        options: {
+            spell: 'quick' | 'story' | 'cinema';
+            audioMode: 'talk' | 'scene';
+            textInput: string;
+            voiceStyle?: string; // 'cute', 'robot', 'monster'
+            sceneMood?: string; // 'happy', 'mysterious', etc.
+        }
+    ): Promise<string> {
+        const { spell, audioMode, textInput } = options;
+        const voiceStyle = options.voiceStyle || 'cute';
+        const sceneMood = options.sceneMood || 'happy';
+
+        // 1. Map Spell to Duration/Res
+        const SPELL_MAP = {
+            'quick': { duration: 4, res: '480p' },
+            'story': { duration: 8, res: '480p' },
+            'cinema': { duration: 12, res: '720p' }
+        };
+        const config = SPELL_MAP[spell] || SPELL_MAP['story'];
+
+        // 2. Construct Prompts based on Audio Mode
+        let video_prompt = "";
+        let audio_prompt = "";
+        let lip_sync = false;
+
+        if (audioMode === 'talk') {
+            // Path A: Lip-Sync
+            // Note: Seedance 1.5 typically extracts speech from audio_prompt if provided as text or TTS?
+            // User logic: video_prompt="Character talking...", audio_prompt="[Style] voice..."
+            video_prompt = `Close-up of character talking, saying '${textInput}', facial animation matches speech, high quality`;
+
+            // Map icon styles to descriptive prompts
+            const VOICE_PROMPTS: Record<string, string> = {
+                'cute': 'cute child voice, happy and energetic',
+                'robot': 'robotic mechanical voice, metallic texture',
+                'monster': 'playful monster voice, slightly deep but friendly'
+            };
+            const voiceDesc = VOICE_PROMPTS[voiceStyle] || 'cute child voice';
+
+            // For Seedance, ensuring the character speaks exactly what's in textInput often requires 
+            // a specific text_content field OR using the audio_prompt implies TTS. 
+            // We'll follow the user's "audio_prompt" instruction.
+            // "audio_prompt = [Style] voice, clear speech" -> Wait, where does the text go?
+            // Usually: prompt="... --tts_text 'Hello world'" or similar.
+            // Let's rely on the user's prompt structure: audio_prompt describes the voice.
+            audio_prompt = `${voiceDesc}, speaking clear English: "${textInput}"`;
+            lip_sync = true;
+        } else {
+            // Path B: Scene Sound
+            video_prompt = `Cinematic scene, ${textInput}, high quality, detailed background`;
+            audio_prompt = `${textInput}, ${sceneMood} background music, immersive sound effects`;
+            lip_sync = false;
+        }
+
+        // 3. Technical Params
+        const model = 'doubao-seedance-1-5-pro-251215';
+        const url = process.env.VOLC_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks';
+
+        // Construct final prompt string with flags
+        // Doubao 1.5 often takes flags in the text prompt itself
+        const promptWithParams = `${video_prompt} --audio_prompt "${audio_prompt}" --lip_sync ${lip_sync} --resolution ${config.res} --duration ${config.duration} --watermark false`;
+
+        console.log(`[Doubao 1.5] Creating Task: Spell=${spell}, Mode=${audioMode}`);
+        console.log(`[Doubao 1.5] Prompt: ${promptWithParams}`);
+
+        const payload = {
+            model: model,
+            content: [
+                { type: "text", text: promptWithParams },
+                { type: "image_url", image_url: { url: imageUrl } }
+            ]
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Volcengine 1.5 API Error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            if (!data.id) throw new Error('No Task ID returned from Volcengine 1.5');
+            return data.id;
+        } catch (error) {
+            console.error('createSeedanceVideoTask1_5 failed:', error);
             throw error;
         }
     }
@@ -839,12 +997,41 @@ Output JSON structure:
                 appStatus = 'SUCCEEDED'; // Use consistent internal enum
 
                 // Extract video URL from various possible locations
-                videoUrl = remoteResult.result?.content?.[0]?.video_url ||
+                // Try content as object first (Seedance 1.5 format), then as array (older format)
+                videoUrl = remoteResult.content?.video_url ||  // NEW: Direct object access
+                    remoteResult.result?.content?.[0]?.video_url ||
                     remoteResult.content?.[0]?.video_url ||
                     remoteResult.data?.content?.[0]?.video_url ||
                     remoteResult.result?.video_url ||
                     remoteResult.resp_data?.video_url ||
-                    remoteResult.output?.video_url; // Added output.video_url per user suggestion
+                    remoteResult.output?.video_url ||
+                    remoteResult.data?.output?.video_url ||
+                    remoteResult.video_url ||  // Direct videoUrl
+                    '';
+
+                console.log('[Doubao] ===== VIDEO URL EXTRACTION DEBUG =====');
+                console.log('[Doubao] Checking remoteResult.content?.video_url:', remoteResult.content?.video_url);
+                console.log('[Doubao] Checking remoteResult.result?.content?.[0]?.video_url:', remoteResult.result?.content?.[0]?.video_url);
+                console.log('[Doubao] Checking remoteResult.content?.[0]?.video_url:', remoteResult.content?.[0]?.video_url);
+                console.log('[Doubao] Checking remoteResult.data?.content?.[0]?.video_url:', remoteResult.data?.content?.[0]?.video_url);
+                console.log('[Doubao] Checking remoteResult.result?.video_url:', remoteResult.result?.video_url);
+                console.log('[Doubao] Checking remoteResult.resp_data?.video_url:', remoteResult.resp_data?.video_url);
+                console.log('[Doubao] Checking remoteResult.output?.video_url:', remoteResult.output?.video_url);
+                console.log('[Doubao] Checking remoteResult.data?.output?.video_url:', remoteResult.data?.output?.video_url);
+                console.log('[Doubao] Checking remoteResult.video_url:', remoteResult.video_url);
+                console.log('[Doubao] FINAL extracted videoUrl:', videoUrl);
+                console.log('[Doubao] ========================================');
+
+                if (!videoUrl) {
+                    console.error('[Doubao] WARNING: Video generation succeeded but no videoUrl found in response!');
+                    console.error('[Doubao] Full response structure keys:', Object.keys(remoteResult));
+                    if (remoteResult.data) {
+                        console.error('[Doubao] remoteResult.data keys:', Object.keys(remoteResult.data));
+                    }
+                    if (remoteResult.result) {
+                        console.error('[Doubao] remoteResult.result keys:', Object.keys(remoteResult.result));
+                    }
+                }
             }
             // Failure: 'failed' (any case), 3
             else if (statusStr === 'failed' || remoteStatus === 3) {

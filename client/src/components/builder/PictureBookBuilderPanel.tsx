@@ -1,55 +1,64 @@
 import React, { useState } from 'react';
-import { Book, Heart, Globe, Moon, Wand2, Flower2, Palette, PenTool, Smile, Zap, Coffee, Mic, MicOff, Rocket } from 'lucide-react';
+import { Book, Heart, Globe, Moon, Wand2, Flower2, Palette, PenTool, Smile, Zap, Coffee, Mic, MicOff, Rocket, Ghost, Fish, Crown, Cat, Footprints, Search, Box, Scissors, Camera } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import generateVideo from '../../assets/generate.mp4';
+import { Carousel3D } from '../ui/Carousel3D';
 
 // --- Configuration ---
 const THEMES = [
-    { id: 'fairy_tale', label: 'Fairy Tale Book', icon: Wand2 },
-    { id: 'growing_up', label: 'Growing Up', icon: Flower2 },
-    { id: 'explore', label: 'Explore World', icon: Globe },
-    { id: 'family_love', label: 'Family Love', icon: Heart },
-    { id: 'bedtime', label: 'Bedtime Book', icon: Moon },
-    { id: 'theme_space_journey', label: 'Space Journey', icon: Rocket },
+    { id: 'theme_magic', label: 'Magic Land', icon: Wand2, image: '/assets/theme_magic.jpg' },
+    { id: 'theme_dino', label: 'Dino Park', icon: Footprints, image: '/assets/theme_dino.jpg' },
+    { id: 'theme_space', label: 'Space Trip', icon: Rocket, image: '/assets/theme_space.jpg' },
+    { id: 'theme_hero', label: 'Super Hero', icon: Zap, image: '/assets/theme_hero.jpg' },
+    { id: 'theme_royal', label: 'Royal Castle', icon: Crown, image: '/assets/theme_royal.jpg' },
+    { id: 'theme_animals', label: 'Animal Town', icon: Cat, image: '/assets/theme_animals.jpg' },
+    { id: 'theme_ocean', label: 'Under Sea', icon: Fish, image: '/assets/theme_ocean.jpg' },
+    { id: 'theme_spooky', label: 'Spooky Fun', icon: Ghost, image: '/assets/theme_spooky.jpg' },
 ];
 
 const ILLUSTRATION_STYLES = [
-    { id: 'ghibli', label: 'Ghibli Style', icon: Flower2 },
-    { id: 'storybook', label: 'Storybook', icon: Book },
-    { id: 'crayon', label: 'Soft Crayon', icon: PenTool },
-    { id: 'pastel', label: 'Cute Pastel', icon: Palette },
+    { id: 'style_3d', label: '3D Magic', icon: Box, image: '/assets/style_3d.jpg' },
+    { id: 'style_watercolor', label: 'Watercolor', icon: Palette, image: '/assets/style_watercolor.jpg' },
+    { id: 'style_paper', label: 'Paper Cut', icon: Scissors, image: '/assets/style_paper.jpg' },
+    { id: 'style_clay', label: 'Clay World', icon: Smile, image: '/assets/style_clay.jpg' },
+    { id: 'style_doodle', label: 'Doodle', icon: PenTool, image: '/assets/style_doodle.jpg' },
+    { id: 'style_real', label: 'Real Life', icon: Camera, image: '/assets/style_real.jpg' },
 ];
 
-const PACING_OPTIONS = [
-    { id: 'slow', label: 'Slow & Calm', icon: Coffee },
-    { id: 'adventure', label: 'Gentle Adventure', icon: Zap },
+const STORY_VIBES = [
+    { id: 'vibe_adventure', label: 'Adventure', icon: Rocket, image: '/assets/vibe_adventure.jpg' },
+    { id: 'vibe_funny', label: 'Funny', icon: Smile, image: '/assets/vibe_funny.jpg' },
+    { id: 'vibe_bedtime', label: 'Bedtime', icon: Moon, image: '/assets/vibe_bedtime.jpg' },
+    { id: 'vibe_mystery', label: 'Mystery', icon: Search, image: '/assets/vibe_mystery.jpg' },
+    { id: 'vibe_heartwarm', label: 'Heartwarm', icon: Heart, image: '/assets/vibe_heartwarm.jpg' },
 ];
 
 const CHARACTERS = [
-    { id: 'dinosaur', label: 'Dino', icon: '🦖' },
-    { id: 'space', label: 'Space', icon: '🚀' },
-    { id: 'hero', label: 'Hero', icon: '🦸' },
-    { id: 'robot', label: 'Bot', icon: '🤖' },
-    { id: 'fairytale', label: 'Fairy', icon: '🧚' },
-    // IP Characters (Fallback to icons if images missing)
-    { id: 'char_roblox', label: 'Robo', icon: '🕹️' /*, image: '/assets/icons/char_roblox.png' */ },
-    { id: 'char_minecraft', label: 'Cube', icon: '🟩' /*, image: '/assets/icons/char_minecraft.png' */ },
-    { id: 'char_fortnite', label: 'Battle', icon: '🛡️' /*, image: '/assets/icons/char_fortnite.png' */ },
-    { id: 'char_pokemon', label: 'Pika', icon: '⚡' /*, image: '/assets/icons/char_pokemon.png' */ },
-    { id: 'char_stitch', label: 'Alien', icon: '👾' /*, image: '/assets/icons/char_stitch.png' */ },
-    { id: 'char_lego', label: 'Brick', icon: '🧱' /*, image: '/assets/icons/char_lego.png' */ },
+    { id: 'dinosaur', label: 'Dino', icon: '🦕', image: '/assets/icons/char_dinosaur.png' },
+    { id: 'space', label: 'Space', icon: '🚀', image: '/assets/char_space.jpg' },
+    { id: 'hero', label: 'Hero', icon: '🦸', image: '/assets/char_hero.jpg' },
+    { id: 'robot', label: 'Bot', icon: '🤖', image: '/assets/char_robot_new.jpg' },
+    { id: 'fairytale', label: 'Fairy', icon: '🧚', image: '/assets/char_fairytale.jpg' },
+    // IP Characters
+    { id: 'char_roblox', label: 'Robo', icon: '🕹️', image: '/assets/char_roblox.jpg' },
+    { id: 'char_minecraft', label: 'Cube', icon: '🟩', image: '/assets/char_minecraft_new.jpg' },
+    { id: 'char_fortnite', label: 'Battle', icon: '🛡️', image: '/assets/char_fortnite.jpg' },
+    { id: 'char_pokemon', label: 'Pika', icon: '⚡', image: '/assets/char_robot.jpg' },
+    { id: 'char_stitch', label: 'Alien', icon: '👾', image: '/assets/char_alien.jpg' },
+    { id: 'char_lego', label: 'Brick', icon: '🧱', image: '/assets/char_lego_new.jpg' },
 ];
 
 const PAGE_COUNTS = [
-    { value: 4, label: '4 Pages', desc: 'Short Story' },
-    { value: 8, label: '8 Pages', desc: 'Deep Story' },
-    { value: 12, label: '12 Pages', desc: 'Epic Adventure' },
+    { value: 4, label: '4 Pages', desc: 'Short Story', cost: 30, image: '/assets/page_count_4.jpg' },
+    { value: 8, label: '8 Pages', desc: 'Deep Story', cost: 50, image: '/assets/page_count_8.jpg' },
+    { value: 12, label: '12 Pages', desc: 'Epic Adventure', cost: 70, image: '/assets/page_count_12.jpg' },
 ];
 
 export interface PictureBookBuilderData {
     theme: string;
     illustrationStyle: string;
-    pace: string;
+    vibe: string;
     character: string;
     pageCount: number;
     storyText?: string;
@@ -63,8 +72,8 @@ interface Props {
 
 export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUploaded, children }) => {
     const [theme, setTheme] = useState(THEMES[0].id);
-    const [illustrationStyle, setIllustrationStyle] = useState(ILLUSTRATION_STYLES[1].id);
-    const [pace, setPace] = useState(PACING_OPTIONS[0].id);
+    const [illustrationStyle, setIllustrationStyle] = useState(ILLUSTRATION_STYLES[0].id);
+    const [vibe, setVibe] = useState(STORY_VIBES[0].id);
     const [character, setCharacter] = useState(CHARACTERS[0].id);
     const [pageCount, setPageCount] = useState(PAGE_COUNTS[0].value);
     const [storyText, setStoryText] = useState('');
@@ -141,7 +150,7 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
     const isReady = imageUploaded;
 
     return (
-        <div className="w-full flex flex-col md:grid md:grid-cols-[250px_1fr_250px] md:gap-8 items-center md:items-start p-4 md:p-10 max-w-7xl mx-auto">
+        <div className="w-full flex flex-col md:grid md:grid-cols-[330px_1fr_330px] md:gap-3 items-center md:items-start p-4 md:p-10 max-w-7xl mx-auto pb-40">
 
             {/* Left Column: Theme & Style */}
             <div className="w-full md:w-auto order-2 md:order-1 flex flex-col gap-8">
@@ -150,86 +159,112 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                     <h3 className="text-lg font-black text-white flex items-center justify-center md:justify-start">
                         Story Theme 📖
                     </h3>
-                    <div className="grid grid-cols-2 gap-3 pb-2 md:pb-0 justify-center md:justify-start">
+                    <div className="grid grid-cols-2 gap-3">
                         {THEMES.map(item => (
                             <button
                                 key={item.id}
                                 onClick={() => setTheme(item.id)}
                                 className={cn(
-                                    "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all shrink-0 aspect-square",
-                                    item.id === 'theme_space_journey'
-                                        ? (theme === item.id
-                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md scale-105"
-                                            : "border-slate-100 bg-white text-slate-500 hover:border-indigo-200 hover:bg-indigo-50")
-                                        : (theme === item.id
-                                            ? "border-pink-500 bg-pink-50 text-pink-700 shadow-md scale-105"
-                                            : "border-slate-100 bg-white text-slate-500 hover:border-pink-200 hover:bg-pink-50")
+                                    "relative w-full aspect-square rounded-2xl border-3 transition-all bg-white overflow-hidden group",
+                                    theme === item.id
+                                        ? "border-pink-500 shadow-xl ring-4 ring-pink-200"
+                                        : "border-slate-200 shadow-md hover:border-pink-300"
                                 )}
                             >
-                                <item.icon className="w-8 h-8 mb-2 shrink-0" />
-                                <span className="text-[10px] font-bold text-center leading-tight">{item.label}</span>
+                                <img
+                                    src={item.image}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+
+                                {theme === item.id && (
+                                    <div className="absolute top-2 right-2 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <svg className="w-4 h-4 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                )}
+
+                                {/* Text at Bottom Inside Button */}
+                                <div className={cn(
+                                    "absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-2 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-200",
+                                    theme === item.id || "opacity-0 group-hover:opacity-100"
+                                )}>
+                                    <item.icon className="w-3 h-3 text-white" />
+                                    <span className="text-xs font-bold text-white drop-shadow-lg">{item.label}</span>
+                                </div>
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* Section B: Visual Style */}
+                {/* Section D: Book Length (Moved from Center) */}
                 <div className="flex flex-col gap-4">
                     <h3 className="text-lg font-black text-white flex items-center justify-center md:justify-start">
-                        Art Style 🎨
+                        Pages 📖
                     </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {ILLUSTRATION_STYLES.map(item => (
+                    <div className="flex flex-wrap justify-center gap-3">
+                        {PAGE_COUNTS.map(item => (
                             <button
-                                key={item.id}
-                                onClick={() => setIllustrationStyle(item.id)}
-                                className={cn(
-                                    "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all shrink-0 hover:bg-purple-50 aspect-square",
-                                    illustrationStyle === item.id
-                                        ? "border-purple-500 bg-purple-50 text-purple-700 shadow-md scale-105"
-                                        : "border-slate-100 bg-white text-slate-500 hover:border-purple-200"
-                                )}
+                                key={item.value}
+                                onClick={() => setPageCount(item.value)}
+                                className="flex flex-col items-center gap-2 group w-[47%]"
                             >
-                                <item.icon className="w-8 h-8 mb-2 shrink-0" />
-                                <span className="text-[10px] font-bold text-center leading-tight">{item.label}</span>
+                                <div className={cn(
+                                    "relative w-full aspect-square rounded-2xl border-3 transition-all bg-white overflow-hidden",
+                                    pageCount === item.value
+                                        ? "border-amber-500 shadow-xl ring-4 ring-amber-200"
+                                        : "border-slate-200 shadow-md hover:border-amber-300"
+                                )}>
+                                    <img
+                                        src={item.image}
+                                        alt={item.label}
+                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                    {pageCount === item.value && (
+                                        <div className="absolute top-2 right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg">
+                                            <svg className="w-4 h-4 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Text Below Button */}
+                                <div className="flex flex-col items-center">
+                                    <span className={cn("text-[10px] sm:text-xs font-black drop-shadow-lg text-center leading-tight", pageCount === item.value ? "text-amber-400" : "text-white")}>{item.label}</span>
+                                </div>
                             </button>
                         ))}
                     </div>
                 </div>
+
+
             </div>
 
             {/* Center Column: Upload + Pace + Roles + Generate */}
             <div className="w-full order-1 md:order-2 flex flex-col items-center gap-6">
                 {/* Upload Box (Children) */}
-                <div className="w-full max-w-md aspect-[4/3]">
+                <div className="w-[85%] max-w-sm aspect-square shadow-2xl rounded-3xl overflow-hidden border-4 border-white/50 bg-white/10 backdrop-blur-sm">
                     {children}
                 </div>
 
 
 
-                {/* Section D: Page Count (NEW) */}
-                <div className="w-full max-w-sm flex flex-col gap-4">
+                {/* Main Character (Moved from Right) */}
+                <div className="w-full max-w-2xl flex flex-col gap-4">
                     <h3 className="text-lg font-black text-white text-center">
-                        Book Length 📖
+                        Main Character 🏷️
                     </h3>
-                    <div className="flex gap-2 justify-center">
-                        {PAGE_COUNTS.map(item => (
-                            <button
-                                key={item.value}
-                                onClick={() => setPageCount(item.value)}
-                                className={cn(
-                                    "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all flex-1 hover:bg-amber-50",
-                                    pageCount === item.value
-                                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-md scale-105"
-                                        : "border-slate-100 bg-white text-slate-500 hover:border-amber-200"
-                                )}
-                            >
-                                <span className="text-sm font-black">{item.label}</span>
-                                <span className="text-[10px] font-bold opacity-70">{item.desc}</span>
-                            </button>
-                        ))}
+                    <div className="relative h-[260px] w-full flex items-center justify-center overflow-visible z-10">
+                        <Carousel3D
+                            items={CHARACTERS}
+                            selectedId={character}
+                            onSelect={(id) => setCharacter(id)}
+                        />
                     </div>
                 </div>
+
+
 
                 {/* Module 6: Story Text Input (NEW) */}
                 <section className="mt-8">
@@ -264,145 +299,117 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                     </div>
                 </section>
 
-                {/* Generate Button */}
-                <button
-                    onClick={() => onGenerate({ theme, illustrationStyle, pace, character, pageCount, storyText })}
-                    disabled={!isReady}
-                    className="w-full max-w-sm py-4 rounded-full text-white font-black text-xl shadow-xl shadow-pink-500/20 bg-gradient-to-r from-pink-500 to-rose-500 hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-                >
-                    Create My Book ✨ (Costs {pageCount === 4 ? 30 : pageCount === 8 ? 50 : 70} Points)
-                </button>
+                {/* Generate Button (Video Replacement) */}
+                <div className="w-full mt-4 flex justify-center">
+                    <button
+                        onClick={() => onGenerate({ theme, illustrationStyle, vibe, character, pageCount, storyText })}
+                        disabled={!isReady}
+                        className="relative w-40 h-40 rounded-full overflow-hidden shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group border-4 border-white/30"
+                    >
+                        <video
+                            src={generateVideo}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover scale-110" // Slight scale to ensure fill
+                        />
+                        {/* Optional Overlay Text if needed, user didn't explicitly ask for text but a button usually needs some indication. Given the strict "replace" instruction, I'll stick to just the video, or add a subtle text like the comic one if previous patterns suggest it. The prompt says "replace... with assets/generate.mp4", so I will trust the video has the content. */}
+                    </button>
+                    {/* Helper Text */}
+                    {!isReady && (
+                        <p className="text-xs text-white/50 text-center mt-2 font-bold animate-pulse">
+                            Upload a photo to start!
+                        </p>
+                    )}
+                </div>
             </div>
 
             {/* Right Column: Role Labels */}
             <div className="w-full md:w-auto order-3 flex flex-col gap-8">
+                {/* Section B: Visual Style (Now First in Right Column) */}
                 <div className="flex flex-col gap-4">
                     <h3 className="text-lg font-black text-white flex items-center justify-center md:justify-start">
-                        Main Character 🏷️
+                        Art Style 🎨
                     </h3>
-                    <div className="relative h-[350px] flex items-center justify-center">
-                        {/* Fan Selector Container */}
+                    <div className="grid grid-cols-2 gap-3">
+                        {ILLUSTRATION_STYLES.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setIllustrationStyle(item.id)}
+                                className={cn(
+                                    "relative w-full aspect-square rounded-2xl border-3 transition-all bg-white overflow-hidden group",
+                                    illustrationStyle === item.id
+                                        ? "border-purple-500 shadow-xl ring-4 ring-purple-200"
+                                        : "border-slate-200 shadow-md hover:border-purple-300"
+                                )}
+                            >
+                                <img
+                                    src={item.image}
+                                    alt={item.label}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
 
-                        {/* Outer Orbit (IP Characters - 6) */}
-                        <AnimatePresence>
-                            {isCharSelectorOpen && CHARACTERS.slice(5, 11).map((item, i) => {
-                                const total = 6;
-                                const radius = 140;
-                                // Angle range: -60 to 240 (300 degree fan to cover mostly everything except bottom left obscured?? or full circle?)
-                                // User suggested: -30 to 210.
-                                const angleStart = -60;
-                                const angleEnd = 240;
-                                const span = angleEnd - angleStart;
-                                const angle = angleStart + (i * (span / (total - 1)));
-                                const radian = (angle * Math.PI) / 180;
-                                const x = radius * Math.cos(radian);
-                                const y = radius * Math.sin(radian);
+                                {illustrationStyle === item.id && (
+                                    <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <svg className="w-4 h-4 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                )}
 
-                                return (
-                                    <motion.button
-                                        key={item.id}
-                                        initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                                        animate={{ opacity: 1, scale: 1, x, y }}
-                                        exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                                        transition={{ delay: i * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-                                        onClick={() => { setCharacter(item.id); setIsCharSelectorOpen(false); }}
-                                        className={cn(
-                                            "absolute w-14 h-14 rounded-full border-2 bg-white shadow-lg flex flex-col items-center justify-center z-20 hover:scale-110 hover:z-30 transition-all",
-                                            character === item.id ? "border-green-500 ring-2 ring-green-200" : "border-slate-100"
-                                        )}
-                                        title={item.label}
-                                    >
-                                        {(item as any).image ? (
-                                            <img src={(item as any).image} className="w-10 h-10 object-contain" />
-                                        ) : (
-                                            <span className="text-2xl">{item.icon}</span>
-                                        )}
-                                    </motion.button>
-                                );
-                            })}
-                        </AnimatePresence>
-
-                        {/* Inner Orbit (Basic Characters - 5) */}
-                        <AnimatePresence>
-                            {isCharSelectorOpen && CHARACTERS.slice(0, 5).map((item, i) => {
-                                const total = 5;
-                                const radius = 80;
-                                // Stagger angle slightly differently
-                                const angleStart = -45;
-                                const angleEnd = 225;
-                                const span = angleEnd - angleStart;
-                                const angle = angleStart + (i * (span / (total - 1)));
-                                const radian = (angle * Math.PI) / 180;
-                                const x = radius * Math.cos(radian);
-                                const y = radius * Math.sin(radian);
-
-                                return (
-                                    <motion.button
-                                        key={item.id}
-                                        initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                                        animate={{ opacity: 1, scale: 1, x, y }}
-                                        exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                                        transition={{ delay: i * 0.03 + 0.1, type: "spring", stiffness: 260, damping: 20 }}
-                                        onClick={() => { setCharacter(item.id); setIsCharSelectorOpen(false); }}
-                                        className={cn(
-                                            "absolute w-12 h-12 rounded-full border-2 bg-white shadow-md flex items-center justify-center z-20 hover:scale-110 hover:z-30 transition-all",
-                                            character === item.id ? "border-green-500 ring-2 ring-green-200" : "border-slate-100"
-                                        )}
-                                        title={item.label}
-                                    >
-                                        <span className="text-2xl">{item.icon}</span>
-                                    </motion.button>
-                                );
-                            })}
-                        </AnimatePresence>
-
-                        {/* Central Trigger Button */}
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => setIsCharSelectorOpen(!isCharSelectorOpen)}
-                            className={cn(
-                                "relative z-30 w-20 h-20 rounded-full shadow-xl border-4 flex flex-col items-center justify-center bg-white transition-all",
-                                isCharSelectorOpen ? "border-green-400 bg-green-50 scale-105" : "border-green-500 hover:scale-105"
-                            )}
-                        >
-                            {(() => {
-                                const selected = CHARACTERS.find(c => c.id === character) || CHARACTERS[0];
-                                return (
-                                    <>
-                                        {(selected as any).image ? (
-                                            <img src={(selected as any).image} className="w-10 h-10 object-contain mb-1" />
-                                        ) : (
-                                            <span className="text-3xl mb-1">{selected.icon}</span>
-                                        )}
-                                        <div className="absolute -bottom-8 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
-                                            {isCharSelectorOpen ? "Close" : selected.label}
-                                        </div>
-                                    </>
-                                );
-                            })()}
-                        </motion.button>
+                                {/* Text at Bottom Inside Button */}
+                                <div className={cn(
+                                    "absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-1 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200",
+                                    illustrationStyle === item.id || "opacity-0 group-hover:opacity-100"
+                                )}>
+                                    <item.icon className="w-3 h-3 text-white" />
+                                    <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-lg">{item.label}</span>
+                                </div>
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                {/* Section C: Pace (Moved to Right) */}
+                {/* Section E: Story Vibe (Moved to Bottom Right) */}
                 <div className="flex flex-col gap-4">
                     <h3 className="text-lg font-black text-white flex items-center justify-center md:justify-start">
-                        Story Pace 🐢
+                        What kind of story? 🤔
                     </h3>
-                    <div className="grid grid-cols-2 gap-3 justify-center md:justify-start">
-                        {PACING_OPTIONS.map(item => (
+                    <div className="flex flex-wrap justify-center gap-3">
+                        {STORY_VIBES.map(item => (
                             <button
                                 key={item.id}
-                                onClick={() => setPace(item.id)}
+                                onClick={() => setVibe(item.id)}
                                 className={cn(
-                                    "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all shrink-0 hover:bg-blue-50 shadow-sm aspect-square",
-                                    pace === item.id
-                                        ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md scale-105"
-                                        : "border-slate-100 bg-white text-slate-500 hover:border-blue-200"
+                                    "relative w-[47%] aspect-square rounded-2xl border-3 transition-all bg-white overflow-hidden group",
+                                    vibe === item.id
+                                        ? "border-sky-500 shadow-xl ring-4 ring-sky-200"
+                                        : "border-slate-200 shadow-md hover:border-sky-300"
                                 )}
                             >
-                                <item.icon className="w-8 h-8 mb-2 shrink-0" />
-                                <span className="text-[10px] font-bold text-center leading-tight">{item.label}</span>
+                                <img
+                                    src={item.image}
+                                    alt={item.label}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+
+                                {vibe === item.id && (
+                                    <div className="absolute top-2 right-2 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <svg className="w-4 h-4 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                )}
+
+                                {/* Text at Bottom Inside Button */}
+                                <div className={cn(
+                                    "absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-1 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200",
+                                    vibe === item.id || "opacity-0 group-hover:opacity-100"
+                                )}>
+                                    <item.icon className="w-3 h-3 text-white" />
+                                    <span className="text-[10px] font-bold text-white drop-shadow-lg">{item.label}</span>
+                                </div>
                             </button>
                         ))}
                     </div>

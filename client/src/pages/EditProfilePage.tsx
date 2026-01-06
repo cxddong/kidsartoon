@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 import { ArrowLeft, Camera, User, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +17,7 @@ const EditProfilePage: React.FC = () => {
     const [avatarUrl, setAvatarUrl] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [cropImage, setCropImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (!user) {
@@ -134,9 +136,22 @@ const EditProfilePage: React.FC = () => {
     const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const url = URL.createObjectURL(file); // Preview immediately
-            setAvatarUrl(url);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCropImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
         }
+    };
+
+    const handleCropComplete = (blob: Blob) => {
+        if (!cropImage) return;
+        const url = URL.createObjectURL(blob);
+        // We just update the URL. handleSave handles the blob via fetch or we can store the blob?
+        // handleSave uses 'compressImage(avatarUrl)' which takes a src string. blob:url works.
+        setAvatarUrl(url);
+        setCropImage(null);
     };
 
     return (
@@ -229,6 +244,16 @@ const EditProfilePage: React.FC = () => {
                     </div>
                 </div>
             </motion.div>
+            {/* Cropper Modal */}
+            {cropImage && (
+                <ImageCropperModal
+                    imageUrl={cropImage}
+                    onCrop={handleCropComplete}
+                    onCancel={() => setCropImage(null)}
+                    aspectRatio={1} // Profile is usually circular/square
+                    circular={true} // Add visual circle overlay?
+                />
+            )}
         </div>
     );
 };

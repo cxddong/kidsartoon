@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { BottomNav } from '../components/BottomNav';
 import { AuthButton } from '../components/auth/AuthButton';
 import ImageModal, { type ImageRecord } from '../components/history/ImageModal';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 import { useAuth } from '../context/AuthContext';
 
 import { ComicBuilderPanel, type ComicBuilderData } from '../components/builder/ComicBuilderPanel';
@@ -83,7 +84,17 @@ export const ComicPage: React.FC = () => {
                 window.dispatchEvent(new CustomEvent('sparkle-update', { detail: location.state.sparkleTags }));
             }, 800);
         }
+
+        // Cleanup: Clear session storage when user leaves the page
+        return () => {
+            // Clear session storage to reset the page on next visit
+            sessionStorage.removeItem('comic-result');
+            sessionStorage.removeItem('comic-review');
+            sessionStorage.removeItem('comic-preview');
+        };
     }, []);
+
+    const [cropImage, setCropImage] = useState<string | null>(null);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -92,16 +103,26 @@ export const ComicPage: React.FC = () => {
                 alert("File is too large! Please upload under 50MB.");
                 return;
             }
-            setImageFile(file);
+
+            // Read for Cropper
             const reader = new FileReader();
             reader.onloadend = () => {
-                const result = reader.result as string;
-                setImagePreview(result);
-                // Saving on generate is cleaner usually, but saving here prevents loss if user refreshes before invalid input. 
-                // Let's save on GENERATE success to be consistent with result.
+                setCropImage(reader.result as string);
             };
             reader.readAsDataURL(file);
+
+            e.target.value = ''; // Reset input
         }
+    };
+
+    const handleCropComplete = (blob: Blob) => {
+        if (!cropImage) return;
+        const url = URL.createObjectURL(blob);
+        const file = new File([blob], "comic-input.jpg", { type: "image/jpeg" });
+
+        setImagePreview(url);
+        setImageFile(file);
+        setCropImage(null);
     };
 
     const handleGenerate = async (builderData: ComicBuilderData) => {
@@ -150,13 +171,18 @@ export const ComicPage: React.FC = () => {
             formData.append('userId', user?.uid || 'demo-user');
             formData.append('pageCount', '4');
 
-            // NEW: Use Magic Comic Endpoint (Creative Director Flow)
             const res = await fetch('/api/media/generate-magic-comic', {
                 method: 'POST',
                 body: formData,
             });
 
-            if (!res.ok) throw new Error('Failed to generate comic');
+            if (!res.ok) {
+                // Read error response
+                const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('[Comic Generation] Server error:', errorData);
+                throw new Error(errorData.error || `Server error: ${res.status}`);
+            }
+
             const data = await res.json();
 
             clearInterval(progressInterval);
@@ -188,10 +214,29 @@ export const ComicPage: React.FC = () => {
                 setStep('finished');
             }, 500);
         } catch (err: any) {
-            console.error(err);
+            console.error('[Comic Generation] Error caught:', err);
             clearInterval(progressInterval);
-            setError('Failed to create the comic. Please try again.');
-            alert(`Error: ${err.message}`);
+
+            // Try to get detailed error from response
+            let errorMessage = 'Failed to create the comic. Please try again.';
+            if (err.message) {
+                errorMessage = err.message;
+            }
+
+            // If it's a fetch error, try to get response body
+            try {
+                const errorText = await err.text?.();
+                if (errorText) {
+                    console.error('[Comic Generation] Error response:', errorText);
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.error || errorJson.message || errorMessage;
+                }
+            } catch (parseErr) {
+                console.log('[Comic Generation] Could not parse error response');
+            }
+
+            setError(errorMessage);
+            alert(`Comic Generation Failed:\n\n${errorMessage}\n\nCheck console for details.`);
             setStep('upload');
         }
     };
@@ -244,52 +289,68 @@ export const ComicPage: React.FC = () => {
             audioRef.pause();
             audioRef.currentTime = 0;
             setIsPlaying(false);
+            window.speechSynthesis.cancel();
             return;
         }
 
-        // Use Expressive TTS Endpoint
+        // Use browser TTS directly (more reliable than backend TTS)
         try {
-            const res = await fetch('/api/media/speak', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: aiReview.text })
-            });
-            const data = await res.json();
-
-            if (data.audioUrl) {
-                const audio = new Audio(data.audioUrl);
-                audio.onended = () => setIsPlaying(false);
-                setAudioRef(audio);
-                setIsPlaying(true);
-                audio.play();
-            }
-        } catch (err) {
-            console.error("TTS Failed:", err);
-            // Fallback to browser TTS if backend fails (e.g., 403 Quota/Permission)
             const utterance = new SpeechSynthesisUtterance(aiReview.text);
             // Simple language detection
             utterance.lang = /[\u4e00-\u9fa5]/.test(aiReview.text) ? 'zh-CN' : 'en-US';
+            utterance.rate = 0.9; // Slightly slower for kids
+            utterance.pitch = 1.1; // Slightly higher for friendly tone
             utterance.onend = () => setIsPlaying(false);
+            utterance.onerror = () => {
+                console.error('TTS failed');
+                setIsPlaying(false);
+            };
             window.speechSynthesis.speak(utterance);
             setIsPlaying(true);
+        } catch (err) {
+            console.error("Browser TTS Failed:", err);
+            setIsPlaying(false);
+        }
+    };
+
+    const [autoStartPuzzle, setAutoStartPuzzle] = useState(false);
+
+    const handlePlayPuzzle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (resultData) {
+            setAutoStartPuzzle(true);
+            setExpandedImage({
+                id: resultData.id || 'comic-result',
+                userId: resultData.userId || 'me',
+                imageUrl: resultData.gridImageUrl || resultData.coverImage || resultData.pages?.[0]?.imageUrl,
+                type: 'comic',
+                createdAt: new Date().toISOString(),
+                prompt: "Magic Comic",
+                meta: {
+                    isStoryBook: false,
+                    bookData: resultData,
+                    originalImageUrl: resultData.originalImageUrl || imagePreview,
+                    feedback: aiReview.text,
+                    isTextBurnedIn: resultData.isTextBurnedIn,
+                    gridImageUrl: resultData.gridImageUrl,
+                    tags: resultData.tags
+                }
+            });
         }
     };
 
     return (
-        <div className="fixed inset-0 w-full h-full bg-slate-900 z-[60] overflow-y-auto">
-            {/* Background Video (Audio Page Style) */}
-            <div className="fixed inset-0 z-0">
-                <video
-                    src={comicVideo}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    disablePictureInPicture
-                    controlsList="nodownload noremoteplayback"
-                    className="w-full h-full object-cover"
-                />
-            </div>
+        <div className="fixed inset-0 w-full h-full bg-[#121826] z-[60] overflow-y-auto">
+            {/* Background - Restored looping video */}
+            <video
+                src={comicVideo}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="fixed inset-0 w-full h-full object-cover opacity-60 z-0"
+            />
+            <div className="fixed inset-0 z-0 bg-gradient-to-b from-slate-900/40 to-indigo-950/60" />
 
             {/* Header */}
             <header className="absolute top-0 left-0 right-0 z-50 flex items-center gap-4 p-4 pointer-events-none sticky top-0">
@@ -302,7 +363,6 @@ export const ComicPage: React.FC = () => {
                         <span>✨</span>
                         <span>{user?.points || 0}</span>
                     </div>
-                    <AuthButton />
                 </div>
             </header>
 
@@ -316,47 +376,51 @@ export const ComicPage: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            className="relative z-10 w-full max-w-4xl h-full flex flex-col items-center justify-center p-4"
+                            className="relative z-10 w-full max-w-none h-full flex flex-col items-center justify-center p-1"
                         >
                             {/* Magic Comic Display (Single Image + Overlays) */}
                             <div
-                                className="relative flex items-center justify-center bg-white p-2 rounded-xl shadow-2xl border-[6px] border-white overflow-hidden max-h-[70vh] w-auto max-w-full"
-                                onClick={() => setExpandedImage({
-                                    id: resultData.id || 'comic-result',
-                                    userId: resultData.userId || 'me',
-                                    imageUrl: resultData.gridImageUrl || resultData.coverImage || resultData.pages?.[0]?.imageUrl,
-                                    type: 'comic',
-                                    createdAt: new Date().toISOString(),
-                                    prompt: "Magic Comic",
-                                    meta: {
-                                        isStoryBook: true,
-                                        bookData: resultData,
-                                        originalImageUrl: resultData.originalImageUrl || imagePreview,
-                                        feedback: aiReview.text,
-                                        isTextBurnedIn: resultData.isTextBurnedIn,
-                                        // Pass Builder Tags for Display (Retrieved from persisted resultData)
-                                        tags: resultData.tags
-                                    }
-                                })}
+                                className="relative flex items-center justify-center bg-white p-1 rounded-sm shadow-2xl border-4 border-white overflow-hidden max-h-[92vh] w-auto max-w-full"
+                                onClick={() => {
+                                    setAutoStartPuzzle(false);
+                                    setExpandedImage({
+                                        id: resultData.id || 'comic-result',
+                                        userId: resultData.userId || 'me',
+                                        imageUrl: resultData.gridImageUrl || resultData.coverImage || resultData.pages?.[0]?.imageUrl,
+                                        type: 'comic',
+                                        createdAt: new Date().toISOString(),
+                                        prompt: "Magic Comic",
+                                        meta: {
+                                            isStoryBook: false, // COMIC IS A SINGLE GRID IMAGE, NOT A STORY BOOK
+                                            bookData: resultData,
+                                            originalImageUrl: resultData.originalImageUrl || imagePreview,
+                                            feedback: aiReview.text,
+                                            isTextBurnedIn: resultData.isTextBurnedIn,
+                                            gridImageUrl: resultData.gridImageUrl,
+                                            // Pass Builder Tags for Display (Retrieved from persisted resultData)
+                                            tags: resultData.tags
+                                        }
+                                    });
+                                }}
                             >
-                                <div className="relative flex items-center justify-center w-full h-full">
+                                <div className="relative aspect-square max-h-[90vh] w-auto shadow-sm">
                                     <img
                                         src={resultData.gridImageUrl || resultData.coverImageUrl || resultData.pages?.[0]?.imageUrl}
-                                        className="block w-auto h-auto max-h-[68vh] max-w-full object-contain"
+                                        className="w-full h-full object-cover rounded-sm"
                                         alt="Comic Strip"
                                     />
 
                                     {/* Architecture C: Interactive Text Overlays for 2x2 Grid */}
                                     {editableCaptions.length === 4 && !resultData.isTextBurnedIn && (
-                                        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 w-full h-full pointer-events-none p-1 md:p-4">
+                                        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 w-full h-full pointer-events-none">
                                             {editableCaptions.map((caption, i) => (
                                                 <div
-                                                    key={i} className="relative w-full h-full flex flex-col justify-end p-2 md:p-4">
+                                                    key={i} className="relative w-full h-full flex flex-col justify-end items-center p-2 md:p-4">
                                                     <div
-                                                        className="bg-white/90 backdrop-blur-sm p-1.5 md:p-3 rounded-2xl border-2 border-slate-200/50 shadow-xl pointer-events-auto text-center transition-all hover:scale-[1.02]"
+                                                        className="bg-white px-3 py-2 rounded-[1rem] border-2 border-slate-900 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] pointer-events-auto text-center transition-all hover:scale-[1.05] max-w-[95%] max-h-[35%] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent flex items-center justify-center cursor-pointer"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <div className="w-full bg-transparent border-none text-[9px] md:text-[14px] font-black text-slate-800 text-center leading-tight">
+                                                        <div className="w-full bg-transparent border-none text-[9px] md:text-[13px] font-bold text-slate-800 text-center leading-snug" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", sans-serif' }}>
                                                             {caption}
                                                         </div>
                                                     </div>
@@ -367,7 +431,7 @@ export const ComicPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 mt-6 pointer-events-auto">
+                            <div className="flex gap-3 mt-6 pointer-events-auto flex-wrap justify-center">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -394,6 +458,13 @@ export const ComicPage: React.FC = () => {
                                     className="bg-purple-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
                                 >
                                     Make Animation 🎬
+                                </button>
+                                <button
+                                    onClick={handlePlayPuzzle}
+                                    className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 hover:bg-orange-600 transition-colors"
+                                >
+                                    <span>🧩</span>
+                                    Play Puzzle
                                 </button>
                                 <button
                                     onClick={handleAiReview}
@@ -457,8 +528,8 @@ export const ComicPage: React.FC = () => {
                             className="relative z-10 bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-xl flex flex-col items-center mb-12"
                         >
                             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                            <h3 className="text-xl font-bold text-slate-800">Drawing...</h3>
-                            <div className="w-48 h-3 bg-slate-200 rounded-full mt-4 overflow-hidden">
+                            <h3 className="text-xl font-bold text-slate-800">Drawing... {Math.round(progress)}%</h3>
+                            <div className="w-48 h-3 bg-slate-200 rounded-full mt-4 overflow-hidden relative">
                                 <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.round(progress)}%` }} />
                             </div>
 
@@ -487,24 +558,17 @@ export const ComicPage: React.FC = () => {
                                         {imagePreview ? (
                                             <img src={imagePreview} className="relative z-10 w-full h-full object-contain" />
                                         ) : (
-                                            <div className="relative z-10 flex flex-col items-center text-white group-hover:scale-105 transition-transform">
-                                                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-2 shadow-lg backdrop-blur-md">
-                                                    <img src="/upload_icon_v2.png" className="w-12 h-12" />
+                                            <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-300 group-hover:scale-110">
+                                                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-md border-2 border-white/30">
+                                                    <img src="/upload_icon_v2.png" className="w-12 h-12 drop-shadow-md" />
                                                 </div>
-                                                <p className="font-bold drop-shadow-md text-xl">Tap to Upload Photo</p>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </ComicBuilderPanel>
 
-                            {/* Universal Exit Button */}
-                            <div className="mt-8 mb-12">
-                                <GenerationCancelButton
-                                    isGenerating={false}
-                                    onCancel={() => navigate('/generate')}
-                                />
-                            </div>
+
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -514,6 +578,7 @@ export const ComicPage: React.FC = () => {
             <ImageModal
                 image={expandedImage}
                 onClose={() => setExpandedImage(null)}
+                initialShowPuzzle={autoStartPuzzle}
                 onToggleFavorite={async (id) => {
                     if (expandedImage) {
                         setExpandedImage(prev => prev ? { ...prev, favorite: !prev.favorite } : null);
@@ -542,6 +607,15 @@ export const ComicPage: React.FC = () => {
                     setStep('upload');
                 }}
             />
+            {/* Cropper Modal */}
+            {cropImage && (
+                <ImageCropperModal
+                    imageUrl={cropImage}
+                    onCrop={handleCropComplete}
+                    onCancel={() => setCropImage(null)}
+                    aspectRatio={1}
+                />
+            )}
             <BottomNav />
         </div >
     );
