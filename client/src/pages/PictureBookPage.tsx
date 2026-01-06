@@ -247,12 +247,7 @@ export const PictureBookPage: React.FC = () => {
                                 onGenerate={handleGenerate}
                             >
                                 {/* Embedded Upload Box */}
-                                <div className="relative w-full h-full flex items-center justify-center flex-col overflow-hidden hover:scale-105 transition-all group cursor-pointer"
-                                    onClick={() => {
-                                        console.log('[PictureBook] Upload box clicked');
-                                        fileInputRef.current?.click();
-                                    }}
-                                >
+                                <div className="relative w-full h-full flex items-center justify-center flex-col overflow-hidden hover:scale-105 transition-all group">
                                     {/* Video Background (Restored) */}
                                     <video
                                         src={catlogoVideo}
@@ -264,14 +259,15 @@ export const PictureBookPage: React.FC = () => {
                                         disablePictureInPicture
                                     />
 
+                                    {/* File Input as Full Overlay - Direct Click */}
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        id="book-upload"
-                                        className="hidden"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                                         accept="image/*"
                                         onChange={handleImageUpload}
                                     />
+
                                     {imagePreview && (
                                         <img src={imagePreview} alt="Uploaded preview" className="relative z-10 w-full h-full object-cover pointer-events-none" />
                                     )}
