@@ -301,31 +301,28 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
 
                 {/* Generate Button (Video Replacement) */}
                 {/* Generate Button (Floating Fixed Bottom) */}
-                <div className="fixed bottom-20 md:bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none">
-                    <div className="flex flex-col items-center pointer-events-auto">
-                        <button
-                            onClick={() => onGenerate({ theme, illustrationStyle, vibe, character, pageCount, storyText })}
-                            disabled={!isReady}
-                            className="relative w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group border-4 border-white/40 bg-white"
-                        >
-                            <video
-                                src={generateVideo}
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="w-full h-full object-cover scale-110"
-                            />
-                        </button>
-                        {/* Helper Text */}
-                        {!isReady && (
-                            <div className="mt-2 px-4 py-1 bg-black/60 backdrop-blur-md rounded-full">
-                                <p className="text-xs text-white font-bold animate-pulse">
-                                    Upload a photo to start!
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                {/* Generate Button (Static Below Textarea) */}
+                <div className="w-full mt-8 flex justify-center flex-col items-center">
+                    <button
+                        onClick={() => onGenerate({ theme, illustrationStyle, vibe, character, pageCount, storyText })}
+                        disabled={!isReady}
+                        className="relative w-40 h-40 rounded-full overflow-hidden shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group border-4 border-white/30"
+                    >
+                        <video
+                            src={generateVideo}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover scale-110"
+                        />
+                    </button>
+                    {/* Helper Text */}
+                    {!isReady && (
+                        <p className="text-xs text-white/70 text-center mt-2 font-bold animate-pulse">
+                            Upload a photo to start!
+                        </p>
+                    )}
                 </div>
             </div>
 
