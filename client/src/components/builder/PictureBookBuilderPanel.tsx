@@ -300,28 +300,32 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                 </section>
 
                 {/* Generate Button (Video Replacement) */}
-                <div className="w-full mt-4 flex justify-center">
-                    <button
-                        onClick={() => onGenerate({ theme, illustrationStyle, vibe, character, pageCount, storyText })}
-                        disabled={!isReady}
-                        className="relative w-40 h-40 rounded-full overflow-hidden shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group border-4 border-white/30"
-                    >
-                        <video
-                            src={generateVideo}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover scale-110" // Slight scale to ensure fill
-                        />
-                        {/* Optional Overlay Text if needed, user didn't explicitly ask for text but a button usually needs some indication. Given the strict "replace" instruction, I'll stick to just the video, or add a subtle text like the comic one if previous patterns suggest it. The prompt says "replace... with assets/generate.mp4", so I will trust the video has the content. */}
-                    </button>
-                    {/* Helper Text */}
-                    {!isReady && (
-                        <p className="text-xs text-white/50 text-center mt-2 font-bold animate-pulse">
-                            Upload a photo to start!
-                        </p>
-                    )}
+                {/* Generate Button (Floating Fixed Bottom) */}
+                <div className="fixed bottom-20 md:bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                    <div className="flex flex-col items-center pointer-events-auto">
+                        <button
+                            onClick={() => onGenerate({ theme, illustrationStyle, vibe, character, pageCount, storyText })}
+                            disabled={!isReady}
+                            className="relative w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group border-4 border-white/40 bg-white"
+                        >
+                            <video
+                                src={generateVideo}
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="w-full h-full object-cover scale-110"
+                            />
+                        </button>
+                        {/* Helper Text */}
+                        {!isReady && (
+                            <div className="mt-2 px-4 py-1 bg-black/60 backdrop-blur-md rounded-full">
+                                <p className="text-xs text-white font-bold animate-pulse">
+                                    Upload a photo to start!
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
