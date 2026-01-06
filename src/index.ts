@@ -160,7 +160,9 @@ if (fs.existsSync(clientDist)) {
 
 // Start Server
 const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log(`\n\n[Server] 🚀 Backend running on http://localhost:${port}`);
+const host = '0.0.0.0'; // Bind to all interfaces for Cloud Run
+app.listen(Number(port), host, () => {
+  console.log(`\n\n[Server] 🚀 Backend running on http://${host}:${port}`);
   console.log(`📱 Main App:  http://localhost:${port}/`);
+  console.log(`[Cloud Run Ready] Listening on PORT=${port}, HOST=${host}`);
 });
