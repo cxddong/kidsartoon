@@ -126,7 +126,7 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
         // We only check limits if we are generating NEW content (not cached)
         const dailyCount = await databaseService.getUserDailyUsage(userId, 'story');
         const userRec = await databaseService.getUser(userId);
-        const isFree = !userRec?.plan || userRec.plan === 'free';
+        const isFree = !userRec?.plan || (userRec.plan as string) === 'free';
 
         if (isFree && dailyCount >= 3) {
             console.warn(`[StoryOrchestrator] Daily Limit Reached for ${userId}`);

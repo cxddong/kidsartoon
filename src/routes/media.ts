@@ -739,7 +739,7 @@ router.post('/image-to-video/task', (req, res, next) => {
     // 4s = 15, 8s = 30, 12s = 60
     let baseCredits = 15;
     if (duration === 8) baseCredits = 30;
-    if (duration === 10 || duration === 12) baseCredits = 60; // 10 is legacy, 12 is cinema
+    if ((duration as number) === 10 || (duration as number) === 12) baseCredits = 60; // 10 is legacy, 12 is cinema
 
     // Audio cost addition? User spec said: "Video - Quick (4s): Deduct 15 Credits." implying total.
     // "Video - Story (8s): Deduct 30 Credits."
@@ -2110,7 +2110,8 @@ router.post('/generate-magic-book', upload.single('cartoonImage'), async (req, r
       visual_style: visualStyle,
       pace,
       page_count: pageCountRequested,
-      story_concept: storyText
+      story_concept: storyText,
+      character_description: charDesc || ""
     };
 
     const requestType = pageCountRequested === 4 ? 'Picturebook_4_Page' : `Picturebook_${pageCountRequested}_Page`;
