@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { magicMentorService } from '../services/mentor';
-import { MentorStepRequest } from '../types/mentor';
+import { databaseService } from '../services/database.js';
+import { magicMentorService } from '../services/mentor.js';
+import { MentorStepRequest } from '../types/mentor.js';
 
 const router = Router();
 import multer from 'multer';
@@ -49,7 +50,7 @@ router.get('/active/:userId', async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const { databaseService } = require('../services/database');
+        // databaseService imported at top
         const series = await databaseService.getUserActiveSeries(userId);
         res.json({ success: true, series });
     } catch (error: any) {
