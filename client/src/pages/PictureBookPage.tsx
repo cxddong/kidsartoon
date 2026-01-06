@@ -280,6 +280,15 @@ export const PictureBookPage: React.FC = () => {
                 </AnimatePresence>
             </div>
 
+            {/* Image Cropper Modal */}
+            {cropImage && (
+                <ImageCropperModal
+                    imageUrl={cropImage}
+                    onCrop={handleCropComplete}
+                    onCancel={() => setCropImage(null)}
+                />
+            )}
+
             <BottomNav />
         </div >
     );
