@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
     onAuthStateChanged,
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword
@@ -166,158 +167,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => unsubscribe();
     }, []);
 
-    // 1. Google Login
+    // 1. Google Login (Redirect-based to avoid popup blockers)
     const loginWithGoogle = async (): Promise<boolean> => {
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const user = result.user;
-
-            // ATTEMPT 1: Fetch Real Profile First
-            try {
-                const userRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(userRef);
-
-                if (docSnap.exists()) {
-                    const userData = docSnap.data();
-                    // Found existing user! Set valid state
-                    setUser({
-                        uid: user.uid,
-                        email: user.email,
-                        name: userData.name || user.displayName || 'Artist',
-                        photoURL: userData.photoUrl || user.photoURL || null,
-                        profileCompleted: userData.profileCompleted || false,
-                        points: userData.points ?? 50,
-                        plan: userData.plan || 'free',
-                        language: userData.language || 'English',
-                        interests: userData.interests || []
-                    });
-                    setLoading(false);
-                    return false; // Not new
-                } else {
-                    // New User - Create Profile
-                    await setDoc(userRef, {
-                        name: user.displayName || 'New Artist',
-                        email: user.email,
-                        photoUrl: user.photoURL,
-                        createdAt: new Date().toISOString(),
-                        points: 50,
-                        plan: 'free',
-                        language: 'English',
-                        profileCompleted: false,
-                        creationHistory: [],
-                        lastPointsReset: new Date().toISOString()
-                    });
-
-                    // Set State for New User
-                    setUser({
-                        uid: user.uid,
-                        email: user.email,
-                        name: user.displayName || 'New Artist',
-                        photoURL: user.photoURL || null,
-                        profileCompleted: false,
-                        points: 50,
-                        plan: 'free',
-                        language: 'English',
-                        interests: []
-                    });
-                    setLoading(false);
-                    return true;
-                }
-            } catch (firestoreError: any) {
-                console.warn('Firestore blocked. Falling back to Guest Mode.', firestoreError);
-
-                // FALLBACK: Manual State (Guest Mode)
-                setUser({
-                    uid: user.uid,
-                    email: user.email,
-                    name: user.displayName || 'Artist',
-                    photoURL: user.photoURL || null,
-                    profileCompleted: false,
-                    points: 50, // Offline Cache
-                    plan: 'free',
-                    language: 'English',
-                    interests: []
-                });
-                setLoading(false);
-                return true; // Treat as new/startup flow if we can't verify
-            }
+            console.log('Starting google login...');
+            await signInWithRedirect(auth, googleProvider);
+            // Note: After redirect completes, user returns to app
+            // and onAuthStateChanged will fire automatically
+            return false; // This line won't execute - page redirects
         } catch (error) {
-            console.error("Google Login Error", error);
+            console.error("PROVIDER LOGIN FAILED:", error, '/', (error as any).code);
             throw error;
         }
     };
 
-    // 2. Apple Login
+    // 2. Apple Login (Redirect-based to avoid popup blockers)
     const loginWithApple = async (): Promise<boolean> => {
         try {
-            const result = await signInWithPopup(auth, appleProvider);
-            const user = result.user;
-
-            // ATTEMPT 1: Fetch Real Profile First
-            try {
-                const userRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(userRef);
-
-                if (docSnap.exists()) {
-                    const userData = docSnap.data();
-                    setUser({
-                        uid: user.uid,
-                        email: user.email,
-                        name: userData.name || user.displayName || 'Apple Artist',
-                        photoURL: userData.photoUrl || user.photoURL || null,
-                        profileCompleted: userData.profileCompleted || false,
-                        points: userData.points ?? 50,
-                        plan: userData.plan || 'free',
-                        language: userData.language || 'English',
-                        interests: userData.interests || []
-                    });
-                    setLoading(false);
-                    return false;
-                } else {
-                    await setDoc(userRef, {
-                        name: user.displayName || 'Apple User',
-                        email: user.email,
-                        photoUrl: user.photoURL,
-                        createdAt: new Date().toISOString(),
-                        points: 50,
-                        plan: 'free',
-                        language: 'English',
-                        profileCompleted: false,
-                        creationHistory: [],
-                        lastPointsReset: new Date().toISOString()
-                    });
-                    setUser({
-                        uid: user.uid,
-                        email: user.email,
-                        name: user.displayName || 'Apple User',
-                        photoURL: user.photoURL || null,
-                        profileCompleted: false,
-                        points: 50,
-                        plan: 'free',
-                        language: 'English',
-                        interests: []
-                    });
-                    setLoading(false);
-                    return true;
-                }
-            } catch (firestoreError: any) {
-                console.warn('Firestore blocked. Falling back to Guest Mode.', firestoreError);
-                setUser({
-                    uid: user.uid,
-                    email: user.email,
-                    name: user.displayName || 'Apple Artist',
-                    photoURL: user.photoURL || null,
-                    profileCompleted: false,
-                    points: 50,
-                    plan: 'free',
-                    language: 'English',
-                    interests: []
-                });
-                setLoading(false);
-                return true;
-            }
+            console.log('Starting apple login...');
+            await signInWithRedirect(auth, appleProvider);
+            // Note: After redirect completes, user returns to app
+            // and onAuthStateChanged will fire automatically
+            return false; // This line won't execute - page redirects
         } catch (error) {
-            console.error("Apple Login Error", error);
+            console.error("PROVIDER LOGIN FAILED:", error, '/', (error as any).code);
             throw error;
         }
     };
