@@ -1,13 +1,13 @@
-import { CreativeSeries, MentorStepRequest, MentorStepResponse, Chapter } from '../types/mentor';
-import { databaseService } from './database';
-import { adminStorageService } from './adminStorage';
+import { CreativeSeries, MentorStepRequest, MentorStepResponse, Chapter } from '../types/mentor.js';
+import { databaseService } from './database.js';
+import { adminStorageService } from './adminStorage.js';
 
 import { v4 as uuidv4 } from 'uuid';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
-import { doubaoService } from './doubao';
-import { minimaxService } from './minimax';
-import { geminiService } from './gemini';
-import { MASTERPIECES } from '../data/masterpieces';
+import { doubaoService } from './doubao.js';
+import { minimaxService } from './minimax.js';
+import { geminiService } from './gemini.js';
+import { MASTERPIECES } from '../data/masterpieces.js';
 
 export class MagicMentorService {
     private readonly MAX_ITERATIONS = 5;
