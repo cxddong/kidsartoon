@@ -252,7 +252,7 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
 
                 {/* Main Character (Moved from Right) */}
                 <div className="w-full max-w-2xl flex flex-col gap-4">
-                    <h3 className="text-lg font-black text-white text-center">
+                    <h3 className="text-2xl font-black text-white text-center drop-shadow-lg">
                         Main Character 🏷️
                     </h3>
                     <div className="relative h-[260px] w-full flex items-center justify-center overflow-visible z-10">

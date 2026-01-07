@@ -836,7 +836,7 @@ export const GreetingCardPage = () => {
 
                         {/* Slot 2: Photo (Optional - Selfie Only) */}
                         <div className="w-full md:w-1/3 space-y-3">
-                            <label className="block text-sm font-bold text-slate-400 uppercase text-center">Input You</label>
+                            <label className="block text-base font-bold text-slate-700 text-center">Put Yourself Into the Card</label>
                             <div className="relative w-full aspect-square bg-white/20 backdrop-blur-md rounded-[2rem] border-4 border-dashed border-slate-200 hover:border-pink-400 transition-colors overflow-hidden group shadow-sm">
                                 {photo ? (
                                     <>
