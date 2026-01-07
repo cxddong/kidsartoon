@@ -277,6 +277,11 @@ export const PictureBookPage: React.FC = () => {
                                         <img src={imagePreview} alt="Uploaded preview" className="relative z-10 w-full h-full object-cover pointer-events-none" />
                                     )}
                                 </div>
+
+                                {/* Upload Hint */}
+                                <p className="text-center text-sm font-bold text-white/80 mt-2 drop-shadow-md">
+                                    👆 Click above to upload your photo
+                                </p>
                             </PictureBookBuilderPanel>
 
 

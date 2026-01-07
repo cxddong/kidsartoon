@@ -333,6 +333,11 @@ export const MakeCartoonPage: React.FC = () => {
     };
 
     const generateAnimation = async (builderData: AnimationBuilderData) => {
+        if (!user?.uid) {
+            alert('User ID required! Please log in to create amazing content.');
+            return;
+        }
+
         setLoading(true);
         console.log('[MakeCartoon] Starting video generation with data:', builderData);
         try {
