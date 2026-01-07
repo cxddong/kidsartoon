@@ -74,6 +74,11 @@ export const PictureBookPage: React.FC = () => {
     };
 
     const handleGenerate = async (builderData: PictureBookBuilderData) => {
+        if (!user?.uid) {
+            alert('User ID required! Please log in to create amazing content.');
+            return;
+        }
+
         if (!imageFile && !builderData) return; // imageFile might be optional if we supported text-only but we don't yet
 
         setStep('generating-book');

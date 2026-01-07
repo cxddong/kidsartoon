@@ -126,6 +126,11 @@ export const ComicPage: React.FC = () => {
     };
 
     const handleGenerate = async (builderData: ComicBuilderData) => {
+        if (!user?.uid) {
+            alert('User ID required! Please log in to create amazing content.');
+            return;
+        }
+
         if (!imageFile) return;
 
         // Construct Prompt
