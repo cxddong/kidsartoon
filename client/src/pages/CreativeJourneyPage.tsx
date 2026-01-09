@@ -1026,6 +1026,31 @@ function JourneyFlow({
 
 function FinaleSection({ series, onAction }: { series: CreativeSeries, onAction: (type: 'pdf' | 'video') => void }) {
     const navigate = useNavigate();
+
+    // Get the last chapter's image for pre-population
+    const lastChapterImage = series.chapters && series.chapters.length > 0
+        ? series.chapters[series.chapters.length - 1].userImageUrl
+        : null;
+
+    const handleCreateComic = () => {
+        if (lastChapterImage) {
+            navigate('/generate/comic', { state: { remixImage: lastChapterImage, mode: 'comic' } });
+        }
+    };
+
+    const handleCreatePictureBook = () => {
+        if (lastChapterImage) {
+            navigate('/generate/picture', { state: { remixImage: lastChapterImage, mode: 'book' } });
+        }
+    };
+
+    const handleCreateVideo = () => {
+        if (lastChapterImage) {
+            navigate('/generate/video', { state: { remixImage: lastChapterImage } });
+        } else {
+            onAction('video');
+        }
+    };
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -1053,15 +1078,36 @@ function FinaleSection({ series, onAction }: { series: CreativeSeries, onAction:
                 </div>
 
                 <div
-                    onClick={() => onAction('video')}
+                    onClick={handleCreateVideo}
                     className="p-8 rounded-[2rem] bg-gradient-to-br from-pink-500 to-orange-500 text-white text-left relative overflow-hidden group cursor-pointer hover:shadow-2xl transition-all"
                 >
-                    <Palette className="w-12 h-12 mb-4 opacity-50" />
+                    <Film className="w-12 h-12 mb-4 opacity-50" />
                     <h3 className="text-xl font-bold mb-2">Dynamic Movie</h3>
                     <p className="text-sm opacity-80 mb-4">Turn your drawings into an animated musical video!</p>
                     <div className="bg-white/20 px-4 py-2 rounded-full inline-block text-xs font-bold">
                         ✨ 20 Magic Points
                     </div>
+                </div>
+            </div>
+
+            {/* NEW: More Creation Options */}
+            <div className="grid md:grid-cols-2 gap-6 mb-10">
+                <div
+                    onClick={handleCreateComic}
+                    className="p-6 rounded-[1.5rem] bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-left relative overflow-hidden group cursor-pointer hover:shadow-xl transition-all"
+                >
+                    <BookOpen className="w-10 h-10 mb-3 opacity-50" />
+                    <h3 className="text-lg font-bold mb-2">Create Comic</h3>
+                    <p className="text-xs opacity-80">Turn your final artwork into a comic strip!</p>
+                </div>
+
+                <div
+                    onClick={handleCreatePictureBook}
+                    className="p-6 rounded-[1.5rem] bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-left relative overflow-hidden group cursor-pointer hover:shadow-xl transition-all"
+                >
+                    <BookOpen className="w-10 h-10 mb-3 opacity-50" />
+                    <h3 className="text-lg font-bold mb-2">Create Picture Book</h3>
+                    <p className="text-xs opacity-80">Make a storybook from your masterpiece!</p>
                 </div>
             </div>
 
