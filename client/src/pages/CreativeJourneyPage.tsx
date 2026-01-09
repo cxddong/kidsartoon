@@ -535,8 +535,9 @@ function WelcomeSection({ onStart }: { onStart: () => void }) {
                         <video
                             src={masterpieceVideo}
                             autoPlay
+                            loop
+                            muted
                             playsInline
-                            onEnded={(e) => { e.currentTarget.currentTime = 0; }}
                             className="w-full h-full object-cover"
                         />
                         {/* Shine effect */}
