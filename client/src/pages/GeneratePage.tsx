@@ -200,6 +200,21 @@ export const GeneratePage: React.FC = () => {
                         </div>
                     </motion.button>
 
+                    {/* My Apprentice (NEW - Rectangle) */}
+                    <motion.button
+                        variants={jellyPopVariants}
+                        onClick={() => handleNavigation('/magic-lab')}
+                        className="flex flex-col items-center gap-2 md:gap-3 group relative"
+                    >
+                        <div className="w-28 h-28 md:w-40 md:h-36 rounded-3xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg border-4 border-white/30 overflow-hidden transform transition-all group-hover:scale-105 group-active:scale-95">
+                            <div className="text-5xl md:text-6xl">🐱✨</div>
+                        </div>
+                        <div className="flex flex-col items-center leading-tight">
+                            <span className="text-xs md:text-lg font-black text-slate-700 drop-shadow-sm tracking-wider">MY</span>
+                            <span className="text-xs md:text-lg font-black text-slate-700 drop-shadow-sm tracking-wider">APPRENTICE</span>
+                        </div>
+                    </motion.button>
+
                     {/* Picture Book (Circle - Right) */}
                     <motion.button
                         variants={jellyPopVariants}
