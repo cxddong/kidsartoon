@@ -154,8 +154,8 @@ export const GeneratePage: React.FC = () => {
                     </motion.button>
                 </div>
 
-                {/* Row 2: Comic - Greeting - Mentor - Picture Book */}
-                <div className="flex items-center gap-2 md:gap-8 flex-wrap justify-center px-2">
+                {/* Row 2: Comic - Greeting - Mentor - Picture Book - Graphic Novel */}
+                <div className="flex items-center gap-4 md:gap-8 flex-wrap justify-center px-2 max-w-6xl mx-auto">
                     {/* Comic (Circle - Left) */}
                     <motion.button
                         variants={jellyPopVariants}
