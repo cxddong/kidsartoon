@@ -15,6 +15,7 @@ import comicVideo from '../assets/comic.mp4';
 import greetingCardVideo from '../assets/greeting_card1.mp4';
 import mentorVideo from '../assets/mentor journey.mp4';
 import bookVideo from '../assets/book.mp4';
+import graphicNovelVideo from '../assets/graphicnovel.mp4';
 import homepageBg from '../assets/homepage.mp4';
 
 export const GeneratePage: React.FC = () => {
