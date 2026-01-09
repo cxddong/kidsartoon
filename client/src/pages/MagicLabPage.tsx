@@ -310,9 +310,9 @@ export const MagicLabPage: React.FC = () => {
                     </button>
                     <div className="flex flex-col">
                         <h1 className="text-2xl md:text-3xl font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
-                            My Apprentice ✨
+                            Magic Lab ✨
                         </h1>
-                        <p className="text-white/80 text-sm font-bold">Magic Kat</p>
+                        <p className="text-white/80 text-sm font-bold">Talk & Create with Sparkle</p>
                     </div>
                 </div>
 
