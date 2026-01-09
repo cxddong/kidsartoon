@@ -113,7 +113,7 @@ export const GeneratePage: React.FC = () => {
                 animate="animate"
             >
                 {/* Row 1: Audio - Start Magic - Animation */}
-                <div className="flex items-center gap-4 md:gap-16">
+                <div className="flex items-center gap-4 md:gap-16 justify-center max-w-5xl mx-auto mb-6 px-4">
                     {/* Audio (Circle - Left) */}
                     <motion.button
                         variants={jellyPopVariants}
