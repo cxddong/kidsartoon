@@ -264,16 +264,21 @@ Output format: ["Chapter 1 description", "Chapter 2 description", ...]`;
         pageNumber: number,
         style?: string
     ): Promise<string> {
-        // Build character context
+        // Build character context with asset image URLs for reference
         let characterContext = '';
+        let referenceImageUrl = '';  // Use first available asset as img2img reference
+
         if (assets.slot1) {
-            characterContext += `Main character: ${assets.slot1.description}. `;
+            characterContext += `Main character (from uploaded drawing): ${assets.slot1.description}. `;
+            referenceImageUrl = assets.slot1.imageUrl;
         }
         if (assets.slot2) {
-            characterContext += `Second character: ${assets.slot2.description}. `;
+            characterContext += `Second character (from uploaded drawing): ${assets.slot2.description}. `;
+            if (!referenceImageUrl) referenceImageUrl = assets.slot2.imageUrl;
         }
         if (assets.slot3) {
-            characterContext += `Setting: ${assets.slot3.description}. `;
+            characterContext += `Setting (from uploaded drawing): ${assets.slot3.description}. `;
+            if (!referenceImageUrl) referenceImageUrl = assets.slot3.imageUrl;
         }
 
         const comicPrompt = `${characterContext}\n\nPage ${pageNumber}: ${chapterPrompt}\n\nCreate a 4-panel comic strip showing this scene. Each panel should advance the story.`;
@@ -291,16 +296,43 @@ Output format: ["Chapter 1 description", "Chapter 2 description", ...]`;
 
                     console.log(`[WorldBuilder] Generating image from ${panels.length} panels...`);
 
-                    // Get style prompt from the style parameter
-                    const stylePrompt = style || 'vibrant comic book style';
+                    // Map style IDs to detailed prompts
+                    const stylePrompts: Record<string, string> = {
+                        'movie_magic': '3D Pixar Animation Style, high detail, vibrant, character-focused',
+                        'toy_kingdom': 'Toy Kingdom style, plastic textures, miniature world',
+                        'clay_world': 'Clay stop-motion, Aardman style, soft shadows',
+                        'paper_craft': 'Paper Craft, cut paper layers, origami, textured',
+                        'pixel_land': 'Pixel art, Minecraft style, blocky, 8-bit',
+                        'doodle_magic': 'Chalkboard drawing, glowing chalk lines',
+                        'watercolor': 'Watercolor painting, soft brushstrokes',
+                        'comic_book': 'Classic comic book style, bold lines, halftone'
+                    };
+                    const stylePrompt = stylePrompts[style || ''] || style || 'vibrant comic book style';
 
-                    // Build enhanced prompt with style, character context, and panel descriptions
-                    const fullPrompt = `${stylePrompt}. ${characterContext}\n\n4-panel comic strip layout: ${panels.map((p, i) => `Panel ${i + 1}: ${p.sceneDescription}`).join('; ')}.\n\nCRITICAL: Use the described characters and setting consistently across all panels. Comic book style, vibrant colors, clear panel borders.`;
+                    // Extract scene descriptions WITHOUT dialogue
+                    const sceneDescriptions = panels.map((p, i) => `Panel ${i + 1}: ${p.sceneDescription}`).join('; ');
 
-                    const imageUrl = await doubaoService.generateImage(
-                        fullPrompt,
-                        '2K'
-                    );
+                    // Build prompt emphasizing uploaded asset consistency
+                    const fullPrompt = `${stylePrompt}. ${characterContext}\n\n4-panel comic strip: ${sceneDescriptions}.\n\nCRITICAL: Match uploaded drawing style. NO text bubbles. Clear panel borders.`;
+
+                    let imageUrl: string;
+
+                    // Try img2img with reference image for character consistency
+                    if (referenceImageUrl) {
+                        console.log(`[WorldBuilder] Using asset as reference: ${referenceImageUrl.substring(0, 40)}...`);
+                        try {
+                            imageUrl = await doubaoService.generateImageFromImage(
+                                referenceImageUrl,
+                                fullPrompt,
+                                { denoisingStrength: 0.7, size: '2K' }
+                            );
+                        } catch (refError) {
+                            console.warn(`[WorldBuilder] Img2img failed, using text-only:`, refError);
+                            imageUrl = await doubaoService.generateImage(fullPrompt, '2K');
+                        }
+                    } else {
+                        imageUrl = await doubaoService.generateImage(fullPrompt, '2K');
+                    }
 
                     return imageUrl;
                 })(),
