@@ -112,8 +112,8 @@ export const GeneratePage: React.FC = () => {
                 initial="initial"
                 animate="animate"
             >
-                {/* Row 1: Audio - Animation */}
-                <div className="flex items-center gap-8 md:gap-16 justify-center max-w-5xl mx-auto mb-6 px-4">
+                {/* Row 1: Audio - Start Magic - Animation */}
+                <div className="flex items-center gap-4 md:gap-16 justify-center max-w-5xl mx-auto mb-6 px-4">
                     {/* Audio (Circle - Left) */}
                     <motion.button
                         variants={jellyPopVariants}
@@ -126,8 +126,8 @@ export const GeneratePage: React.FC = () => {
                         <span className="text-sm md:text-xl font-black text-slate-700 drop-shadow-sm tracking-wider">AUDIO</span>
                     </motion.button>
 
-                    {/* START MAGIC - HIDDEN */}
-                    {/* <motion.button
+                    {/* START MAGIC (Rectangle - Center) */}
+                    <motion.button
                         variants={jellyPopVariants}
                         onClick={() => handleNavigation('/magic-lab')}
                         className="flex flex-col items-center gap-2 md:gap-3 group relative"
@@ -139,7 +139,7 @@ export const GeneratePage: React.FC = () => {
                                 <span className="text-2xl md:text-4xl font-black text-white drop-shadow-lg tracking-widest text-yellow-200">MAGIC</span>
                             </div>
                         </div>
-                    </motion.button> */}
+                    </motion.button>
 
                     {/* Animation (Circle - Right) */}
                     <motion.button
