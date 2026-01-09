@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
     onAuthStateChanged,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     signOut,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword
@@ -54,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
             return;
         }
+
 
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
@@ -135,6 +135,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         });
                     }
                     setLoading(false);
+
+                    // Check for pending OAuth navigation
+                    const pendingNav = sessionStorage.getItem('oauth_pending_nav');
+                    if (pendingNav) {
+                        console.log('🚀 Navigating to:', pendingNav);
+                        sessionStorage.removeItem('oauth_pending_nav');
+                        // Use setTimeout to ensure state is fully settled
+                        setTimeout(() => {
+                            window.location.href = pendingNav;
+                        }, 100);
+                    }
                 }, (err) => {
                     console.error("Firestore error (Permission?):", err);
 
@@ -155,6 +166,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     });
 
                     setLoading(false);
+
+                    // Check for pending OAuth navigation even in error case
+                    const pendingNav = sessionStorage.getItem('oauth_pending_nav');
+                    if (pendingNav) {
+                        console.log('🚀 Navigating to:', pendingNav);
+                        sessionStorage.removeItem('oauth_pending_nav');
+                        setTimeout(() => {
+                            window.location.href = pendingNav;
+                        }, 100);
+                    }
                 });
 
                 return () => unsubDoc();
@@ -167,30 +188,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => unsubscribe();
     }, []);
 
-    // 1. Google Login (Redirect-based to avoid popup blockers)
+    // 1. Google Login (Popup-based for immediate authentication)
     const loginWithGoogle = async (): Promise<boolean> => {
         try {
-            console.log('Starting google login...');
-            await signInWithRedirect(auth, googleProvider);
-            // Note: After redirect completes, user returns to app
-            // and onAuthStateChanged will fire automatically
-            return false; // This line won't execute - page redirects
-        } catch (error) {
-            console.error("PROVIDER LOGIN FAILED:", error, '/', (error as any).code);
+            console.log('🔐 Starting Google login with popup...');
+            const result = await signInWithPopup(auth, googleProvider);
+
+            // Check if new user
+            const creationTime = new Date(result.user.metadata.creationTime!).getTime();
+            const lastSignInTime = new Date(result.user.metadata.lastSignInTime!).getTime();
+            const isNewUser = Math.abs(creationTime - lastSignInTime) < 5000;
+
+            console.log(`✅ Google login success! User: ${result.user.email}, isNew: ${isNewUser}`);
+            return isNewUser;
+        } catch (error: any) {
+            console.error("❌ Google login failed:", error.code, error.message);
+
+            // User-friendly error messages
+            if (error.code === 'auth/popup-closed-by-user') {
+                throw new Error('Login cancelled. Please try again.');
+            } else if (error.code === 'auth/popup-blocked') {
+                throw new Error('Popup blocked by browser. Please allow popups and try again.');
+            } else if (error.code === 'auth/cancelled-popup-request') {
+                throw new Error('Login cancelled.');
+            }
+
             throw error;
         }
     };
 
-    // 2. Apple Login (Redirect-based to avoid popup blockers)
+    // 2. Apple Login (Popup-based for immediate authentication)
     const loginWithApple = async (): Promise<boolean> => {
         try {
-            console.log('Starting apple login...');
-            await signInWithRedirect(auth, appleProvider);
-            // Note: After redirect completes, user returns to app
-            // and onAuthStateChanged will fire automatically
-            return false; // This line won't execute - page redirects
-        } catch (error) {
-            console.error("PROVIDER LOGIN FAILED:", error, '/', (error as any).code);
+            console.log('🍎 Starting Apple login with popup...');
+            const result = await signInWithPopup(auth, appleProvider);
+
+            // Check if new user
+            const creationTime = new Date(result.user.metadata.creationTime!).getTime();
+            const lastSignInTime = new Date(result.user.metadata.lastSignInTime!).getTime();
+            const isNewUser = Math.abs(creationTime - lastSignInTime) < 5000;
+
+            console.log(`✅ Apple login success! User: ${result.user.email}, isNew: ${isNewUser}`);
+            return isNewUser;
+        } catch (error: any) {
+            console.error("❌ Apple login failed:", error.code, error.message);
+
+            // User-friendly error messages
+            if (error.code === 'auth/popup-closed-by-user') {
+                throw new Error('Login cancelled. Please try again.');
+            } else if (error.code === 'auth/popup-blocked') {
+                throw new Error('Popup blocked by browser. Please allow popups and try again.');
+            } else if (error.code === 'auth/cancelled-popup-request') {
+                throw new Error('Login cancelled.');
+            }
+
             throw error;
         }
     };

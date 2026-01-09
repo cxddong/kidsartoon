@@ -10,7 +10,7 @@ export interface ImageRecord {
     id: string;
     userId: string;
     imageUrl: string;
-    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece';
+    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'graphic-novel';
     createdAt: string;
     prompt?: string;
     favorite?: boolean;

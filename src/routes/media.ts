@@ -2317,4 +2317,35 @@ router.get('/proxy/image', async (req, res) => {
   }
 });
 
+/**
+ * Save Graphic Novel to User History
+ */
+router.post('/save-graphic-novel', async (req, res) => {
+  try {
+    const { userId, taskId, title, type, imageUrl, prompt, meta } = req.body;
+
+    if (!userId || !taskId) {
+      return res.status(400).json({ error: 'Missing userId or taskId' });
+    }
+
+    console.log(`[Media] Saving graphic novel ${taskId} for user ${userId}`);
+
+    // Save to database
+    await databaseService.saveImageRecord(
+      userId,
+      imageUrl || meta?.graphicNovel?.pages?.[0]?.imageUrl || '',
+      type || 'graphic-novel',
+      prompt || `Graphic novel - ${meta?.graphicNovel?.vibe || 'adventure'}`,
+      meta || {}
+    );
+
+    console.log(`[Media] Graphic novel saved successfully`);
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('[Media] Save graphic novel error:', error);
+    res.status(500).json({ error: 'Failed to save graphic novel' });
+  }
+});
+
 export default router;

@@ -642,7 +642,9 @@ Output JSON structure:
             'dance': { prompt: 'character dancing happily, rhythmic movement', motion: 0.8 },
             'run': { prompt: 'running fast, speed lines, hair blowing', motion: 0.8, camera: 'pan_right' },
             'fly': { prompt: 'flying in the sky, feet off ground', camera: 'pan_up' },
+            'swim': { prompt: 'swimming in water, flowing movement, bubbles', motion: 0.7 },
             'jump': { prompt: 'jumping up high, bouncing', motion: 0.9 },
+            'silly': { prompt: 'doing a silly dance, funny face, wiggling', motion: 0.8 },
             'laugh': { prompt: 'laughing out loud, moving head', camera: 'zoom_in' },
             'wink': { prompt: 'winking one eye, cute smile', camera: 'zoom_in' }
         };

@@ -77,6 +77,19 @@ export const AudioStoryPage: React.FC = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+    // Cleanup: Stop audio when leaving page
+    useEffect(() => {
+        return () => {
+            // Stop HTML5 audio
+            if (audioRef) {
+                audioRef.pause();
+                audioRef.currentTime = 0;
+            }
+            // Stop browser TTS
+            window.speechSynthesis.cancel();
+        };
+    }, [audioRef]);
+
     // Handlers
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

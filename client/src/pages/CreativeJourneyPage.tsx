@@ -25,6 +25,13 @@ export default function CreativeJourneyPage() {
     const [showFinale, setShowFinale] = useState(false);
     const [cropImage, setCropImage] = useState<string | null>(null);
 
+    // --- V2 Improvement Tracking ---
+    const [showV2Challenge, setShowV2Challenge] = useState(false);
+    const [v2UploadedImage, setV2UploadedImage] = useState<string | null>(null);
+    const [v2CropImage, setV2CropImage] = useState<string | null>(null);
+    const [improvementReport, setImprovementReport] = useState<any>(null);
+    const [analyzingImprovement, setAnalyzingImprovement] = useState(false);
+
     // --- Init: Load active series ---
     useEffect(() => {
         if (user) {
@@ -132,6 +139,79 @@ export default function CreativeJourneyPage() {
         } finally {
             setAnalyzing(false);
         }
+    };
+
+    // --- V2 Improvement Tracking Handlers ---
+    const handleV2ImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setV2CropImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    };
+
+    const handleV2CropComplete = (blob: Blob) => {
+        if (!v2CropImage) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setV2UploadedImage(reader.result as string);
+            setV2CropImage(null);
+        };
+        reader.readAsDataURL(blob);
+    };
+
+    const handleAnalyzeImprovement = async () => {
+        if (!uploadedImage || !v2UploadedImage || !series) return;
+
+        setAnalyzingImprovement(true);
+        setError(null);
+
+        try {
+            const lastIteration = series.chapters[series.chapters.length - 1];
+            const previousAdvice = lastIteration?.coachingFeedback?.advice?.actionableTask || "Improve your artwork";
+
+            const response = await fetch('/api/mentor/analyze-improvement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    originalImageBase64: uploadedImage,
+                    newImageBase64: v2UploadedImage,
+                    previousAdvice: previousAdvice
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.message || 'Improvement analysis failed');
+            }
+
+            setImprovementReport(data);
+
+            // Celebrate with confetti if score > 80
+            if (data.improvement_score > 80) {
+                // Add confetti animation here if you have a library
+                console.log('🎉 High score! Celebrate!');
+            }
+        } catch (err: any) {
+            setError(err.message || 'Failed to analyze improvement');
+        } finally {
+            setAnalyzingImprovement(false);
+        }
+    };
+
+    const handleKeepImproving = () => {
+        setV2UploadedImage(null);
+        setImprovementReport(null);
+    };
+
+    const handleFinalize = () => {
+        // Save the improved version and navigate to profile
+        navigate('/profile', { state: { tab: 'journey' } });
     };
 
     const handleFinaleAction = async (type: 'pdf' | 'video') => {
@@ -381,6 +461,16 @@ export default function CreativeJourneyPage() {
                             onContinue={handleContinue}
                             onResetUpload={() => setUploadedImage(null)}
                             error={error}
+                            v2UploadedImage={v2UploadedImage}
+                            onV2Upload={handleV2ImageUpload}
+                            onResetV2={() => setV2UploadedImage(null)}
+                            improvementReport={improvementReport}
+                            analyzingImprovement={analyzingImprovement}
+                            onAnalyzeImprovement={handleAnalyzeImprovement}
+                            onKeepImproving={handleKeepImproving}
+                            onFinalize={handleFinalize}
+                            showV2Challenge={showV2Challenge}
+                            onToggleV2Challenge={() => setShowV2Challenge(!showV2Challenge)}
                             key="flow"
                         />
                     )}
@@ -392,6 +482,15 @@ export default function CreativeJourneyPage() {
                     imageUrl={cropImage}
                     onCrop={handleCropComplete}
                     onCancel={() => setCropImage(null)}
+                    aspectRatio={1}
+                />
+            )}
+            {/* V2 Cropper Modal */}
+            {v2CropImage && (
+                <ImageCropperModal
+                    imageUrl={v2CropImage}
+                    onCrop={handleV2CropComplete}
+                    onCancel={() => setV2CropImage(null)}
                     aspectRatio={1}
                 />
             )}
@@ -464,7 +563,9 @@ function WelcomeSection({ onStart }: { onStart: () => void }) {
 }
 
 function JourneyFlow({
-    series, uploadedImage, analyzing, onUpload, onContinue, onResetUpload, error
+    series, uploadedImage, analyzing, onUpload, onContinue, onResetUpload, error,
+    v2UploadedImage, onV2Upload, onResetV2, improvementReport, analyzingImprovement,
+    onAnalyzeImprovement, onKeepImproving, onFinalize, showV2Challenge, onToggleV2Challenge
 }: any) {
     const currentStep = series.currentStep + 1;
     const isStepDone = uploadedImage !== null;
@@ -714,6 +815,153 @@ function JourneyFlow({
                 )}
             </motion.div>
 
+            {/* V2 Improvement Challenge Section */}
+            {coachingFeedback && uploadedImage && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[2.5rem] shadow-xl p-8 border-4 border-dashed border-purple-200"
+                >
+                    {!showV2Challenge ? (
+                        <div className="text-center">
+                            <div className="text-6xl mb-4">🚀</div>
+                            <h3 className="text-2xl font-black text-purple-900 mb-3">Ready for the Improvement Challenge?</h3>
+                            <p className="text-purple-600 mb-6 text-lg">
+                                Try following Magic Kat's suggestions and upload your improved drawing to see your progress!
+                            </p>
+                            <button
+                                onClick={onToggleV2Challenge}
+                                className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-full hover:shadow-2xl transition-all hover:scale-105"
+                            >
+                                ✨ Start Improvement Challenge
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-2xl font-black text-purple-900">📈 Improvement Challenge</h3>
+                                <button
+                                    onClick={onToggleV2Challenge}
+                                    className="text-purple-500 hover:text-purple-700 font-bold text-sm"
+                                >
+                                    ✕ Close
+                                </button>
+                            </div>
+
+                            {/* Split Screen: V1 vs V2 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Left: Original V1 */}
+                                <div className="bg-white rounded-2xl p-4 shadow-md">
+                                    <h4 className="text-sm font-black text-gray-500 uppercase mb-3 text-center">V1 - Original</h4>
+                                    {uploadedImage && (
+                                        <img src={uploadedImage} alt="V1" className="w-full aspect-square object-cover rounded-xl border-2 border-gray-200" />
+                                    )}
+                                    <div className="mt-3 text-xs text-gray-600 italic">
+                                        "{coachingFeedback.advice.actionableTask}"
+                                    </div>
+                                </div>
+
+                                {/* Right: V2 Upload or Growth Report */}
+                                <div className="bg-white rounded-2xl p-4 shadow-md">
+                                    {!v2UploadedImage ? (
+                                        <label className="w-full aspect-square bg-purple-50 rounded-xl border-4 border-dashed border-purple-200 flex flex-col items-center justify-center cursor-pointer hover:bg-purple-100 transition-all">
+                                            <input type="file" accept="image/*" onChange={onV2Upload} className="hidden" />
+                                            <Camera className="w-16 h-16 text-purple-400 mb-3" />
+                                            <span className="text-purple-900 font-black">Upload V2</span>
+                                            <span className="text-purple-500 text-xs mt-1">Try the suggestions!</span>
+                                        </label>
+                                    ) : (
+                                        <div className="relative">
+                                            <h4 className="text-sm font-black text-gray-500 uppercase mb-3 text-center">V2 - Improved</h4>
+                                            <img src={v2UploadedImage} alt="V2" className="w-full aspect-square object-cover rounded-xl border-2 border-purple-300" />
+                                            <button
+                                                onClick={onResetV2}
+                                                className="absolute top-0 right-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600"
+                                            >
+                                                ×
+                                            </button>
+
+                                            {/* Growth Report */}
+                                            {improvementReport && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    className="mt-4 bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border-4 border-green-200 shadow-lg"
+                                                >
+                                                    <div className="text-center">
+                                                        <h5 className="text-lg font-black text-green-800 mb-2">🎉 Growth Report</h5>
+                                                        <div className="text-7xl font-black text-green-600 mb-3">
+                                                            {improvementReport.improvement_score}%
+                                                        </div>
+                                                        <p className="text-green-900 font-bold text-sm mb-4">
+                                                            {improvementReport.feedback}
+                                                        </p>
+
+                                                        {/* Improvements Detected */}
+                                                        <div className="bg-white/60 rounded-xl p-4 mb-4">
+                                                            <h6 className="text-xs font-black text-green-700 uppercase mb-2">What You Improved:</h6>
+                                                            <ul className="space-y-1">
+                                                                {improvementReport.improvements_detected?.map((imp: string, idx: number) => (
+                                                                    <li key={idx} className="text-xs text-green-800 flex items-center gap-2">
+                                                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                                                        {imp}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+
+                                                        {/* Next Suggestion */}
+                                                        {improvementReport.next_suggestion && (
+                                                            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
+                                                                <p className="text-xs font-black text-yellow-800 uppercase mb-1">💡 Next Challenge:</p>
+                                                                <p className="text-sm text-yellow-900">{improvementReport.next_suggestion}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-4 justify-center flex-wrap">
+                                {v2UploadedImage && !improvementReport && (
+                                    <button
+                                        onClick={onAnalyzeImprovement}
+                                        disabled={analyzingImprovement}
+                                        className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-xl hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {analyzingImprovement ? (
+                                            <>🔄 Analyzing...</>
+                                        ) : (
+                                            <>✨ Analyze Improvement</>
+                                        )}
+                                    </button>
+                                )}
+                                {improvementReport && (
+                                    <>
+                                        <button
+                                            onClick={onKeepImproving}
+                                            className="px-6 py-3 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-all"
+                                        >
+                                            🔄 Keep Improving
+                                        </button>
+                                        <button
+                                            onClick={onFinalize}
+                                            className="px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all"
+                                        >
+                                            ✅ Use This One
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
+            )}
+
             {/* "Evolution" Gallery */}
             {series.chapters.length > 0 && (
                 <motion.div
@@ -837,9 +1085,9 @@ function AudioPlayer({ audioUrl }: { audioUrl: string }) {
             <div className="relative z-10 flex items-center justify-between gap-4">
                 <button
                     onClick={togglePlay}
-                    className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-md hover:scale-110 active:scale-95 transition-all"
+                    className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-md hover:scale-110 active:scale-95 transition-all"
                 >
-                    {isPlaying ? <Volume2 className="w-6 h-6 animate-pulse" /> : <Volume2 className="w-6 h-6" />}
+                    {isPlaying ? <Volume2 className="w-8 h-8 animate-pulse" /> : <Volume2 className="w-8 h-8" />}
                 </button>
 
                 <div className="flex-1">

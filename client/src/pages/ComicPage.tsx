@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, Star } from 'lucide-react';
+import { ArrowRight, Loader2, Star, Download, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { cn } from '../lib/utils';
@@ -9,6 +9,8 @@ import { AuthButton } from '../components/auth/AuthButton';
 import ImageModal, { type ImageRecord } from '../components/history/ImageModal';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { useAuth } from '../context/AuthContext';
+import { ShareDialog } from '../components/ShareDialog';
+import jsPDF from 'jspdf';
 
 import { ComicBuilderPanel, type ComicBuilderData } from '../components/builder/ComicBuilderPanel';
 import comicVideo from '../assets/comic.mp4';
@@ -27,8 +29,14 @@ export const ComicPage: React.FC = () => {
     const [progress, setProgress] = useState(0);
     const [expandedImage, setExpandedImage] = useState<ImageRecord | null>(null);
 
-    // Architecture C: Text-First Editable Overlays
     const [editableCaptions, setEditableCaptions] = useState<string[]>([]);
+
+    // Gallery for loading screen
+    const [publicGallery, setPublicGallery] = useState<any[]>([]);
+    const [galleryIndex, setGalleryIndex] = useState(0);
+
+    // Share dialog state
+    const [showShareDialog, setShowShareDialog] = useState(false);
 
     const goBack = () => {
         if (imageFile || imagePreview || resultData) {
@@ -93,6 +101,80 @@ export const ComicPage: React.FC = () => {
             sessionStorage.removeItem('comic-preview');
         };
     }, []);
+
+    // Load public comics for gallery
+    useEffect(() => {
+        fetch('/api/media/public?type=comic')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setPublicGallery(data);
+            })
+            .catch(err => console.error('Failed to load gallery:', err));
+    }, []);
+
+    // Gallery rotation during generation
+    useEffect(() => {
+        let interval: any;
+        if (step === 'generating' && publicGallery.length > 0) {
+            interval = setInterval(() => {
+                setGalleryIndex(prev => (prev + 1) % publicGallery.length);
+            }, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [step, publicGallery]);
+
+    // PDF Export Function
+    const handleExportPDF = async () => {
+        if (!resultData) return;
+
+        try {
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const imageUrl = resultData.gridImageUrl || resultData.coverImageUrl || resultData.pages?.[0]?.imageUrl;
+            if (!imageUrl) {
+                alert('No image found to export');
+                return;
+            }
+
+            // Add title
+            pdf.setFontSize(20);
+            pdf.text('My Magic Comic', 105, 20, { align: 'center' });
+
+            // Load and add image
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = imageUrl;
+
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+
+            // Calculate dimensions to fit on page
+            const maxWidth = 180;
+            const maxHeight = 250;
+            let width = img.width;
+            let height = img.height;
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width *= ratio;
+            height *= ratio;
+
+            const x = (210 - width) / 2; // Center horizontally
+            const y = 30; // Start below title
+
+            pdf.addImage(img, 'PNG', x, y, width, height);
+
+            // Save PDF
+            pdf.save(`kidsartoon-comic-${Date.now()}.pdf`);
+        } catch (error) {
+            console.error('PDF export failed:', error);
+            alert('Failed to export PDF. Please try again.');
+        }
+    };
 
     const [cropImage, setCropImage] = useState<string | null>(null);
 
@@ -441,8 +523,8 @@ export const ComicPage: React.FC = () => {
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setStep('upload');
-                                        setResultData(null); // Clear Persistence
-                                        setAiReview({ loading: false, text: null, shown: false }); // Clear Review State
+                                        setResultData(null);
+                                        setAiReview({ loading: false, text: null, shown: false });
                                         sessionStorage.removeItem('comic-result');
                                         sessionStorage.removeItem('comic-review');
                                     }}
@@ -451,10 +533,23 @@ export const ComicPage: React.FC = () => {
                                     Make Another
                                 </button>
                                 <button
+                                    onClick={handleExportPDF}
+                                    className="bg-green-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                                >
+                                    <Download className="w-5 h-5" />
+                                    Save as PDF
+                                </button>
+                                <button
+                                    onClick={() => setShowShareDialog(true)}
+                                    className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                >
+                                    <Share2 className="w-5 h-5" />
+                                    Share
+                                </button>
+                                <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        // Prioritize the first panel for animation to avoid "4 grid" video artifact.
-                                        // User wants a cinematic animation, not an animated grid.
+                                        // Prioritize the first panel for animation
                                         const remixUrl = resultData.pages?.[0]?.imageUrl || resultData.gridImageUrl || resultData.coverImageUrl;
                                         if (remixUrl) {
                                             navigate('/generate/video', { state: { remixImage: remixUrl } });
@@ -472,11 +567,16 @@ export const ComicPage: React.FC = () => {
                                     Play Puzzle
                                 </button>
                                 <button
-                                    onClick={handleAiReview}
+                                    onClick={() => {
+                                        // Navigate to creative journey with uploaded image
+                                        if (imagePreview) {
+                                            navigate('/creative-journey', { state: { uploadedImage: imagePreview } });
+                                        }
+                                    }}
                                     className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 hover:brightness-110 transition-colors"
                                 >
                                     <Star className="w-5 h-5 fill-current" />
-                                    Rate It!
+                                    Ask Art Teacher
                                 </button>
                             </div>
 
@@ -524,7 +624,7 @@ export const ComicPage: React.FC = () => {
                         </motion.div>
                     )}
 
-                    {/* State 2: Generating (Loading) */}
+                    {/* State 2: Generating (Loading with Gallery) */}
                     {step === 'generating' && (
                         <motion.div key="loading"
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -537,6 +637,26 @@ export const ComicPage: React.FC = () => {
                             <div className="w-48 h-3 bg-slate-200 rounded-full mt-4 overflow-hidden relative">
                                 <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.round(progress)}%` }} />
                             </div>
+
+                            {/* Gallery Display */}
+                            {publicGallery.length > 0 && (
+                                <div className="mt-8 w-full max-w-md">
+                                    <p className="text-sm text-slate-600 font-medium text-center mb-4">While you wait, check out other comics! 🎨</p>
+                                    <motion.div
+                                        key={galleryIndex}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="relative aspect-square rounded-2xl overflow-hidden shadow-lg"
+                                    >
+                                        <img
+                                            src={publicGallery[galleryIndex]?.imageUrl || publicGallery[galleryIndex]?.gridImageUrl}
+                                            alt="Gallery Comic"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </motion.div>
+                                </div>
+                            )}
 
                             <div className="mt-8">
                                 <GenerationCancelButton
@@ -621,6 +741,15 @@ export const ComicPage: React.FC = () => {
                     aspectRatio={1}
                 />
             )}
+
+            {/* Share Dialog */}
+            <ShareDialog
+                isOpen={showShareDialog}
+                onClose={() => setShowShareDialog(false)}
+                imageUrl={resultData?.gridImageUrl || resultData?.coverImageUrl || resultData?.pages?.[0]?.imageUrl || ''}
+                title="Magic Comic"
+            />
+
             <BottomNav />
         </div >
     );

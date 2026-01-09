@@ -91,6 +91,7 @@ import { router as videoRouter } from './routes/video.js';
 import { router as checkinRouter } from './routes/checkin.js';
 import mentorRouter from './routes/mentor.js';
 import referralRouter from './routes/referral.js'; // New Import
+import graphicNovelRouter from './routes/graphicNovel.js'; // Graphic Novel
 import { optionalApiKeyAuth } from './middleware/auth.js';
 
 // --- Health Check (Highest Priority for load balancers) ---
@@ -113,6 +114,7 @@ app.use('/api/picturebook', pictureBookRouter);
 // Removed: /api/masterpiece (duplicated by /api/mentor)
 app.use('/api/mentor', mentorRouter);
 app.use('/api/referral', referralRouter); // New Referral Router
+app.use('/api/graphic-novel', graphicNovelRouter); // Graphic Novel Routes
 
 // AI Related
 const aiRouter = express.Router();

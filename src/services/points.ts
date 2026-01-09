@@ -24,6 +24,12 @@ export const POINTS_COSTS: Record<string, number> = {
     'picture_book_12': POINT_COSTS.PICTURE_BOOK_12,
     'premium_voice_extra': POINT_COSTS.PREMIUM_VOICE_ADDITIONAL,
 
+    // Graphic Novel - Creator's Studio
+    'ai_asset_coaching': 5,    // Optional AI review per asset
+    'graphic_novel_4': 100,   // 4 pages, short story
+    'graphic_novel_8': 180,   // 8 pages, epic tale  
+    'graphic_novel_12': 250,  // 12 pages, masterpiece
+
     // Legacy mapping support
     'generate_audio_story': 25, // Standard story with OpenAI TTS
     'generate_audio_story_premium': 25 + POINT_COSTS.PREMIUM_VOICE_ADDITIONAL, // Story with ElevenLabs
@@ -102,9 +108,12 @@ export class PointsService {
                 const userData = userDoc.data() || {};
                 const currentPoints = userData.points || 0;
 
-                // ADMIN BYPASS: Users with 10000+ points are admins and don't consume points
-                if (currentPoints >= 10000) {
-                    console.log(`[Points] ADMIN BYPASS: User ${userId} has ${currentPoints} points (admin). Skipping deduction.`);
+                // ADMIN BYPASS: Users with 10000+ points OR admin emails are admins and don't consume points
+                const userEmail = userData.email || '';
+                const isAdminEmail = userEmail.includes('cxddong');
+
+                if (currentPoints >= 10000 || isAdminEmail) {
+                    console.log(`[Points] ADMIN BYPASS: User ${userId} (${userEmail}) - Points: ${currentPoints}, Admin Email: ${isAdminEmail}. Skipping deduction.`);
                     return { success: true, before: currentPoints, after: currentPoints };
                 }
 

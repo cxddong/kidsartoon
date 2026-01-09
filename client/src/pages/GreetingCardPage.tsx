@@ -331,35 +331,36 @@ export const GreetingCardPage = () => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!recognitionRef.current) {
             recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = true;
-            recognitionRef.current.interimResults = true;
+            recognitionRef.current.continuous = false; // FIXED: Changed from true to false to prevent duplicates
+            recognitionRef.current.interimResults = false; // FIXED: Changed to false for cleaner results
             recognitionRef.current.lang = 'en-US';
 
             recognitionRef.current.onresult = (event: any) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript + ' ';
-                    } else {
-                        interimTranscript += transcript;
+                // FIXED: Only get final result from the latest recognition
+                if (event.results.length > 0) {
+                    const result = event.results[event.results.length - 1];
+                    if (result.isFinal) {
+                        const transcript = result[0].transcript;
+                        setCustomMessage(prev => {
+                            const spacer = prev && !prev.endsWith(' ') && !prev.endsWith('\n') ? ' ' : '';
+                            return prev + spacer + transcript;
+                        });
                     }
-                }
-
-                if (finalTranscript) {
-                    setCustomMessage(prev => prev + finalTranscript);
                 }
             };
 
             recognitionRef.current.onerror = (event: any) => {
                 console.error('Speech recognition error:', event.error);
                 setIsListeningMessage(false);
+                if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                    alert(`Voice input error: ${event.error}`);
+                }
             };
 
             recognitionRef.current.onend = () => {
                 setIsListeningMessage(false);
+                // Auto-restart if still supposed to be listening (for continuous feel)
+                // But this is now managed by user clicking again
             };
         }
 
@@ -834,8 +835,8 @@ export const GreetingCardPage = () => {
                             </div>
                         </div>
 
-                        {/* Slot 2: Photo (Optional - Selfie Only) */}
-                        <div className="w-full md:w-1/3 space-y-3">
+                        {/* Slot 2: Photo (Optional - Selfie Only) - ENLARGED */}
+                        <div className="w-full md:w-2/5 space-y-3">
                             <label className="block text-base font-bold text-slate-700 text-center">Put Yourself Into the Card</label>
                             <div className="relative w-full aspect-square bg-white/20 backdrop-blur-md rounded-[2rem] border-4 border-dashed border-slate-200 hover:border-pink-400 transition-colors overflow-hidden group shadow-sm">
                                 {photo ? (
@@ -863,7 +864,7 @@ export const GreetingCardPage = () => {
                     {/* Hidden Inputs */}
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'drawing')} />
 
-                    {/* NEW: Selfie Mode Toggle */}
+                    {/* NEW: Selfie Mode - Both Options Visible */}
                     {photo && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-top-4 bg-purple-50 p-6 rounded-3xl border border-purple-100 shadow-inner">
                             <h3 className="text-lg font-bold text-purple-900 flex items-center justify-center gap-2">
@@ -871,121 +872,91 @@ export const GreetingCardPage = () => {
                                 Selfie Mode
                             </h3>
 
-                            {/* Mode Toggle */}
-                            <div className="flex gap-2 p-1 bg-white rounded-2xl shadow-sm">
-                                <button
-                                    onClick={() => handleSelfieModeSwitch('filter')}
-                                    className={cn(
-                                        "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2",
-                                        selfieMode === 'filter'
-                                            ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md scale-105"
-                                            : "text-slate-600 hover:bg-slate-50"
-                                    )}
-                                >
-                                    <span className="text-lg">✨</span>
-                                    Style Me
-                                </button>
-                                <button
-                                    onClick={() => handleSelfieModeSwitch('cosplay')}
-                                    className={cn(
-                                        "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2",
-                                        selfieMode === 'cosplay'
-                                            ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md scale-105"
-                                            : "text-slate-600 hover:bg-slate-50"
-                                    )}
-                                >
-                                    <span className="text-lg">🎭</span>
-                                    Cosplay
-                                </button>
+                            {/* Filter Options - Always Visible */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-blue-600 uppercase tracking-widest block text-center flex items-center justify-center gap-2">
+                                    <span className="text-lg">✨</span> Style Me - Art Filter
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {FILTERS.map(f => (
+                                        <button
+                                            key={f.id}
+                                            onClick={() => setSelectedFilter(f)}
+                                            className={cn(
+                                                "relative aspect-square rounded-xl overflow-hidden border-2 transition-all group",
+                                                selectedFilter.id === f.id
+                                                    ? "border-blue-500 shadow-md transform scale-105 ring-2 ring-blue-200"
+                                                    : "border-transparent bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-200"
+                                            )}
+                                        >
+                                            {(f as any).image ? (
+                                                <img src={(f as any).image} className="w-full h-full object-cover" alt={f.label} />
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center w-full h-full gap-1">
+                                                    <span className="text-2xl">{f.icon}</span>
+                                                    <span className="text-[10px] font-bold">{f.label.split(' ')[0]}</span>
+                                                </div>
+                                            )}
+
+                                            {(f as any).image && (
+                                                <div className="absolute bottom-0 inset-x-0 p-1 bg-black/50 text-white text-[10px] font-bold text-center truncate">
+                                                    {f.label}
+                                                </div>
+                                            )}
+
+                                            {selectedFilter.id === f.id && (
+                                                <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-0.5 shadow-md">
+                                                    <Check className="w-3 h-3" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Filter Mode Options */}
-                            {selfieMode === 'filter' && (
-                                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                    <label className="text-xs font-bold text-blue-600 uppercase tracking-widest block text-center">Art Filter</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {FILTERS.map(f => (
-                                            <button
-                                                key={f.id}
-                                                onClick={() => setSelectedFilter(f)}
-                                                className={cn(
-                                                    "relative aspect-square rounded-xl overflow-hidden border-2 transition-all group",
-                                                    selectedFilter.id === f.id
-                                                        ? "border-blue-500 shadow-md transform scale-105 ring-2 ring-blue-200"
-                                                        : "border-transparent bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-200"
-                                                )}
-                                            >
-                                                {(f as any).image ? (
-                                                    <img src={(f as any).image} className="w-full h-full object-cover" alt={f.label} />
-                                                ) : (
-                                                    <div className="flex flex-col items-center justify-center w-full h-full gap-1">
-                                                        <span className="text-2xl">{f.icon}</span>
-                                                        <span className="text-[10px] font-bold">{f.label.split(' ')[0]}</span>
+                            {/* Cosplay Options - Always Visible */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-pink-600 uppercase flex items-center justify-center gap-2">
+                                    <span className="text-lg">🎭</span> <Wand2 className="w-3 h-3" /> Cosplay - Be a Character
+                                </label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {SELFIE_ROLES.map(role => (
+                                        <button
+                                            key={role.id}
+                                            onClick={() => setSelectedSelfieRole(role)}
+                                            className={cn(
+                                                "relative aspect-square rounded-xl overflow-hidden border-2 transition-all group",
+                                                selectedSelfieRole.id === role.id
+                                                    ? "border-pink-600 shadow-lg ring-2 ring-pink-400 ring-offset-2 scale-105"
+                                                    : "border-transparent hover:border-pink-300 hover:shadow-md"
+                                            )}
+                                        >
+                                            {role.image ? (
+                                                <img src={role.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={role.label} />
+                                            ) : (
+                                                <div className="w-full h-full bg-indigo-50 flex items-center justify-center">
+                                                    <div className="bg-white p-2 rounded-full shadow-sm">
+                                                        <User className="w-6 h-6 text-indigo-400" />
                                                     </div>
-                                                )}
-
-                                                {(f as any).image && (
-                                                    <div className="absolute bottom-0 inset-x-0 p-1 bg-black/50 text-white text-[10px] font-bold text-center truncate">
-                                                        {f.label}
-                                                    </div>
-                                                )}
-
-                                                {selectedFilter.id === f.id && (
-                                                    <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-0.5 shadow-md">
-                                                        <Check className="w-3 h-3" />
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Cosplay Mode Options */}
-                            {selfieMode === 'cosplay' && (
-                                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                    <label className="text-xs font-bold text-pink-600 uppercase flex items-center justify-center gap-2">
-                                        <Wand2 className="w-3 h-3" /> Be a Character
-                                    </label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {SELFIE_ROLES.map(role => (
-                                            <button
-                                                key={role.id}
-                                                onClick={() => setSelectedSelfieRole(role)}
-                                                className={cn(
-                                                    "relative aspect-square rounded-xl overflow-hidden border-2 transition-all group",
-                                                    selectedSelfieRole.id === role.id
-                                                        ? "border-pink-600 shadow-lg ring-2 ring-pink-400 ring-offset-2 scale-105"
-                                                        : "border-transparent hover:border-pink-300 hover:shadow-md"
-                                                )}
-                                            >
-                                                {role.image ? (
-                                                    <img src={role.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={role.label} />
-                                                ) : (
-                                                    <div className="w-full h-full bg-indigo-50 flex items-center justify-center">
-                                                        <div className="bg-white p-2 rounded-full shadow-sm">
-                                                            <User className="w-6 h-6 text-indigo-400" />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <div className={cn(
-                                                    "absolute bottom-0 inset-x-0 p-1.5 text-[10px] font-bold text-center truncate backdrop-blur-md transition-colors",
-                                                    role.image ? "bg-black/50 text-white group-hover:bg-black/60" : "bg-indigo-100/80 text-indigo-700"
-                                                )}>
-                                                    {role.label}
                                                 </div>
+                                            )}
 
-                                                {selectedSelfieRole.id === role.id && (
-                                                    <div className="absolute top-2 right-2 bg-pink-600 text-white rounded-full p-0.5 shadow-md z-10">
-                                                        <Check className="w-3 h-3" />
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
+                                            <div className={cn(
+                                                "absolute bottom-0 inset-x-0 p-1.5 text-[10px] font-bold text-center truncate backdrop-blur-md transition-colors",
+                                                role.image ? "bg-black/50 text-white group-hover:bg-black/60" : "bg-indigo-100/80 text-indigo-700"
+                                            )}>
+                                                {role.label}
+                                            </div>
+
+                                            {selectedSelfieRole.id === role.id && (
+                                                <div className="absolute top-2 right-2 bg-pink-600 text-white rounded-full p-0.5 shadow-md z-10">
+                                                    <Check className="w-3 h-3" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     )}
                 </section>
@@ -999,7 +970,7 @@ export const GreetingCardPage = () => {
 
                     {/* 0. Occasion/Festival (Smart System) */}
                     <div className="space-y-3">
-                        <label className="text-sm font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Occasion</label>
+                        <label className="text-lg font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Occasion</label>
 
                         {/* Main Occasions Grid */}
                         <div className="grid grid-cols-4 gap-3">
@@ -1012,7 +983,7 @@ export const GreetingCardPage = () => {
                                         className={cn(
                                             "aspect-square p-2 rounded-2xl font-bold text-xs border transition-all flex flex-col items-center justify-center text-center relative overflow-hidden",
                                             selectedOccasion.id === occ.id
-                                                ? (isSeasonal ? "border-red-500 ring-2 ring-red-200 scale-105" : "border-pink-500 scale-105")
+                                                ? (isSeasonal ? "border-4 border-red-500 ring-4 ring-red-300 scale-105" : "border-4 border-pink-500 ring-4 ring-pink-300 scale-105")
                                                 : "border-slate-200 hover:border-slate-400 hover:scale-[1.02]",
                                             (occ as any).image ? "bg-cover bg-center text-white shadow-md" : "bg-white text-slate-600 shadow-sm"
                                         )}
@@ -1107,7 +1078,7 @@ export const GreetingCardPage = () => {
 
                     {/* 1. Art Style */}
                     <div className="space-y-4">
-                        <label className="text-sm font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Art Style</label>
+                        <label className="text-lg font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Art Style</label>
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                             {ART_STYLES.map(style => (
                                 <button
@@ -1137,7 +1108,7 @@ export const GreetingCardPage = () => {
                     <div className="space-y-6 bg-white/50 p-6 rounded-2xl border border-slate-100">
                         {/* A. Frame */}
                         <div className="space-y-4">
-                            <label className="text-xs font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] uppercase tracking-widest block text-center">Card Frame</label>
+                            <label className="text-base font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] uppercase tracking-widest block text-center">Card Frame</label>
                             <div className="grid grid-cols-3 gap-2">
                                 {CARD_FRAMES.map(frame => (
                                     <button
@@ -1165,7 +1136,7 @@ export const GreetingCardPage = () => {
 
                         {/* B. Stickers */}
                         <div className="space-y-4">
-                            <label className="text-xs font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] uppercase tracking-widest block text-center">Stickers</label>
+                            <label className="text-base font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] uppercase tracking-widest block text-center">Stickers</label>
                             <div className="grid grid-cols-4 gap-2">
                                 {ALL_STICKERS.map(sticker => {
                                     const isSelected = selectedStickers.includes(sticker.id);
@@ -1215,7 +1186,7 @@ export const GreetingCardPage = () => {
 
                         {/* C. Text Style */}
                         <div className="space-y-4">
-                            <label className="text-xs font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] uppercase tracking-widest block text-center">Text Style</label>
+                            <label className="text-base font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] uppercase tracking-widest block text-center">Text Style</label>
                             <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
                                 {TEXT_STYLES.map(style => (
                                     <button
@@ -1258,7 +1229,7 @@ export const GreetingCardPage = () => {
 
                     {/* 3. Recipient */}
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Who is this for?</label>
+                        <label className="text-lg font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Who is this for?</label>
                         <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                             {RECIPIENTS.map(rec => (
                                 <button
@@ -1266,7 +1237,7 @@ export const GreetingCardPage = () => {
                                     onClick={() => setRecipientSelection(rec.id)}
                                     className={cn(
                                         "aspect-square p-2 rounded-2xl font-bold text-sm border transition-all flex flex-col items-center justify-center text-center gap-1",
-                                        recipientSelection === rec.id ? "bg-blue-100 text-blue-700 border-blue-200 scale-105 shadow-sm" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                        recipientSelection === rec.id ? "bg-blue-100 text-blue-700 border-4 border-blue-500 ring-4 ring-blue-300 scale-105 shadow-lg" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
                                     )}
                                 >
                                     <span className="text-2xl">👤</span>
@@ -1289,7 +1260,7 @@ export const GreetingCardPage = () => {
 
                     {/* 4. Warm Wishes */}
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Warm Wishes</label>
+                        <label className="text-lg font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] block text-center">Warm Wishes</label>
                         <div className="relative">
                             <textarea
                                 placeholder="Write your blessing here..."

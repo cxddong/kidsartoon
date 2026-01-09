@@ -32,6 +32,8 @@ import OnboardingStartPage from './pages/onboarding/OnboardingStartPage';
 import { MakeCartoonPage } from './pages/MakeCartoonPage';
 // Removed: MasterpieceMatchPage (duplicated by CreativeJourneyPage)
 import CreativeJourneyPage from './pages/CreativeJourneyPage';
+import { GraphicNovelBuilderPage } from './pages/GraphicNovelBuilderPage';
+import { GraphicNovelReaderPage } from './pages/GraphicNovelReaderPage';
 
 
 // Protected Route Wrapper
@@ -60,7 +62,7 @@ const AppRoutes = () => {
       <Route path="/onboarding/start" element={<OnboardingStartPage />} />
 
       {/* Public Pages */}
-      <Route path="/" element={<GeneratePage />} />
+      <Route path="/" element={<SplashPage />} />
       <Route path="/home" element={<GeneratePage />} />
       <Route path="/community" element={<HomePage />} />
       <Route path="/splash" element={<SplashPage />} />
@@ -97,6 +99,8 @@ const AppRoutes = () => {
         <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
         {/* Removed: masterpiece-match route (duplicated by creative-journey) */}
         <Route path="/creative-journey" element={<CreativeJourneyPage />} />
+        <Route path="/graphic-novel/builder" element={<GraphicNovelBuilderPage />} />
+        <Route path="/graphic-novel/reader/:id" element={<GraphicNovelReaderPage />} />
 
       </Route>
 

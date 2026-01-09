@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { jellyPopVariants, jellyPopContainer } from '../lib/animations';
 import { BottomNav } from '../components/BottomNav';
+import { useAuth } from '../context/AuthContext';
+import { X } from 'lucide-react';
 
 // Assets
 import audioVideo from '../assets/mic3.mp4';
@@ -13,10 +15,35 @@ import comicVideo from '../assets/comic.mp4';
 import greetingCardVideo from '../assets/greeting_card1.mp4';
 import mentorVideo from '../assets/mentor journey.mp4';
 import bookVideo from '../assets/book.mp4';
-import customBg from '../assets/generate_background_custom.jpg';
+import homepageBg from '../assets/homepage.mp4';
 
 export const GeneratePage: React.FC = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    // Debug Panel State
+    const [showDebugPanel, setShowDebugPanel] = useState(false);
+    const [generatedCode, setGeneratedCode] = useState('');
+    const [generating, setGenerating] = useState(false);
+    const isAdmin = user?.email === 'cxddongdong@gmail.com' || user?.plan === 'admin';
+
+    const handleGenerateInviteCode = async () => {
+        setGenerating(true);
+        try {
+            const code = `KAT${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            setGeneratedCode(code);
+            alert(`✅ Generated Code: ${code}\n\nThis code can be used for free access!`);
+        } catch (err) {
+            alert('Failed to generate code');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        alert('Copied to clipboard!');
+    };
 
     const handleNavigation = (path: string, state?: any) => {
         navigate(path, { state });
@@ -24,12 +51,55 @@ export const GeneratePage: React.FC = () => {
 
     return (
         <div className="relative w-full h-screen overflow-hidden bg-[#F0F4F8] flex flex-col">
+            {/* Admin Debug Panel */}
+            {isAdmin && (
+                <div className="fixed top-4 right-4 z-50">
+                    {!showDebugPanel ? (
+                        <button onClick={() => setShowDebugPanel(true)} className="px-4 py-2 bg-red-500 text-white rounded-full shadow-lg font-bold text-xs hover:bg-red-600 animate-pulse">🔧 DEBUG</button>
+                    ) : (
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl p-6 w-80 border-4 border-red-500">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-black text-red-500">🔧 ADMIN DEBUG</h3>
+                                <button onClick={() => setShowDebugPanel(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="p-4 bg-yellow-50 rounded-xl border-2 border-yellow-400">
+                                    <div className="font-bold text-yellow-900 mb-2">🎁 Free Invite Code</div>
+                                    <button onClick={handleGenerateInviteCode} disabled={generating} className="w-full py-2 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 disabled:opacity-50">
+                                        {generating ? 'Generating...' : '➕ Generate Code'}
+                                    </button>
+                                    {generatedCode && (
+                                        <div className="mt-3 p-3 bg-white rounded-lg border-2 border-yellow-300">
+                                            <div className="text-xs text-gray-600 mb-1">Generated Code:</div>
+                                            <div className="flex items-center justify-between">
+                                                <code className="font-mono font-bold text-yellow-900">{generatedCode}</code>
+                                                <button onClick={() => copyToClipboard(generatedCode)} className="px-2 py-1 bg-yellow-400 text-white text-xs rounded hover:bg-yellow-500">Copy</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-400">
+                                    <div className="font-bold text-blue-900 mb-2">👤 User Info</div>
+                                    <div className="text-xs space-y-1">
+                                        <div><span className="text-gray-600">Email:</span> <code className="text-blue-900">{user?.email}</code></div>
+                                        <div><span className="text-gray-600">Points:</span> <code className="text-blue-900">{user?.points || 0}</code></div>
+                                        <div><span className="text-gray-600">Plan:</span> <code className="text-blue-900">{user?.plan || 'free'}</code></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            )}
 
-            {/* Custom Background Image */}
+            {/* Video Background */}
             <div className="absolute inset-0 z-0">
-                <img
-                    src={customBg}
-                    alt="Background"
+                <video
+                    src={homepageBg}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
                     className="w-full h-full object-cover opacity-100"
                 />
             </div>
@@ -141,6 +211,21 @@ export const GeneratePage: React.FC = () => {
                         <div className="flex flex-col items-center leading-tight">
                             <span className="text-sm md:text-xl font-black text-slate-700 drop-shadow-sm tracking-wider">PICTURE</span>
                             <span className="text-sm md:text-xl font-black text-slate-700 drop-shadow-sm tracking-wider">BOOK</span>
+                        </div>
+                    </motion.button>
+
+                    {/* Graphic Novel (NEW) */}
+                    <motion.button
+                        variants={jellyPopVariants}
+                        onClick={() => handleNavigation('/graphic-novel/builder')}
+                        className="flex flex-col items-center gap-2 md:gap-3 group relative"
+                    >
+                        <div className="w-28 h-28 md:w-40 md:h-36 rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-lg border-4 border-white/30 transform transition-all group-hover:scale-105 group-active:scale-95">
+                            <div className="text-5xl md:text-6xl">📗</div>
+                        </div>
+                        <div className="flex flex-col items-center leading-tight">
+                            <span className="text-xs md:text-lg font-black text-slate-700 drop-shadow-sm tracking-wider">GRAPHIC</span>
+                            <span className="text-xs md:text-lg font-black text-slate-700 drop-shadow-sm tracking-wider">NOVEL</span>
                         </div>
                     </motion.button>
                 </div>

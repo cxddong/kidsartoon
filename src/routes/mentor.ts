@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { databaseService } from '../services/database.js';
 import { magicMentorService } from '../services/mentor.js';
+import { geminiService } from '../services/gemini.js';
 import { MentorStepRequest } from '../types/mentor.js';
 
 const router = Router();
@@ -55,6 +56,42 @@ router.get('/active/:userId', async (req, res) => {
         res.json({ success: true, series });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+/**
+ * POST /api/mentor/analyze-improvement
+ * Masterpiece Match V2: Compare two images (V1 vs V2) and analyze improvement
+ */
+router.post('/analyze-improvement', async (req, res) => {
+    try {
+        const { originalImageBase64, newImageBase64, previousAdvice } = req.body;
+
+        if (!originalImageBase64 || !newImageBase64) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: originalImageBase64, newImageBase64'
+            });
+        }
+
+        console.log('[Mentor Route] Analyzing improvement between V1 and V2...');
+
+        const improvementReport = await geminiService.analyzeImprovement(
+            originalImageBase64,
+            newImageBase64,
+            previousAdvice || "Try to improve your artwork"
+        );
+
+        res.json({
+            success: true,
+            ...improvementReport
+        });
+    } catch (error: any) {
+        console.error('[Mentor Route] Error analyzing improvement:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to analyze improvement'
+        });
     }
 });
 

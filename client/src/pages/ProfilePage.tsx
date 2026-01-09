@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Crown, Edit2, Grid, Clock, Star, List, LogOut, Home, Heart, Mic, Search, Sparkles, CloudUpload, Trash2, X, CheckCircle } from 'lucide-react';
+import { Settings, Crown, Edit2, Grid, Clock, Star, List, LogOut, Home, Heart, Mic, Search, Sparkles, CloudUpload, Trash2, X, CheckCircle, BookOpen } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,7 @@ import ImageModal, { type ImageRecord } from '../components/history/ImageModal';
 import { motion } from 'framer-motion';
 import { StoryBookViewer } from '../components/viewer/StoryBookViewer';
 import PictureBookReader from '../components/viewer/PictureBookReader';
+import { GraphicNovelViewer } from '../components/viewer/GraphicNovelViewer';
 import { BottomNav } from '../components/BottomNav';
 
 import profileLeftVideo from '../assets/profileleft.mp4';
@@ -29,9 +30,10 @@ export const ProfilePage: React.FC = () => {
     const [images, setImages] = useState<ImageRecord[]>([]);
     const [loadingImages, setLoadingImages] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [activeTab, setActiveTab] = useState<'works' | 'journey' | 'likes'>('works');
+    const [activeTab, setActiveTab] = useState<'works' | 'journey' | 'graphic-novels' | 'likes'>('works');
     const [selectedImage, setSelectedImage] = useState<ImageRecord | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [searchExpanded, setSearchExpanded] = useState(false);
 
     // Deletion State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -153,259 +155,219 @@ export const ProfilePage: React.FC = () => {
     const filteredImages = React.useMemo(() => {
         if (activeTab === 'likes') return images; // API already returns likes
         if (activeTab === 'journey') return images.filter(img => img.type === 'masterpiece');
+        if (activeTab === 'graphic-novels') return images.filter(img => img.type === 'graphic-novel');
         // Works: Show everything else (generated, story, comic, animation, picturebook, upload)
-        return images.filter(img => img.type !== 'masterpiece');
+        return images.filter(img => img.type !== 'masterpiece' && img.type !== 'graphic-novel');
     }, [images, activeTab]);
 
     return (
-        <div className="h-screen w-full flex flex-col md:flex-row relative overflow-hidden bg-[#F0F4F8]">
-            {/* Background elements */}
-            <div className="fixed inset-0 z-0">
-                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-200/30 rounded-full blur-[100px]" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-200/30 rounded-full blur-[100px]" />
-            </div>
-
-            {/* Left Panel - Profile & Nav */}
-            <div className="w-full md:w-[320px] lg:w-[380px] bg-white relative z-20 shadow-2xl flex flex-col h-full overflow-hidden border-r border-slate-100">
-
-                {/* Profile Header Video Background */}
-                <div className="relative h-48 w-full overflow-hidden">
-                    <video
-                        src={profileLeftVideo}
-                        autoPlay
-                        loop
-                        muted
-                        className="w-full h-full object-cover"
-                    />
-
-                    {/* Logout Button (Top Left) */}
-                    <button
-                        onClick={logout}
-                        className="absolute top-4 left-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all border border-white/20 group"
-                    >
-                        <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                    </button>
-
-                    {/* Edit Profile Button (Top Right) */}
-                    <button
-                        onClick={() => navigate('/edit-profile')}
-                        className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all border border-white/20"
-                    >
-                        <Settings className="w-4 h-4" />
-                    </button>
-
-                    {/* User Info Overlay */}
-                    <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
-                        <div className="flex flex-col">
-                            <h2 className="text-2xl font-black text-white drop-shadow-md">{user?.name || 'Artist'}</h2>
-                            <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded-full border border-yellow-200 shadow-sm flex items-center gap-1">
-                                    <Crown className="w-3 h-3" /> {user?.plan === 'pro' ? 'Pro Artist' : 'Ready to Create'}
+        <div className="h-screen w-full flex flex-col relative overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50">
+            {/* Clean Header with User Info - Top Left */}
+            <div className="relative w-full bg-white border-b border-slate-200 shadow-sm">
+                <div className="max-w-[1600px] mx-auto px-8 py-6 flex items-start gap-6">
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
+                        {user?.photoURL ? (
+                            <img
+                                src={user.photoURL}
+                                alt={user?.name || 'User'}
+                                className="w-28 h-28 rounded-full border-4 border-blue-500 shadow-lg object-cover"
+                            />
+                        ) : (
+                            <div className="w-28 h-28 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center border-4 border-blue-500 shadow-lg">
+                                <span className="text-white text-5xl font-black">
+                                    {(user?.name || 'A').charAt(0).toUpperCase()}
                                 </span>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Profile Content */}
-                <div className="flex-1 overflow-y-auto p-6">
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-2 mb-8">
-                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col items-center">
-                            <span className="text-2xl font-black text-slate-800">{images.length}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Works</span>
-                        </div>
-                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col items-center">
-                            <span className="text-2xl font-black text-slate-800">{images.filter(i => i.favorite).length}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Likes</span>
-                        </div>
-                        <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100 flex flex-col items-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-yellow-200/20 blur-xl"></div>
-                            <span className="text-2xl font-black text-amber-600 relative z-10">{user?.points || 0}</span>
-                            <span className="text-[10px] font-bold text-amber-500 uppercase relative z-10">Points</span>
-                        </div>
+                        )}
                     </div>
 
-                    {/* Navigation Menu (Desktop Sidebar Mode) */}
-                    <div className="hidden md:flex flex-col gap-2 mb-8">
-                        <h3 className="text-xs font-bold text-slate-300 uppercase mb-2 ml-2 tracking-wider">Menu</h3>
+                    {/* User Info + Action Buttons */}
+                    <div className="flex-1">
+                        {/* Username */}
+                        <h2 className="text-3xl font-black text-slate-800 mb-1">
+                            {user?.name || 'Artist'}
+                        </h2>
 
-                        <button onClick={() => navigate('/home')} className="flex items-center gap-3 p-3 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all font-bold">
-                            <Home className="w-5 h-5" /> Home
-                        </button>
-                        <button onClick={() => navigate('/generate')} className="flex items-center gap-3 p-3 text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all font-bold">
-                            <Sparkles className="w-5 h-5" /> Create New
-                        </button>
-                        <button onClick={() => navigate('/profile/history')} className="flex items-center gap-3 p-3 text-blue-600 bg-blue-50 rounded-xl transition-all font-bold">
-                            <Grid className="w-5 h-5" /> My Gallery
-                        </button>
-                        <button onClick={() => navigate('/subscription')} className="flex items-center gap-3 p-3 text-slate-600 hover:bg-slate-50 hover:text-purple-600 rounded-xl transition-all font-bold">
-                            <Crown className="w-5 h-5" /> Membership
-                        </button>
-                    </div>
-
-                    {/* Quick Upload Action */}
-                    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white text-center shadow-xl shadow-indigo-200 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Edit2 className="w-24 h-24" />
-                        </div>
-                        <h3 className="font-bold text-lg mb-1 relative z-10">Have a drawing?</h3>
-                        <p className="text-indigo-100 text-xs mb-4 relative z-10">Upload your own art to safe keep or turn into magic!</p>
-
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
-                            className="w-full py-3 bg-white text-indigo-600 rounded-xl font-bold shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 relative z-10"
-                        >
-                            {isUploading ? (
-                                <span className="animate-pulse">Uploading...</span>
-                            ) : (
-                                <>
-                                    <CloudUpload className="w-4 h-4" /> Upload Art
-                                </>
-                            )}
-                        </button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*"
-                            className="hidden"
-                        />
-                    </div>
-
-                </div>
-            </div>
-
-            {/* Right Panel - Scrollable Content */}
-            <div className="flex-1 h-full overflow-y-auto relative z-10 p-6 md:p-8 scrollbar-hide">
-                <div className="max-w-[1200px] mx-auto min-h-full pb-20">
-                    <div className="flex items-center justify-between mb-6 sticky top-0 z-30 py-4 bg-transparent">
-
-                        {/* Tabs */}
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                                <div className={cn("p-2 rounded-xl text-white shadow-lg",
-                                    activeTab === 'works' ? "bg-blue-500 shadow-blue-500/20" :
-                                        activeTab === 'journey' ? "bg-purple-500 shadow-purple-500/20" :
-                                            "bg-pink-500 shadow-pink-500/20")}>
-                                    {activeTab === 'works' ? <Grid className="w-5 h-5" /> :
-                                        activeTab === 'journey' ? <Star className="w-5 h-5 fill-current" /> :
-                                            <Heart className="w-5 h-5 fill-current" />}
-                                </div>
-                                {activeTab === 'works' ? 'My Masterpieces' :
-                                    activeTab === 'journey' ? 'Creative Journey' :
-                                        'Liked Artworks'}
-                            </h3>
-                        </div>
-
-                        {/* Search / Word Refers */}
-                        <div className="flex-1 max-w-md mx-6 relative hidden md:block">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search your magic..."
-                                    className="w-full pl-10 pr-10 py-2 rounded-full border border-slate-200 bg-white/50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-blue-200"
-                                />
-                                <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors shadow-sm">
-                                    <Mic className="w-3 h-3" />
-                                </button>
+                        {/* Points Display */}
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+                                <span className="text-amber-700 font-bold text-sm">✨ {user?.points || 0} Points</span>
                             </div>
                         </div>
 
-                        <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-2xl shadow-sm border border-white/50 gap-2">
+                        {/* Icon-Only Action Buttons */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => navigate('/subscription')}
+                                className="p-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all shadow-md hover:shadow-lg transform hover:scale-105"
+                                title="Membership"
+                            >
+                                <Crown className="w-5 h-5" />
+                            </button>
+
+                            <button
+                                onClick={() => navigate('/edit-profile')}
+                                className="p-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 transition-all shadow-sm hover:shadow-md"
+                                title="Settings"
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
+
+                            <button
+                                onClick={logout}
+                                className="p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all shadow-sm hover:shadow-md"
+                                title="Logout"
+                            >
+                                <LogOut className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto px-8 pt-8 pb-24">
+                <div className="max-w-[1600px] mx-auto pb-8">
+
+                    {/* Title Row with Search */}
+                    <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-4xl font-black text-slate-800">
+                            My Masterpieces
+                        </h3>
+
+                        <div className="flex items-center gap-3">
+                            {/* Search - Icon or Expanded */}
+                            {searchExpanded ? (
+                                <div className="flex items-center gap-2 bg-white rounded-2xl border-2 border-blue-500 shadow-lg px-4 py-2 animate-in fade-in slide-in-from-right">
+                                    <Search className="w-5 h-5 text-blue-500" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search your magic..."
+                                        className="outline-none w-64"
+                                        autoFocus
+                                    />
+                                    <button onClick={() => setSearchExpanded(false)} className="p-1 hover:bg-slate-100 rounded-full">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setSearchExpanded(true)}
+                                    className="p-3 bg-white rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition-all shadow-sm"
+                                >
+                                    <Search className="w-5 h-5 text-slate-600" />
+                                </button>
+                            )}
+
+                            {/* Select - Icon Only */}
+                            <button
+                                onClick={toggleSelectionMode}
+                                className={cn(
+                                    "p-3 rounded-full border-2 transition-all shadow-sm",
+                                    isSelectionMode
+                                        ? "bg-blue-500 border-blue-600 text-white"
+                                        : "bg-white border-slate-200 text-slate-600 hover:border-blue-500 hover:bg-blue-50"
+                                )}
+                            >
+                                {isSelectionMode ? <X className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
+                            </button>
+
+                            {/* Delete Button (when selection mode active) */}
+                            {isSelectionMode && selectedIds.size > 0 && (
+                                <button
+                                    onClick={handleDeleteSelected}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg animate-in fade-in slide-in-from-right"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete ({selectedIds.size})
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Category Tabs + View Toggle - Same Row */}
+                    <div className="flex justify-between items-center mb-6">
+                        {/* Category Tabs */}
+                        <div className="flex gap-2 bg-white/70 backdrop-blur-sm p-1 rounded-2xl shadow-sm border border-slate-200">
                             <button
                                 onClick={() => setActiveTab('works')}
                                 className={cn(
-                                    "flex flex-col items-center justify-center w-20 h-20 gap-1 rounded-xl transition-all border-2",
+                                    "px-6 py-3 rounded-xl font-bold transition-all",
                                     activeTab === 'works'
-                                        ? "bg-blue-50 border-blue-400 text-blue-600 shadow-md scale-105"
-                                        : "border-transparent text-slate-400 hover:bg-white hover:text-slate-600"
+                                        ? "bg-blue-500 text-white shadow-md"
+                                        : "text-slate-600 hover:bg-slate-100"
                                 )}
                             >
-                                <Grid className="w-8 h-8" />
-                                <span className="text-[10px] font-black uppercase tracking-wide">Works</span>
+                                <Grid className="w-5 h-5 inline-block mr-2" />
+                                Works
                             </button>
                             <button
                                 onClick={() => setActiveTab('journey')}
                                 className={cn(
-                                    "flex flex-col items-center justify-center w-20 h-20 gap-1 rounded-xl transition-all border-2",
+                                    "px-6 py-3 rounded-xl font-bold transition-all",
                                     activeTab === 'journey'
-                                        ? "bg-purple-50 border-purple-400 text-purple-600 shadow-md scale-105"
-                                        : "border-transparent text-slate-400 hover:bg-white hover:text-slate-600"
+                                        ? "bg-purple-500 text-white shadow-md"
+                                        : "text-slate-600 hover:bg-slate-100"
                                 )}
                             >
-                                <Star className="w-8 h-8 fill-current" />
-                                <span className="text-[10px] font-black uppercase tracking-wide">Journey</span>
+                                <Star className="w-5 h-5 inline-block mr-2 fill-current" />
+                                Journey
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('graphic-novels')}
+                                className={cn(
+                                    "px-6 py-3 rounded-xl font-bold transition-all",
+                                    activeTab === 'graphic-novels'
+                                        ? "bg-orange-500 text-white shadow-md"
+                                        : "text-slate-600 hover:bg-slate-100"
+                                )}
+                            >
+                                <BookOpen className="w-5 h-5 inline-block mr-2" />
+                                Graphic Novels
                             </button>
                             <button
                                 onClick={() => setActiveTab('likes')}
                                 className={cn(
-                                    "flex flex-col items-center justify-center w-20 h-20 gap-1 rounded-xl transition-all border-2",
+                                    "px-6 py-3 rounded-xl font-bold transition-all",
                                     activeTab === 'likes'
-                                        ? "bg-pink-50 border-pink-400 text-pink-600 shadow-md scale-105"
-                                        : "border-transparent text-slate-400 hover:bg-white hover:text-slate-600"
+                                        ? "bg-pink-500 text-white shadow-md"
+                                        : "text-slate-600 hover:bg-slate-100"
                                 )}
                             >
-                                <Heart className="w-8 h-8 fill-current" />
-                                <span className="text-[10px] font-black uppercase tracking-wide">Likes</span>
+                                <Heart className="w-5 h-5 inline-block mr-2 fill-current" />
+                                Likes
                             </button>
                         </div>
 
-                        {/* Selection Tools (New) */}
-                        <div className="flex items-center gap-2 mr-2">
-                            {isSelectionMode ? (
-                                <>
-                                    <button
-                                        onClick={handleDeleteSelected}
-                                        disabled={selectedIds.size === 0}
-                                        className={cn(
-                                            "flex items-center gap-2 px-4 py-2 rounded-full font-bold shadow-sm transition-all text-sm",
-                                            selectedIds.size > 0
-                                                ? "bg-red-500 text-white hover:bg-red-600 shadow-red-200"
-                                                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                        )}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete ({selectedIds.size})
-                                    </button>
-                                    <button
-                                        onClick={toggleSelectionMode}
-                                        className="p-2 bg-white border border-slate-200 text-slate-500 rounded-full hover:bg-slate-50 transition-colors"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={toggleSelectionMode}
-                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-full hover:bg-slate-50 hover:text-blue-600 font-bold text-sm transition-all"
-                                >
-                                    <CheckCircle className="w-4 h-4" /> Select
-                                </button>
-                            )}
-                        </div>
-
-                        {/* View Toggles */}
+                        {/* View Toggle - Right Side */}
                         <div className="flex gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={cn("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-blue-100 text-blue-600" : "text-slate-400 hover:text-slate-600")}
+                                className={cn(
+                                    "p-3 rounded-lg transition-all",
+                                    viewMode === 'grid'
+                                        ? "bg-blue-100 text-blue-600"
+                                        : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                                )}
                             >
                                 <Grid className="w-5 h-5" />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-blue-100 text-blue-600" : "text-slate-400 hover:text-slate-600")}
+                                className={cn(
+                                    "p-3 rounded-lg transition-all",
+                                    viewMode === 'list'
+                                        ? "bg-blue-100 text-blue-600"
+                                        : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                                )}
                             >
                                 <List className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
 
-                    {/* Image Grid */}
+                    {/* Image Grid - Enlarged */}
                     <div className="bg-transparent min-h-[500px]">
                         {loadingImages ? (
                             <div className="flex justify-center py-20">
@@ -437,10 +399,10 @@ export const ProfilePage: React.FC = () => {
                 </div>
             </div>
 
+            {/* Modals */}
             <ImageModal
                 image={selectedImage && !selectedImage.meta?.isStoryBook && selectedImage.type !== 'picturebook' ? selectedImage : null}
                 onClose={() => setSelectedImage(null)}
-                // Inline handlers to prevent ReferenceError if definition is lost or shadowed
                 onToggleFavorite={async (id) => {
                     setImages(prev => prev.map(img => img.id === id ? { ...img, favorite: !img.favorite } : img));
                     try {
@@ -461,7 +423,6 @@ export const ProfilePage: React.FC = () => {
                     }
                 }}
                 onRegenerate={(image) => {
-                    // Navigate to appropriate creation page based on type
                     setSelectedImage(null);
                     if (image.type === 'story') {
                         navigate('/generate/audio');
@@ -477,9 +438,8 @@ export const ProfilePage: React.FC = () => {
                 }}
             />
 
-            {/* Picture Book Viewer - Use PictureBookReader for picturebook type */}
+            {/* Picture Book Viewer */}
             {selectedImage && selectedImage.type === 'picturebook' && selectedImage.meta?.pages && (() => {
-                // Transform pages data to match PictureBookReader expected format
                 const transformedPages = selectedImage.meta.pages.map((page: any, idx: number) => ({
                     pageNumber: page.pageNumber || idx + 1,
                     imageUrl: page.imageUrl || page.image_url || '',
@@ -496,7 +456,7 @@ export const ProfilePage: React.FC = () => {
                 );
             })()}
 
-            {/* Story Book Viewer Integration - For other story types */}
+            {/* Story Book Viewer */}
             {selectedImage && selectedImage.meta?.isStoryBook && selectedImage.type !== 'comic' && selectedImage.type !== 'picturebook' && (
                 <StoryBookViewer
                     book={selectedImage.meta.bookData || {
@@ -516,6 +476,19 @@ export const ProfilePage: React.FC = () => {
                             }
                         }
                     }}
+                />
+            )}
+
+            {/* Graphic Novel Viewer */}
+            {selectedImage && selectedImage.type === 'graphic-novel' && selectedImage.meta?.graphicNovel && (
+                <GraphicNovelViewer
+                    title={selectedImage.prompt || "Graphic Novel"}
+                    vibe={selectedImage.meta.graphicNovel.vibe || "adventure"}
+                    pages={selectedImage.meta.graphicNovel.pages || []}
+                    assets={selectedImage.meta.graphicNovel.assets}
+                    settings={selectedImage.meta.graphicNovel.settings}
+                    createdAt={selectedImage.meta.graphicNovel.createdAt || Date.now()}
+                    onClose={() => setSelectedImage(null)}
                 />
             )}
 

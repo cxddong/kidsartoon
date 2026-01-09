@@ -694,6 +694,69 @@ export class DatabaseService {
             return null;
         }
     }
+
+    // --- GRAPHIC NOVEL MANAGEMENT ---
+
+    async saveGraphicNovelTask(task: any): Promise<void> {
+        try {
+            await adminDb.collection('graphic_novel_tasks').doc(task.id).set(task);
+            console.log(`[Database] Saved graphic novel task: ${task.id}`);
+        } catch (e) {
+            console.error('[Database] saveGraphicNovelTask failed:', e);
+            throw e;
+        }
+    }
+
+    async updateGraphicNovelTask(taskId: string, updates: any): Promise<void> {
+        try {
+            await adminDb.collection('graphic_novel_tasks').doc(taskId).update(updates);
+        } catch (e) {
+            console.error('[Database] updateGraphicNovelTask failed:', e);
+            throw e;
+        }
+    }
+
+    async getGraphicNovelTask(taskId: string): Promise<any | null> {
+        try {
+            const snap = await adminDb.collection('graphic_novel_tasks').doc(taskId).get();
+            return snap.exists ? snap.data() : null;
+        } catch (e) {
+            console.error('[Database] getGraphicNovelTask failed:', e);
+            return null;
+        }
+    }
+
+    async getGraphicNovel(id: string): Promise<any | null> {
+        try {
+            const snap = await adminDb.collection('graphic_novel_tasks').doc(id).get();
+            if (snap.exists) {
+                const data = snap.data();
+                // Only return completed novels
+                if (data?.status === 'COMPLETED') {
+                    return data;
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error('[Database] getGraphicNovel failed:', e);
+            return null;
+        }
+    }
+
+    async getUserGraphicNovels(userId: string): Promise<any[]> {
+        try {
+            const snapshot = await adminDb.collection('graphic_novel_tasks')
+                .where('userId', '==', userId)
+                .where('status', '==', 'COMPLETED')
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            return snapshot.docs.map(d => d.data());
+        } catch (e) {
+            console.error('[Database] getUserGraphicNovels failed:', e);
+            return [];
+        }
+    }
 }
 
 export const databaseService = new DatabaseService();

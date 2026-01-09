@@ -23,6 +23,22 @@ const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
 
 const PROMO_SLIDES = [
     {
+        id: 0,
+        title: "SUPER COMIC BOOK 📚",
+        subtitle: 'Build Your World! Create graphic novels!',
+        gradient: "from-purple-600 via-pink-600 to-orange-600",
+        link: '/graphic-novel/builder',
+        decor: (
+            <>
+                <div className="absolute inset-0 opacity-30">
+                    <img src="/assets/graphic_novel_icon.png" alt="Graphic Novel" className="w-full h-full object-contain animate-pulse" />
+                </div>
+                <div className="absolute top-4 left-4 w-16 h-16 bg-yellow-400 rounded-full blur-xl animate-ping opacity-50" />
+                <div className="absolute bottom-4 right-4 w-20 h-20 bg-pink-400 rounded-full blur-2xl animate-pulse opacity-50" />
+            </>
+        )
+    },
+    {
         id: 99,
         title: "MAGIC LAB ✨",
         subtitle: 'Cast spells with your apprentice!',
@@ -108,9 +124,15 @@ const PromoBanner: React.FC = () => {
                             <div className="text-center z-20 text-white transform group-hover:scale-105 transition-transform duration-500">
                                 <h2 className="text-4xl font-black drop-shadow-md mb-2">{slide.title}</h2>
                                 <p className="text-xl font-bold opacity-90">{slide.subtitle}</p>
-                                <div className="mt-6 px-8 py-3 bg-white text-slate-800 rounded-full font-black shadow-lg inline-block hover:bg-yellow-100 transition-colors">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleBannerClick();
+                                    }}
+                                    className="mt-6 px-8 py-3 bg-white text-slate-800 rounded-full font-black shadow-lg hover:bg-yellow-100 transition-colors cursor-pointer"
+                                >
                                     Explore Now
-                                </div>
+                                </button>
                             </div>
                         )}
                     </div>
@@ -244,11 +266,13 @@ export const HomePage: React.FC = () => {
             {/* 3. Main Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto z-10 relative w-full scrollbar-hide">
                 <div className="pb-24 pt-20">
-                    {/* TEMP: Dev Links */}
-                    <div className="flex justify-center gap-4 mb-2 opacity-50 hover:opacity-100 transition-opacity">
-                        <button onClick={() => navigate('/splash')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Splash</button>
-                        <button onClick={() => navigate('/startup')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Startup</button>
-                    </div>
+                    {/* Dev Links - Only visible in development */}
+                    {import.meta.env.DEV && (
+                        <div className="flex justify-center gap-4 mb-2 opacity-50 hover:opacity-100 transition-opacity">
+                            <button onClick={() => navigate('/splash')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Splash</button>
+                            <button onClick={() => navigate('/startup')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Startup</button>
+                        </div>
+                    )}
 
                     {/* Logo Area (Scrolls) */}
                     <motion.div variants={magicFloatVariants} initial="initial" animate="animate">

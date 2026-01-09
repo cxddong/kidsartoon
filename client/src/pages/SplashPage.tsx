@@ -10,15 +10,24 @@ export const SplashPage: React.FC = () => {
     const [showButton, setShowButton] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        // Show button after 3 seconds
+        const buttonTimer = setTimeout(() => {
             setShowButton(true);
-        }, 8000); // 8 seconds
+        }, 3000);
 
-        return () => clearTimeout(timer);
-    }, []);
+        // Auto-redirect after 10 seconds
+        const autoTimer = setTimeout(() => {
+            navigate('/home');
+        }, 10000);
+
+        return () => {
+            clearTimeout(buttonTimer);
+            clearTimeout(autoTimer);
+        };
+    }, [navigate]);
 
     const handleEnter = () => {
-        navigate('/');
+        navigate('/home');
     };
 
     return (

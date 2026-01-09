@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, Play, RefreshCw, Video, Upload, Wand2, Volume2, CloudUpload, Sparkles, MoveLeft, Mic, Pause, X } from 'lucide-react';
+import { ArrowRight, Loader2, Play, RefreshCw, Video, Upload, Wand2, Volume2, CloudUpload, Sparkles, MoveLeft, Mic, Pause, X, Download, Share2, Facebook, Twitter, Instagram, Music } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { BottomNav } from '../components/BottomNav';
@@ -52,6 +52,8 @@ export const AnimationPage: React.FC = () => {
     const [voiceStyle, setVoiceStyle] = useState<'cute' | 'robot' | 'monster'>('cute');
     const [sceneMood, setSceneMood] = useState<'happy' | 'mysterious' | 'action'>('happy');
     const [textInput, setTextInput] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
 
     const SPELLS = {
         'quick': { duration: '4s', limit: 50, cost: 15, name: 'Quick Zap', ph: 'Say hi! (Max 10 words)' },
@@ -124,30 +126,20 @@ export const AnimationPage: React.FC = () => {
         if (imageFile) formData.append('image', imageFile);
         else if (imagePreview) formData.append('imageUrl', imagePreview); // For Remix flow if file missing
 
-        const selectedAction = MAGIC_ACTIONS.find(a => a.id === action);
-        const selectedStyle = MAGIC_STYLES.find(s => s.id === style);
-        const selectedEffect = MAGIC_EFFECTS.find(e => e.id === effect);
+        // Send action, style, effect to the new /image-to-video/task endpoint
+        formData.append('action', action || 'dance'); // Required by backend
+        if (style) formData.append('style', style);
+        if (effect) formData.append('effect', effect);
 
-        let promptParts: string[] = [];
-        if (selectedAction) promptParts.push(selectedAction.prompt);
-        if (selectedStyle) promptParts.push(selectedStyle.prompt);
-        if (selectedEffect) promptParts.push(selectedEffect.prompt);
-
-        const finalPrompt = promptParts.join(', ');
-        // Legacy fields
-        formData.append('prompt', finalPrompt || 'character moving naturally');
-        formData.append('duration', SPELLS[selectedSpell].duration.replace('s', ''));
-
-        // New Doubao 1.5 fields
-        formData.append('spell', selectedSpell);
-        formData.append('audioMode', audioMode);
-        formData.append('textInput', textInput);
-        formData.append('voiceStyle', voiceStyle);
-        formData.append('sceneMood', sceneMood);
+        // Duration mapping: spell -> duration in seconds
+        const durationMap = { 'quick': '5', 'story': '8', 'cinema': '10' };
+        formData.append('duration', durationMap[selectedSpell]);
+        formData.append('generateAudio', 'true'); // Always true for now
+        formData.append('userId', user.uid);
 
         try {
             setStatusMessage('Sending to AI...');
-            const response = await fetch('/api/media/image-to-video', {
+            const response = await fetch('/api/media/image-to-video/task', {
                 method: 'POST',
                 body: formData,
             });
@@ -158,27 +150,69 @@ export const AnimationPage: React.FC = () => {
             }
 
             const data = await response.json();
+
+            // Check for success field from backend
+            if (data.success === false) {
+                if (data.errorCode === 'NOT_ENOUGH_POINTS') {
+                    throw new Error(`Not enough Magic Points! Required: ${data.required}, Current: ${data.current}`);
+                } else {
+                    throw new Error(data.error || 'Generation failed');
+                }
+            }
+
             const taskId = data.taskId;
 
+            if (!taskId) {
+                throw new Error('No taskId received from server');
+            }
+
             setStatusMessage('AI is generating video...');
+
+            // Simulated progress (since backend doesn't provide real progress)
+            let simulatedProgress = 0;
+            const progressInterval = setInterval(() => {
+                simulatedProgress += 2;
+                if (simulatedProgress < 90) {
+                    setProgress(simulatedProgress);
+                }
+            }, 1000);
+
             const pollInterval = setInterval(async () => {
                 try {
-                    const statusRes = await fetch(`/api/media/image-to-video/${taskId}`);
+                    const statusRes = await fetch(`/api/media/image-to-video/status/${taskId}`);
                     const statusData = await statusRes.json();
-                    if (statusData.progress !== undefined) setProgress(statusData.progress);
 
-                    if (statusData.status === 'completed' && statusData.videoUrl) {
+                    // Map backend status to frontend
+                    if (statusData.status === 'SUCCEEDED' && statusData.videoUrl) {
                         clearInterval(pollInterval);
-                        setResultData({ videoUrl: statusData.videoUrl });
+                        clearInterval(progressInterval);
+                        setProgress(100);
+                        setResultData({
+                            videoUrl: statusData.videoUrl,
+                            params: {
+                                action,
+                                style,
+                                effect,
+                                spell: selectedSpell,
+                                duration: durationMap[selectedSpell],
+                                credits: calculateCredits()
+                            }
+                        });
                         setStep('finished');
                         setStatusMessage('Complete!');
-                        setProgress(100);
-                    } else if (statusData.status === 'failed') {
+                    } else if (statusData.status === 'FAILED') {
                         clearInterval(pollInterval);
+                        clearInterval(progressInterval);
                         throw new Error(statusData.error || 'Generation failed');
+                    } else if (statusData.status === 'PENDING' || statusData.status === 'PROCESSING') {
+                        // Still processing, update progress if available
+                        if (statusData.progress !== undefined) {
+                            setProgress(statusData.progress);
+                        }
                     }
                 } catch (err: any) {
                     clearInterval(pollInterval);
+                    clearInterval(progressInterval);
                     alert(err.message || 'Failed to check status');
                     setStep('params');
                 }
@@ -188,6 +222,126 @@ export const AnimationPage: React.FC = () => {
             console.error('Generation error:', err);
             alert(err.message || 'Failed to generate video');
             setStep('params');
+        }
+    };
+
+    const handleListen = () => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('Voice input is not supported in your browser');
+            return;
+        }
+
+        // Stop any existing recognition first
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.stop();
+            } catch (e) {
+                // Ignore errors when stopping
+            }
+        }
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+        // Always create a fresh instance to prevent event handler accumulation
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = (event: any) => {
+            // Get only the final result
+            const result = event.results[event.results.length - 1];
+            if (result && result.isFinal) {
+                const transcript = result[0].transcript.trim();
+
+                if (transcript) {
+                    setTextInput(prev => {
+                        const newText = prev ? `${prev} ${transcript}`.trim() : transcript;
+                        const maxChars = selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50;
+                        return newText.slice(0, maxChars);
+                    });
+                }
+            }
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+            recognitionRef.current = null;
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+            recognitionRef.current = null;
+        };
+
+        try {
+            recognition.start();
+            recognitionRef.current = recognition;
+            setIsListening(true);
+        } catch (error) {
+            console.error('Error starting recognition:', error);
+            setIsListening(false);
+        }
+    };
+
+    const handleDownload = async () => {
+        if (!resultData?.videoUrl) return;
+
+        try {
+            const response = await fetch(resultData.videoUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `magic-video-${Date.now()}.mp4`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Download failed:', err);
+            alert('Download failed. Please try right-clicking the video and selecting "Save video as..."');
+        }
+    };
+
+    const shareToSocial = (platform: 'facebook' | 'instagram' | 'twitter' | 'tiktok') => {
+        const videoUrl = resultData?.videoUrl;
+        const shareText = `Check out my Magic Video! 🎬✨`;
+        const currentUrl = window.location.origin;
+
+        switch (platform) {
+            case 'facebook':
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`, '_blank');
+                break;
+            case 'twitter':
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`, '_blank');
+                break;
+            case 'instagram':
+                if (videoUrl) {
+                    navigator.clipboard.writeText(videoUrl);
+                    alert('Video link copied! 📋\nOpen Instagram app and paste in your story or post.');
+                }
+                break;
+            case 'tiktok':
+                if (videoUrl) {
+                    navigator.clipboard.writeText(videoUrl);
+                    alert('Video link copied! 📋\nOpen TikTok app to upload.');
+                }
+                break;
+        }
+    };
+
+    const handleStopListen = () => {
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.stop();
+            } catch (e) {
+                console.error('Error stopping recognition:', e);
+            }
+            recognitionRef.current = null;
+            setIsListening(false);
         }
     };
 
@@ -253,258 +407,220 @@ export const AnimationPage: React.FC = () => {
 
                 {/* STEP 2: PARAMETERS */}
                 {step === 'params' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 h-full">
-                        {/* Left: Preview */}
-                        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col gap-4">
-                            <div className="relative w-full aspect-square rounded-3xl overflow-hidden border-4 border-white/10 bg-black/20 shadow-2xl max-w-[280px]">
-                                <img src={imagePreview!} className="w-full h-full object-contain" />
-                                <button
-                                    onClick={() => setStep('upload')}
-                                    className="absolute bottom-4 right-4 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-black/80 backdrop-blur-md transition-colors"
-                                >
-                                    Change Photo
-                                </button>
-                            </div>
+                    <div className="space-y-6 pb-32 lg:pb-0">
+                        {/* UPLOAD BOX - Always at Top */}
+                        <div className="flex justify-center">
+                            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+                                <div className="relative w-full aspect-square rounded-3xl overflow-hidden border-4 border-white/10 bg-black/20 shadow-2xl max-w-[280px]">
+                                    <img src={imagePreview!} className="w-full h-full object-contain" />
+                                    <button
+                                        onClick={() => setStep('upload')}
+                                        className="absolute bottom-4 right-4 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-black/80 backdrop-blur-md transition-colors"
+                                    >
+                                        Change Photo
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
 
-                            {/* Generate Button (Desktop - Bottom Left) */}
-                            <div className="hidden lg:block">
-                                <button
-                                    onClick={handleGenerate}
-                                    className="w-full py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white rounded-3xl font-black text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex flex-col items-center justify-center group"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Wand2 className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                                        <span>Generate!</span>
-                                    </div>
-                                    <span className="text-xs font-bold text-white/70 bg-black/20 px-3 py-0.5 rounded-full mt-1">-{calculateCredits()} Credits</span>
+                        {/* STYLE & EFFECT ROW */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                            {/* LEFT: STYLE */}
+                            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm flex flex-col">
+                                <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎨 Style</h3>
+                                <div className="grid grid-cols-2 gap-1 w-full">
+                                    {MAGIC_STYLES.map(sty => (
+                                        <button
+                                            key={sty.id}
+                                            onClick={() => setStyle(prev => prev === sty.id ? undefined : sty.id)}
+                                            className={cn(
+                                                "w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center gap-1 relative overflow-hidden transition-all",
+                                                style === sty.id ? "border-emerald-500 bg-emerald-500/20 scale-105 shadow-lg z-10" : "border-white/10 bg-white/5 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <img src={sty.image} className="absolute inset-0 w-full h-full object-cover" />
+                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
+                                                <span className="text-[9px] font-black text-white uppercase block text-center truncate px-1">{sty.label}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <button className="w-full mt-auto py-3 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl text-[10px] font-black text-white/30 uppercase tracking-widest hover:bg-white/10 transition-colors cursor-not-allowed flex items-center justify-center gap-2">
+                                    <span>More Incoming...</span>
+                                    <span className="grayscale opacity-50">🚀</span>
                                 </button>
+                            </motion.div>
+
+                            {/* RIGHT: EFFECT */}
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm flex flex-col">
+                                <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">✨ Effect</h3>
+                                <div className="grid grid-cols-2 gap-1 w-full">
+                                    {MAGIC_EFFECTS.map(eff => (
+                                        <button
+                                            key={eff.id}
+                                            onClick={() => setEffect(prev => prev === eff.id ? undefined : eff.id)}
+                                            className={cn(
+                                                "w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center gap-1 relative overflow-hidden transition-all",
+                                                effect === eff.id ? "border-amber-500 bg-amber-500/20 scale-105 shadow-lg z-10" : "border-white/10 bg-white/5 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <img src={eff.image} className="absolute inset-0 w-full h-full object-cover" />
+                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
+                                                <span className="text-[9px] font-black text-white uppercase block text-center truncate px-1">{eff.label}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <button className="w-full mt-auto py-3 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl text-[10px] font-black text-white/30 uppercase tracking-widest hover:bg-white/10 transition-colors cursor-not-allowed flex items-center justify-center gap-2">
+                                    <span>More Incoming...</span>
+                                    <span className="grayscale opacity-50">🚀</span>
+                                </button>
+                            </motion.div>
+                        </div>
+
+                        {/* ACTION ROW */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
+                            <div className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm">
+                                <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎬 Action</h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 w-full">
+                                    {MAGIC_ACTIONS.map(act => (
+                                        <button
+                                            key={act.id}
+                                            onClick={() => setAction(prev => prev === act.id ? undefined : act.id)}
+                                            className={cn(
+                                                "w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center gap-1 relative overflow-hidden transition-all",
+                                                action === act.id ? "border-blue-500 bg-blue-500/20 scale-105 shadow-lg z-10" : "border-white/10 bg-white/5 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <img src={act.image} className="absolute inset-0 w-full h-full object-cover" />
+                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
+                                                <span className="text-[9px] font-black text-white uppercase block text-center truncate px-1">{act.label}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </motion.div>
 
-                        {/* Right: Controls */}
-                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8 pb-32 lg:pb-0">
+                        {/* Controls Section */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-4">
+                            {/* 1. CHOOSE SPELL */}
+                            <div>
+                                <div className="flex justify-between items-end mb-2">
+                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center gap-2">🪄 Choose Spell</h3>
+                                    <span className="text-xs font-bold text-yellow-400">{SPELLS[selectedSpell].cost} Credits</span>
+                                </div>
 
-                            {/* 3-COLUMN SELECTION GRID */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <button onClick={() => { setSelectedSpell('quick'); setTextInput(prev => prev.slice(0, 50)); }}
+                                        className={cn("flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
+                                            selectedSpell === 'quick' ? "ring-2 ring-blue-400 bg-slate-700/80 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                        )}>
+                                        <div className="text-2xl mb-1">⚡️</div>
+                                        <div className="text-sm font-bold text-white">Quick</div>
+                                        <div className="text-[10px] text-slate-400">4s</div>
+                                    </button>
 
-                                {/* LEFT COL: STYLE (2 cols x 3 rows) */}
-                                <div className="space-y-3 order-1 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm h-full flex flex-col">
-                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎨 Style</h3>
-                                    <div className="grid grid-cols-2 gap-1 w-full mx-auto lg:mx-0">
-                                        {MAGIC_STYLES.map(sty => (
-                                            <button
-                                                key={sty.id}
-                                                onClick={() => setStyle(prev => prev === sty.id ? undefined : sty.id)}
-                                                className={cn(
-                                                    "w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center gap-1 relative overflow-hidden transition-all",
-                                                    style === sty.id ? "border-emerald-500 bg-emerald-500/20 scale-105 shadow-lg z-10" : "border-white/10 bg-white/5 hover:bg-white/10"
-                                                )}
-                                            >
-                                                <img src={sty.image} className="absolute inset-0 w-full h-full object-cover" />
-                                                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
-                                                    <span className="text-[9px] font-black text-white uppercase block text-center truncate px-1">{sty.label}</span>
-                                                </div>
-                                            </button>
-                                        ))}
+                                    <div className="relative group">
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-600 text-[9px] px-2 py-0.5 rounded-full text-white font-bold whitespace-nowrap z-20 shadow-lg border border-purple-400">BEST</div>
+                                        <button onClick={() => { setSelectedSpell('story'); setTextInput(prev => prev.slice(0, 120)); }}
+                                            className={cn("w-full h-full flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
+                                                selectedSpell === 'story' ? "ring-2 ring-purple-500 bg-slate-700/80 border-transparent shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                            )}>
+                                            <div className="text-2xl mb-1">📖</div>
+                                            <div className="text-sm font-bold text-white">Story</div>
+                                            <div className="text-[10px] text-slate-400">8s</div>
+                                        </button>
                                     </div>
-                                    <button className="w-full mt-auto py-3 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl text-[10px] font-black text-white/30 uppercase tracking-widest hover:bg-white/10 transition-colors cursor-not-allowed flex items-center justify-center gap-2">
-                                        <span>More Incoming...</span>
-                                        <span className="grayscale opacity-50">🚀</span>
+
+                                    <button onClick={() => { setSelectedSpell('cinema'); }}
+                                        className={cn("flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
+                                            selectedSpell === 'cinema' ? "ring-2 ring-yellow-500 bg-slate-700/80 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                        )}>
+                                        <div className="text-2xl mb-1">🎬</div>
+                                        <div className="text-sm font-bold text-white">Cinema</div>
+                                        <div className="text-[10px] text-yellow-200">HD 720P</div>
                                     </button>
                                 </div>
-
-                                {/* MIDDLE COL: ACTION (2 cols x 4 rows) */}
-                                <div className="space-y-3 order-2 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm h-full flex flex-col">
-                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎬 Action</h3>
-                                    <div className="grid grid-cols-2 gap-1 w-full mx-auto">
-                                        {MAGIC_ACTIONS.map(act => (
-                                            <button
-                                                key={act.id}
-                                                onClick={() => setAction(prev => prev === act.id ? undefined : act.id)}
-                                                className={cn(
-                                                    "w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center gap-1 relative overflow-hidden transition-all",
-                                                    action === act.id ? "border-blue-500 bg-blue-500/20 scale-105 shadow-lg z-10" : "border-white/10 bg-white/5 hover:bg-white/10"
-                                                )}
-                                            >
-                                                <img src={act.image} className="absolute inset-0 w-full h-full object-cover" />
-                                                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
-                                                    <span className="text-[9px] font-black text-white uppercase block text-center truncate px-1">{act.label}</span>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* RIGHT COL: EFFECT (2 cols x 3 rows) */}
-                                <div className="space-y-3 order-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm h-full flex flex-col">
-                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">✨ Effect</h3>
-                                    <div className="grid grid-cols-2 gap-1 w-full mx-auto lg:ml-auto lg:mr-0">
-                                        {MAGIC_EFFECTS.map(eff => (
-                                            <button
-                                                key={eff.id}
-                                                onClick={() => setEffect(prev => prev === eff.id ? undefined : eff.id)}
-                                                className={cn(
-                                                    "w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center gap-1 relative overflow-hidden transition-all",
-                                                    effect === eff.id ? "border-amber-500 bg-amber-500/20 scale-105 shadow-lg z-10" : "border-white/10 bg-white/5 hover:bg-white/10"
-                                                )}
-                                            >
-                                                <img src={eff.image} className="absolute inset-0 w-full h-full object-cover" />
-                                                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
-                                                    <span className="text-[9px] font-black text-white uppercase block text-center truncate px-1">{eff.label}</span>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <button className="w-full mt-auto py-3 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl text-[10px] font-black text-white/30 uppercase tracking-widest hover:bg-white/10 transition-colors cursor-not-allowed flex items-center justify-center gap-2">
-                                        <span>More Incoming...</span>
-                                        <span className="grayscale opacity-50">🚀</span>
-                                    </button>
-                                </div>
-
                             </div>
 
-                            {/* SPELL & AUDIO SECTION */}
-                            <div className="space-y-6">
-                                {/* 1. CHOOSE SPELL */}
+                            {/* 2. More (Optional) with Mic Inside */}
+                            <div className="bg-slate-800/50 rounded-2xl p-3 border-2 border-slate-700/50">
                                 <div>
-                                    <div className="flex justify-between items-end mb-2">
-                                        <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center gap-2">🪄 Choose Spell</h3>
-                                        <span className="text-xs font-bold text-yellow-400">{SPELLS[selectedSpell].cost} Credits</span>
+                                    <div className="flex justify-between items-end mb-1">
+                                        <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center gap-2">✨ More (Optional)</h3>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <button onClick={() => { setSelectedSpell('quick'); setTextInput(prev => prev.slice(0, 50)); }}
-                                            className={cn("flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
-                                                selectedSpell === 'quick' ? "ring-2 ring-blue-400 bg-slate-700/80 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                            )}>
-                                            <div className="text-2xl mb-1">⚡️</div>
-                                            <div className="text-sm font-bold text-white">Quick</div>
-                                            <div className="text-[10px] text-slate-400">4s</div>
-                                        </button>
-
-                                        {/* Wrapped in relative div to allow badge outside button */}
-                                        <div className="relative group">
-                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-600 text-[9px] px-2 py-0.5 rounded-full text-white font-bold whitespace-nowrap z-20 shadow-lg border border-purple-400">BEST</div>
-                                            <button onClick={() => { setSelectedSpell('story'); setTextInput(prev => prev.slice(0, 120)); }}
-                                                className={cn("w-full h-full flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
-                                                    selectedSpell === 'story' ? "ring-2 ring-purple-500 bg-slate-700/80 border-transparent shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                )}>
-                                                <div className="text-2xl mb-1">📖</div>
-                                                <div className="text-sm font-bold text-white">Story</div>
-                                                <div className="text-[10px] text-slate-400">8s</div>
-                                            </button>
-                                        </div>
-
-                                        <button onClick={() => { setSelectedSpell('cinema'); }}
-                                            className={cn("flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
-                                                selectedSpell === 'cinema' ? "ring-2 ring-yellow-500 bg-slate-700/80 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                            )}>
-                                            <div className="text-2xl mb-1">🎬</div>
-                                            <div className="text-sm font-bold text-white">Cinema</div>
-                                            <div className="text-[10px] text-yellow-200">HD 720P</div>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* 2. AUDIO MAGIC (Kids Redesign) */}
-                                <div className="bg-slate-800/50 rounded-3xl p-4 border-2 border-slate-700/50">
-                                    {/* 2. AUDIO & TEXT (Simplified with Voice) */}
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-end">
-                                            <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center gap-2">🗣️ Speak or Type</h3>
-                                        </div>
-
-                                        <div className="flex items-center gap-4">
-                                            <div className="relative flex-1">
-                                                <div className="absolute -top-2 left-4 text-slate-500 text-[10px] bg-slate-800 px-2 rounded z-10">What should happen?</div>
-                                                <textarea
-                                                    value={textInput}
-                                                    onChange={(e) => setTextInput(e.target.value)}
-                                                    maxLength={SPELLS[selectedSpell].limit}
-                                                    placeholder={`Type something...`}
-                                                    className="w-full bg-slate-900/80 border-2 border-dashed border-slate-600 rounded-2xl p-4 pr-12 text-base text-white focus:border-purple-500 outline-none resize-none h-32 placeholder-slate-600 leading-normal"
-                                                />
-
-                                                {/* Character Counter */}
-                                                <div className={cn("absolute bottom-3 right-3 text-[10px] font-mono", textInput.length >= SPELLS[selectedSpell].limit ? "text-red-400" : "text-slate-600")}>
-                                                    {textInput.length}/{SPELLS[selectedSpell].limit}
-                                                </div>
-
-                                                {/* Clear Button */}
-                                                {textInput.length > 0 && (
-                                                    <button
-                                                        onClick={() => setTextInput('')}
-                                                        className="absolute top-3 right-3 p-2 text-slate-400 hover:text-white transition-colors"
-                                                        title="Clear text"
-                                                    >
-                                                        <X className="w-5 h-5" />
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {/* Voice Input Button (Right Side) */}
+                                    {/* Textarea with Mic and Clear Buttons on Right */}
+                                    <div className="relative">
+                                        <textarea
+                                            value={textInput}
+                                            onChange={e => {
+                                                const maxChars = selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50;
+                                                setTextInput(e.target.value.slice(0, maxChars));
+                                            }}
+                                            placeholder="e.g., The character jumps and waves hello!"
+                                            className="w-full h-24 bg-slate-900/50 border-2 border-slate-700/50 rounded-xl p-3 pr-16 text-white placeholder-slate-500 resize-none focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
+                                            maxLength={selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50}
+                                        />
+                                        {/* Clear Button - Top Right */}
+                                        {textInput && (
                                             <button
-                                                onClick={() => {
-                                                    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                                                    if (!SpeechRecognition) {
-                                                        alert("Voice input is not supported in this browser.");
-                                                        return;
-                                                    }
-
-                                                    const recognition = new SpeechRecognition();
-                                                    recognition.lang = 'en-US';
-                                                    recognition.interimResults = false;
-                                                    recognition.maxAlternatives = 1;
-
-                                                    recognition.start();
-
-                                                    recognition.onstart = () => {
-                                                        // Visual feedback could be added here
-                                                    };
-
-                                                    recognition.onresult = (event: any) => {
-                                                        const transcript = event.results[0][0].transcript;
-                                                        // Append or replace? Let's append if there's space, or replace if empty.
-                                                        // For kids, maybe just appending with a space is safest.
-                                                        setTextInput(prev => {
-                                                            const newVal = prev ? `${prev} ${transcript}` : transcript;
-                                                            return newVal.slice(0, SPELLS[selectedSpell].limit);
-                                                        });
-                                                    };
-
-                                                    recognition.onerror = (event: any) => {
-                                                        console.error("Speech recognition error", event.error);
-                                                    };
-                                                }}
-                                                className="relative shrink-0 p-2 hover:scale-110 active:scale-95 transition-transform group"
-                                                title="Click to Speak"
+                                                onClick={() => setTextInput('')}
+                                                className="absolute right-2 top-2 p-1.5 rounded-lg transition-all hover:bg-slate-700/50 group"
+                                                title="Clear text"
                                             >
-                                                <div className="absolute inset-0 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/40 transition-colors"></div>
-                                                <img src="/mic_icon_3d.png" alt="Mic" className="relative w-32 h-32 object-contain drop-shadow-2xl" />
+                                                <svg className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
                                             </button>
-                                        </div>
+                                        )}
+                                        {/* Mic Button - Bottom Right */}
+                                        <button
+                                            onClick={() => {
+                                                if (isListening) handleStopListen();
+                                                else handleListen();
+                                            }}
+                                            className={cn(
+                                                "absolute right-2 bottom-2 p-2 rounded-lg transition-all group",
+                                                isListening ? "bg-red-500/20 animate-pulse" : "hover:bg-purple-500/20"
+                                            )}
+                                            title={isListening ? "Stop Listening" : "Click to Speak"}
+                                        >
+                                            <img
+                                                src="/mic_icon_3d.png"
+                                                alt="Mic"
+                                                className={cn(
+                                                    "w-10 h-10 object-contain drop-shadow-lg transition-transform",
+                                                    isListening ? "scale-110" : "group-hover:scale-110"
+                                                )}
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <div className="text-right mt-1">
+                                        <span className="text-[10px] text-slate-500">
+                                            {textInput.length}/{selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Mobile Generate Button */}
-                            <div className="lg:hidden w-full pt-8">
-                                <button
-                                    onClick={handleGenerate}
-                                    className="w-full py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white rounded-3xl font-black text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex flex-col items-center justify-center group"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Wand2 className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                                        <span>Generate!</span>
-                                    </div>
-                                    <span className="text-xs font-bold text-white/70 bg-black/20 px-3 py-0.5 rounded-full mt-1">-{calculateCredits()} Credits</span>
-                                </button>
-                            </div>
-
+                            {/* Generate Button */}
+                            <button
+                                onClick={handleGenerate}
+                                className="w-full py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white rounded-3xl font-black text-xl flex flex-col items-center justify-center"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Wand2 className="w-6 h-6" />
+                                    <span>Generate!</span>
+                                </div>
+                                <span className="text-xs font-bold text-white/70 bg-black/20 px-3 py-0.5 rounded-full mt-1">-{calculateCredits()} Credits</span>
+                            </button>
                         </motion.div>
                     </div>
-                )
-                }
+                )}
 
                 {/* STEP 3 & 4: GENERATING & FINISHED */}
                 {
@@ -522,16 +638,80 @@ export const AnimationPage: React.FC = () => {
                             ) : (
                                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
                                     <h2 className="text-white text-3xl font-black mb-6 text-center">🎉 Your Magic Video!</h2>
-                                    <div className="aspect-video rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl">
-                                        <PureVideoPlayer src={resultData?.videoUrl} />
+
+                                    {/* Generation Parameters */}
+                                    {resultData?.params && (
+                                        <div className="flex flex-wrap gap-2 justify-center mb-6">
+                                            <span className="px-3 py-1.5 bg-blue-500/20 border border-blue-500/50 rounded-full text-blue-200 text-sm font-bold flex items-center gap-1">
+                                                🎬 {MAGIC_ACTIONS.find(a => a.id === resultData.params?.action)?.label || 'Dance'}
+                                            </span>
+                                            {resultData.params?.style && (
+                                                <span className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/50 rounded-full text-emerald-200 text-sm font-bold flex items-center gap-1">
+                                                    🎨 {MAGIC_STYLES.find(s => s.id === resultData.params?.style)?.label}
+                                                </span>
+                                            )}
+                                            {resultData.params?.effect && (
+                                                <span className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-200 text-sm font-bold flex items-center gap-1">
+                                                    ✨ {MAGIC_EFFECTS.find(e => e.id === resultData.params?.effect)?.label}
+                                                </span>
+                                            )}
+                                            <span className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/50 rounded-full text-purple-200 text-sm font-bold flex items-center gap-1">
+                                                🪄 {SPELLS[resultData.params?.spell]?.name} ({resultData.params?.duration}s)
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl">
+                                        <PureVideoPlayer src={resultData?.videoUrl} className="max-h-[70vh]" />
                                     </div>
-                                    <div className="flex flex-wrap gap-4 justify-center">
-                                        <button onClick={handleRemix} className="px-6 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 hover:scale-105 transition-all flex items-center gap-2">
-                                            <RefreshCw className="w-5 h-5" /> Try Again
-                                        </button>
-                                        <button onClick={handleReset} className="px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-500 text-white font-bold rounded-full hover:scale-105 transition-all flex items-center gap-2 shadow-lg">
-                                            <ArrowRight className="w-5 h-5" /> New Magic
-                                        </button>
+                                    <div className="space-y-4">
+                                        {/* Action Buttons */}
+                                        <div className="flex flex-wrap gap-4 justify-center">
+                                            <button onClick={handleDownload} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-full hover:scale-105 transition-all flex items-center gap-2 shadow-lg">
+                                                <Download className="w-5 h-5" /> Download
+                                            </button>
+                                            <button onClick={handleRemix} className="px-6 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 hover:scale-105 transition-all flex items-center gap-2">
+                                                <RefreshCw className="w-5 h-5" /> Try Again
+                                            </button>
+                                            <button onClick={handleReset} className="px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-500 text-white font-bold rounded-full hover:scale-105 transition-all flex items-center gap-2 shadow-lg">
+                                                <ArrowRight className="w-5 h-5" /> New Magic
+                                            </button>
+                                        </div>
+
+                                        {/* Social Share Buttons */}
+                                        <div className="flex flex-col items-center gap-3">
+                                            <p className="text-white/70 text-sm font-bold">Share on social media:</p>
+                                            <div className="flex gap-3 justify-center">
+                                                <button
+                                                    onClick={() => shareToSocial('facebook')}
+                                                    className="p-3 bg-blue-600 rounded-full hover:scale-110 transition-transform shadow-lg"
+                                                    title="Share on Facebook"
+                                                >
+                                                    <Share2 className="w-5 h-5 text-white" />
+                                                </button>
+                                                <button
+                                                    onClick={() => shareToSocial('instagram')}
+                                                    className="p-3 bg-gradient-to-br from-purple-600 via-pink-600 to-yellow-500 rounded-full hover:scale-110 transition-transform shadow-lg"
+                                                    title="Share on Instagram"
+                                                >
+                                                    <Instagram className="w-5 h-5 text-white" />
+                                                </button>
+                                                <button
+                                                    onClick={() => shareToSocial('twitter')}
+                                                    className="p-3 bg-black rounded-full hover:scale-110 transition-transform shadow-lg"
+                                                    title="Share on X (Twitter)"
+                                                >
+                                                    <Twitter className="w-5 h-5 text-white" />
+                                                </button>
+                                                <button
+                                                    onClick={() => shareToSocial('tiktok')}
+                                                    className="p-3 bg-black rounded-full hover:scale-110 transition-transform shadow-lg"
+                                                    title="Share on TikTok"
+                                                >
+                                                    <Music className="w-5 h-5 text-white" />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                     {/* Puzzle Integration */}
                                     {showPuzzle && imagePreview && (
