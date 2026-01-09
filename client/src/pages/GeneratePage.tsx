@@ -220,8 +220,8 @@ export const GeneratePage: React.FC = () => {
                         onClick={() => handleNavigation('/graphic-novel/builder')}
                         className="flex flex-col items-center gap-2 md:gap-3 group relative"
                     >
-                        <div className="w-28 h-28 md:w-40 md:h-36 rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-lg border-4 border-white/30 transform transition-all group-hover:scale-105 group-active:scale-95">
-                            <div className="text-5xl md:text-6xl">📗</div>
+                        <div className="w-28 h-28 md:w-40 md:h-36 rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-lg border-4 border-white/30 overflow-hidden transform transition-all group-hover:scale-105 group-active:scale-95">
+                            <video src={graphicNovelVideo} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-90 scale-[1.3]" />
                         </div>
                         <div className="flex flex-col items-center leading-tight">
                             <span className="text-xs md:text-lg font-black text-slate-700 drop-shadow-sm tracking-wider">GRAPHIC</span>
