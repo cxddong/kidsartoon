@@ -265,23 +265,36 @@ export default function CreativeJourneyPage() {
             doc.circle(pageWidth, 0, 80, 'F');
             doc.circle(0, pageHeight, 60, 'F');
 
+            // Add first user image to cover if available
+            if (series.chapters && series.chapters.length > 0 && series.chapters[0].userImageUrl) {
+                try {
+                    const imgSize = 80;
+                    const imgX = (pageWidth - imgSize) / 2;
+                    const imgY = 40;
+                    const imgData = await getImageDataUrl(series.chapters[0].userImageUrl);
+                    doc.addImage(imgData, 'JPEG', imgX, imgY, imgSize, imgSize);
+                } catch (err) {
+                    console.warn('Failed to add cover image:', err);
+                }
+            }
+
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(40);
-            const title = series.title || "My Magic Journey";
-            (doc as any).text(title, pageWidth / 2, pageHeight / 3, { align: 'center' });
+            const title = series.title || "My Masterpiece";
+            doc.text(title, pageWidth / 2, pageHeight / 2 + 20, { align: 'center' });
 
             doc.setFontSize(22);
-            (doc as any).text("A Masterpiece Storybook", pageWidth / 2, pageHeight / 3 + 15, { align: 'center' });
+            doc.text("A Masterpiece Storybook", pageWidth / 2, pageHeight / 2 + 35, { align: 'center' });
 
             doc.setDrawColor(255, 255, 255);
             doc.setLineWidth(1);
-            doc.line(pageWidth / 4, pageHeight / 3 + 25, (pageWidth * 3) / 4, pageHeight / 3 + 25);
+            doc.line(pageWidth / 4, pageHeight / 2 + 45, (pageWidth * 3) / 4, pageHeight / 2 + 45);
 
-            doc.setFontSize(18);
+            doc.setFontSize(14);
             doc.setFont('helvetica', 'normal');
-            (doc as any).text(`By Little Artist: ${(user as any)?.displayName || (user as any)?.email || 'Hero'}`, pageWidth / 2, pageHeight * 0.7, { align: 'center' });
-            (doc as any).text("Guided by Magic Kat 😺", pageWidth / 2, pageHeight * 0.75, { align: 'center' });
+            doc.text(`By Little Artist: ${(user as any)?.email || 'Hero'}`, pageWidth / 2, pageHeight - 50, { align: 'center' });
+            doc.text("Guided by Magic Kat", pageWidth / 2, pageHeight - 35, { align: 'center' });
 
             // --- 📖 Story Pages ---
             for (let i = 0; i < series.chapters.length; i++) {
