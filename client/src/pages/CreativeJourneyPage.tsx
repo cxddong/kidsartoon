@@ -39,6 +39,20 @@ export default function CreativeJourneyPage() {
         }
     }, [user]);
 
+    // Handle navigation from other pages (e.g., "Ask a Teacher" from Comic)
+    useEffect(() => {
+        // @ts-ignore
+        if (location.state && location.state.uploadedImage) {
+            console.log('[CreativeJourney] Received uploadedImage from navigation');
+            // Reset to new series and pre-populate the image
+            handleStartNew();
+            // @ts-ignore
+            setUploadedImage(location.state.uploadedImage);
+            // Clear the navigation state
+            window.history.replaceState({}, document.title);
+        }
+    }, []);
+
     const checkActiveSeries = async () => {
         try {
             const res = await fetch(`/api/mentor/active/${user?.uid}`);
