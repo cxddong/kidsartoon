@@ -129,7 +129,7 @@ export const GeneratePage: React.FC = () => {
                     {/* START MAGIC (Rectangle - Center) */}
                     <motion.button
                         variants={jellyPopVariants}
-                        onClick={() => handleNavigation('/magic-lab')}
+                        onClick={() => handleNavigation('/make-cartoon')}
                         className="flex flex-col items-center gap-2 md:gap-3 group relative"
                     >
                         <div className="w-48 h-24 md:w-80 md:h-40 rounded-3xl bg-gradient-to-r from-violet-600 to-fuchsia-600 flex flex-col items-center justify-center shadow-2xl border-4 border-white/40 overflow-hidden transform transition-all group-hover:scale-105 group-active:scale-95 hover:shadow-purple-500/50">
