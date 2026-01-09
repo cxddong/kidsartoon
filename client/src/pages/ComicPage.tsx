@@ -93,6 +93,16 @@ export const ComicPage: React.FC = () => {
             }, 800);
         }
 
+        // Handle remix image from navigation (e.g., from Creative Journey)
+        // @ts-ignore
+        if (location.state && location.state.remixImage) {
+            // @ts-ignore
+            const remixImageUrl = location.state.remixImage;
+            console.log("ComicPage received remixImage from nav:", remixImageUrl);
+            setImagePreview(remixImageUrl);
+            sessionStorage.setItem('comic-preview', remixImageUrl);
+        }
+
         // Cleanup: Clear session storage when user leaves the page
         return () => {
             // Clear session storage to reset the page on next visit

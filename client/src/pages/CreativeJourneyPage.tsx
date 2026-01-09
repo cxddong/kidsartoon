@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     Upload, Sparkles, ArrowLeft, Star,
     BookOpen, Palette, Camera, CheckCircle2,
-    ChevronRight, Info, Volume2
+    ChevronRight, Info, Volume2, Film
 } from 'lucide-react';
 import type { CreativeSeries, Chapter } from '../types/mentor';
 import { jsPDF } from 'jspdf';
@@ -444,18 +444,7 @@ export default function CreativeJourneyPage() {
                 </button>
 
                 <div className="text-center">
-                    <motion.div
-                        initial={{ y: -20 }}
-                        animate={{ y: 0 }}
-                        className="inline-block bg-white/50 backdrop-blur-md px-6 py-2 rounded-full border border-white shadow-sm mb-4"
-                    >
-                        <span className="text-sm font-bold text-indigo-600 uppercase tracking-widest">
-                            Magic Mentor Journey
-                        </span>
-                    </motion.div>
-                    <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">
-                        Create Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-pink-600">Masterpiece Story</span>
-                    </h1>
+                    {/* Removed title section as requested */}
                 </div>
             </div>
 
