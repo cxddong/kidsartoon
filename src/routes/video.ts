@@ -93,6 +93,39 @@ router.get('/status/:taskId', async (req, res) => {
         if (result.status === 'SUCCEEDED' && result.videoUrl) {
             // Mark completed in DB
             await databaseService.markTaskCompleted(taskId);
+
+            // CRITICAL FIX: Upload video to permanent storage
+            const localTask = await databaseService.getVideoTask(taskId);
+            if (localTask && localTask.userId) {
+                try {
+                    console.log('[VideoAPI] Uploading completed video to permanent storage...');
+                    const videoRes = await fetch(result.videoUrl);
+                    if (videoRes.ok) {
+                        const arrayBuffer = await videoRes.arrayBuffer();
+                        const buffer = Buffer.from(arrayBuffer);
+                        const { adminStorageService } = await import('../services/adminStorage.js');
+                        const permanentUrl = await adminStorageService.uploadFile(buffer, 'video/mp4', 'videos');
+                        result.videoUrl = permanentUrl;
+
+                        // Save to user's history
+                        await databaseService.saveImageRecord(
+                            localTask.userId,
+                            permanentUrl,
+                            'animation',
+                            localTask.prompt || 'Video',
+                            {
+                                originalImageUrl: localTask.meta?.originalImageUrl,
+                                videoUrl: permanentUrl,
+                                taskId
+                            }
+                        );
+                        console.log('[VideoAPI] Video saved to user history:', permanentUrl);
+                    }
+                } catch (uploadErr) {
+                    console.error('[VideoAPI] Failed to upload video to storage:', uploadErr);
+                    // Continue with original URL - will expire but at least returns a result
+                }
+            }
         } else if (result.status === 'FAILED') {
             // Refund if failed
             const localTask = await databaseService.getVideoTask(taskId);

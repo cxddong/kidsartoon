@@ -11,8 +11,8 @@ const router = express.Router();
 
 router.post('/create', async (req, res) => {
     try {
-        const { userId, assets, totalPages, plotHint, style } = req.body;
-        console.log('[GraphicNovel API] Create request:', { userId, totalPages, hasAssets: !!assets });
+        const { userId, vibe, assets, totalPages, layout, plotHint, style } = req.body;
+        console.log('[GraphicNovel API] Create request:', { userId, vibe, totalPages, layout, hasAssets: !!assets });
 
         if (!userId) return res.status(401).json({ error: 'User ID required' });
         if (!assets || (!assets.slot1 && !assets.slot2 && !assets.slot3 && !assets.slot4)) {
@@ -37,8 +37,10 @@ router.post('/create', async (req, res) => {
         console.log('[GraphicNovel API] Points deducted successfully');
 
         const taskId = await worldBuilderService.createGraphicNovel(userId, {
+            vibe,
             assets,
             totalPages: totalPages as 4 | 8 | 12,
+            layout,
             plotHint,
             style
         });
@@ -61,6 +63,8 @@ router.get('/status/:taskId', async (req, res) => {
             totalPages: task.totalPages,
             pagesCompleted: task.pagesCompleted,
             currentPage: task.currentPage,
+            progress: task.progress,
+            statusMessage: task.statusMessage,
             pages: task.pages || [],
             plotOutline: task.plotOutline,
             error: task.error

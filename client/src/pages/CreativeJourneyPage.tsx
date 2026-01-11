@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -14,6 +14,7 @@ import masterpieceVideo from '../assets/masterpiece.mp4';
 
 export default function CreativeJourneyPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
 
     // --- State ---
@@ -32,15 +33,11 @@ export default function CreativeJourneyPage() {
     const [improvementReport, setImprovementReport] = useState<any>(null);
     const [analyzingImprovement, setAnalyzingImprovement] = useState(false);
 
-    // --- Init: Load active series ---
+    // --- Init: Load active series or handle incoming image ---
     useEffect(() => {
-        if (user) {
-            checkActiveSeries();
-        }
-    }, [user]);
+        if (!user) return;
 
-    // Handle navigation from other pages (e.g., "Ask a Teacher" from Comic)
-    useEffect(() => {
+        // Handle navigation from other pages (e.g., "Ask a Teacher" from Comic)
         // @ts-ignore
         if (location.state && location.state.uploadedImage) {
             console.log('[CreativeJourney] Received uploadedImage from navigation');
@@ -48,10 +45,13 @@ export default function CreativeJourneyPage() {
             handleStartNew();
             // @ts-ignore
             setUploadedImage(location.state.uploadedImage);
+            setLoading(false);
             // Clear the navigation state
             window.history.replaceState({}, document.title);
+        } else {
+            checkActiveSeries();
         }
-    }, []);
+    }, [user, location.state]);
 
     const checkActiveSeries = async () => {
         try {
@@ -451,10 +451,9 @@ export default function CreativeJourneyPage() {
             <div className="max-w-4xl mx-auto mb-8">
                 <button
                     onClick={() => navigate('/generate')}
-                    className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-semibold mb-6 group"
+                    className="w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-sm text-indigo-600 rounded-2xl shadow-sm hover:shadow-md transition-all group mb-6 border-2 border-white"
                 >
-                    <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                    Back to Magic Lab
+                    <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
 
                 <div className="text-center">
@@ -592,21 +591,54 @@ function JourneyFlow({
 
     return (
         <div className="space-y-8">
-            {/* Progress Header */}
-            <div className="flex justify-between items-center bg-white/40 backdrop-blur-sm p-6 rounded-3xl border border-white">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg">
-                        V{currentStep}
-                    </div>
-                    <div>
-                        <h3 className="font-black text-gray-800 leading-none">Drawing Session</h3>
-                        <p className="text-xs text-gray-500 font-bold">Iteration {currentStep} of your Masterpiece</p>
-                    </div>
-                </div>
-                <div className="hidden md:flex gap-1">
-                    {[1, 2, 3, 4, 5].map(s => (
-                        <div key={s} className={`w-8 h-2 rounded-full ${series.currentStep >= s ? 'bg-indigo-500' : 'bg-gray-200'}`} />
-                    ))}
+            {/* Step Navigation Bar */}
+            <div className="bg-white/40 backdrop-blur-md p-6 rounded-[2.5rem] border border-white/60 shadow-inner">
+                <div className="flex items-center justify-between max-w-2xl mx-auto relative px-4">
+                    {/* Connecting Line */}
+                    <div className="absolute top-1/2 left-0 right-0 h-1 bg-indigo-100 -translate-y-1/2 rounded-full -z-10 mx-12" />
+                    <motion.div
+                        className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 -translate-y-1/2 rounded-full -z-10 mx-12"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(series.currentStep / 4) * 100}%` }}
+                    />
+
+                    {[0, 1, 2, 3, 4].map((stepIdx) => {
+                        const isCompleted = stepIdx < series.currentStep;
+                        const isCurrent = stepIdx === series.currentStep;
+
+                        return (
+                            <div key={stepIdx} className="flex flex-col items-center gap-2">
+                                <motion.div
+                                    initial={false}
+                                    animate={{
+                                        scale: isCurrent ? 1.2 : 1,
+                                        backgroundColor: isCurrent || isCompleted ? 'rgb(79, 70, 229)' : 'rgb(255, 255, 255)',
+                                        borderColor: isCurrent || isCompleted ? 'rgb(79, 70, 229)' : 'rgb(224, 231, 255)'
+                                    }}
+                                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shadow-lg relative ${isCurrent ? 'ring-4 ring-indigo-200' : ''}`}
+                                >
+                                    {isCompleted ? (
+                                        <CheckCircle2 className="w-5 h-5 text-white" />
+                                    ) : (
+                                        <span className={`text-sm font-black ${isCurrent ? 'text-white' : 'text-indigo-300'}`}>
+                                            {stepIdx + 1}
+                                        </span>
+                                    )}
+                                    {isCurrent && (
+                                        <motion.div
+                                            layoutId="sparkle"
+                                            className="absolute -top-1 -right-1"
+                                        >
+                                            <Sparkles className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                        </motion.div>
+                                    )}
+                                </motion.div>
+                                <span className={`text-[10px] font-black uppercase tracking-tighter ${isCurrent ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                    {stepIdx === 0 ? 'Sketch' : stepIdx === 4 ? 'Master' : `V${stepIdx + 1}`}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -635,70 +667,63 @@ function JourneyFlow({
                             </div>
                         ) : (
                             <div className="space-y-6">
-                                {/* Visual Diagnosis */}
-                                <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-start gap-3">
-                                    <Camera className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-1" />
-                                    <div>
-                                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Visual Diagnosis</p>
-                                        <p className="text-sm font-bold text-indigo-900 leading-tight">{coachingFeedback.visualDiagnosis}</p>
+                                {/* Visual Diagnosis (Diagnostic Drawing Insight) */}
+                                <div className="p-6 bg-white rounded-[2rem] border-2 border-indigo-100 shadow-sm relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform" />
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="p-2 bg-indigo-500 text-white rounded-xl shadow-lg">
+                                            <Camera className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Diagnostic Vision</p>
+                                            <h4 className="text-lg font-black text-indigo-900">What Magic Kat Sees</h4>
+                                        </div>
                                     </div>
+                                    <p className="text-sm font-bold text-indigo-900/80 leading-relaxed bg-indigo-50/50 p-4 rounded-xl border border-indigo-50 italic">
+                                        {coachingFeedback.visualDiagnosis}
+                                    </p>
                                 </div>
 
                                 {/* Master Connection */}
-                                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 flex items-start gap-3">
-                                    <Palette className="w-5 h-5 text-purple-500 flex-shrink-0 mt-1" />
-                                    <div>
-                                        <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">Master Inspiration: {coachingFeedback.masterConnection.artist}</p>
-                                        <p className="text-sm text-purple-900 leading-tight italic">"{coachingFeedback.masterConnection.reason}"</p>
+                                <div className="p-8 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-[2.5rem] border-2 border-purple-100 flex flex-col items-center gap-6 shadow-sm text-center">
+                                    {/* Thumbnail for the Master artist */}
+                                    {(() => {
+                                        const masterImage = lastIteration?.masterpieceMatches?.find((m: any) => m.artist === coachingFeedback.masterConnection.artist)?.imagePath ||
+                                            lastIteration?.masterpieceMatches?.[0]?.imagePath;
+                                        if (!masterImage) return (
+                                            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                                                <Palette className="w-8 h-8 text-purple-500" />
+                                            </div>
+                                        );
+                                        return (
+                                            <div className="relative group/master">
+                                                <div className="absolute inset-0 bg-purple-200 rounded-2xl blur-xl opacity-20 group-hover/master:opacity-40 transition-opacity" />
+                                                <img
+                                                    src={masterImage}
+                                                    alt={coachingFeedback.masterConnection.artist}
+                                                    className="w-32 h-32 object-contain rounded-2xl border-4 border-white shadow-xl rotate-[-3deg] group-hover/master:rotate-0 transition-transform duration-500"
+                                                />
+                                                <div className="absolute -bottom-2 -right-2 bg-purple-600 text-white p-2 rounded-full shadow-lg border-2 border-white">
+                                                    <Palette className="w-4 h-4" />
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2 flex items-center justify-center gap-3">
+                                            <span className="w-8 h-px bg-purple-200" />
+                                            <span>Master Inspiration</span>
+                                            <span className="w-8 h-px bg-purple-200" />
+                                        </p>
+                                        <h4 className="text-xl font-black text-purple-900 leading-tight mb-3">
+                                            The {coachingFeedback.masterConnection.artist} Style
+                                        </h4>
+                                        <p className="text-sm text-purple-800/80 leading-relaxed italic max-w-md mx-auto">
+                                            "{coachingFeedback.masterConnection.reason}"
+                                        </p>
                                     </div>
                                 </div>
-
-                                {/* NEW: Top 3 Masterpiece Matches */}
-                                {lastIteration?.masterpieceMatches && lastIteration.masterpieceMatches.length > 0 && (
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest text-center">🖼️ Your Art Style Matches These Masters!</p>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {lastIteration.masterpieceMatches.map((match: any) => (
-                                                <div
-                                                    key={match.matchId}
-                                                    className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-purple-200 p-3 hover:shadow-lg transition-all cursor-pointer group"
-                                                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(match.artist + ' artist')}`, '_blank')}
-                                                >
-                                                    {/* Rank Badge */}
-                                                    <div className="flex justify-center mb-2">
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${match.rank === 1 ? 'bg-yellow-400 text-yellow-900' :
-                                                            match.rank === 2 ? 'bg-gray-300 text-gray-800' :
-                                                                'bg-orange-400 text-orange-900'
-                                                            }`}>
-                                                            {match.rank === 1 ? '🥇' : match.rank === 2 ? '🥈' : '🥉'}
-                                                        </span>
-                                                    </div>
-                                                    {/* Image */}
-                                                    <img
-                                                        src={match.imagePath}
-                                                        alt={match.title}
-                                                        className="w-full h-20 object-contain rounded-lg border border-purple-100 bg-white mb-2"
-                                                    />
-                                                    {/* Info */}
-                                                    <p className="text-xs font-bold text-center text-gray-800 truncate">{match.artist}</p>
-                                                    <p className="text-[10px] text-center text-purple-600 truncate">{match.title}</p>
-                                                    {/* Common Features */}
-                                                    <div className="flex flex-wrap gap-1 justify-center mt-1">
-                                                        {match.commonFeatures?.slice(0, 2).map((f: string, i: number) => (
-                                                            <span key={i} className="px-1 py-0.5 bg-white rounded text-[8px] text-purple-500 border border-purple-100">
-                                                                {f}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                    {/* Click hint */}
-                                                    <p className="text-[8px] text-center text-gray-400 mt-1 group-hover:text-purple-600 transition-colors">
-                                                        Click to learn more
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
 
                                 {/* Mission Card */}
                                 <div className="p-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group">
@@ -820,6 +845,38 @@ function JourneyFlow({
                                         </button>
                                     )}
                                 </div>
+
+                                {/* Masterpiece Matches moved to right column */}
+                                {lastIteration?.masterpieceMatches && lastIteration.masterpieceMatches.length > 0 && (
+                                    <div className="mt-8 space-y-4 bg-white/50 backdrop-blur-sm p-6 rounded-[2rem] border-2 border-purple-100 shadow-sm">
+                                        <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest text-center flex items-center justify-center gap-2">
+                                            <span className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center text-[10px]">✨</span>
+                                            ART STYLE MATCHES
+                                        </p>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {lastIteration.masterpieceMatches.map((match: any) => (
+                                                <div
+                                                    key={match.matchId}
+                                                    className="bg-white rounded-xl border border-purple-100 p-2 hover:shadow-md transition-all cursor-pointer group flex flex-col items-center"
+                                                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(match.artist + ' artist')}`, '_blank')}
+                                                >
+                                                    <div className="relative mb-2">
+                                                        <img
+                                                            src={match.imagePath}
+                                                            alt={match.title}
+                                                            className="w-full h-16 object-contain rounded-lg bg-gray-50"
+                                                        />
+                                                        <span className="absolute -top-2 -right-2 text-xs">
+                                                            {match.rank === 1 ? '🥇' : match.rank === 2 ? '🥈' : '🥉'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[10px] font-black text-gray-800 truncate w-full text-center">{match.artist}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[8px] text-center text-purple-400 font-bold uppercase tracking-tighter">Click to discover their secrets!</p>
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
@@ -833,197 +890,201 @@ function JourneyFlow({
             </motion.div>
 
             {/* V2 Improvement Challenge Section */}
-            {coachingFeedback && uploadedImage && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[2.5rem] shadow-xl p-8 border-4 border-dashed border-purple-200"
-                >
-                    {!showV2Challenge ? (
-                        <div className="text-center">
-                            <div className="text-6xl mb-4">🚀</div>
-                            <h3 className="text-2xl font-black text-purple-900 mb-3">Ready for the Improvement Challenge?</h3>
-                            <p className="text-purple-600 mb-6 text-lg">
-                                Try following Magic Kat's suggestions and upload your improved drawing to see your progress!
-                            </p>
-                            <button
-                                onClick={onToggleV2Challenge}
-                                className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-full hover:shadow-2xl transition-all hover:scale-105"
-                            >
-                                ✨ Start Improvement Challenge
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-2xl font-black text-purple-900">📈 Improvement Challenge</h3>
+            {
+                coachingFeedback && uploadedImage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[2.5rem] shadow-xl p-8 border-4 border-dashed border-purple-200"
+                    >
+                        {!showV2Challenge ? (
+                            <div className="text-center">
+                                <div className="text-6xl mb-4">🚀</div>
+                                <h3 className="text-2xl font-black text-purple-900 mb-3">Ready for the Improvement Challenge?</h3>
+                                <p className="text-purple-600 mb-6 text-lg">
+                                    Try following Magic Kat's suggestions and upload your improved drawing to see your progress!
+                                </p>
                                 <button
                                     onClick={onToggleV2Challenge}
-                                    className="text-purple-500 hover:text-purple-700 font-bold text-sm"
+                                    className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-full hover:shadow-2xl transition-all hover:scale-105"
                                 >
-                                    ✕ Close
+                                    ✨ Start Improvement Challenge
                                 </button>
                             </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-2xl font-black text-purple-900">📈 Improvement Challenge</h3>
+                                    <button
+                                        onClick={onToggleV2Challenge}
+                                        className="text-purple-500 hover:text-purple-700 font-bold text-sm"
+                                    >
+                                        ✕ Close
+                                    </button>
+                                </div>
 
-                            {/* Split Screen: V1 vs V2 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Left: Original V1 */}
-                                <div className="bg-white rounded-2xl p-4 shadow-md">
-                                    <h4 className="text-sm font-black text-gray-500 uppercase mb-3 text-center">V1 - Original</h4>
-                                    {uploadedImage && (
-                                        <img src={uploadedImage} alt="V1" className="w-full aspect-square object-cover rounded-xl border-2 border-gray-200" />
-                                    )}
-                                    <div className="mt-3 text-xs text-gray-600 italic">
-                                        "{coachingFeedback.advice.actionableTask}"
+                                {/* Split Screen: V1 vs V2 */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Left: Original V1 */}
+                                    <div className="bg-white rounded-2xl p-4 shadow-md">
+                                        <h4 className="text-sm font-black text-gray-500 uppercase mb-3 text-center">V1 - Original</h4>
+                                        {uploadedImage && (
+                                            <img src={uploadedImage} alt="V1" className="w-full aspect-square object-cover rounded-xl border-2 border-gray-200" />
+                                        )}
+                                        <div className="mt-3 text-xs text-gray-600 italic">
+                                            "{coachingFeedback.advice.actionableTask}"
+                                        </div>
+                                    </div>
+
+                                    {/* Right: V2 Upload or Growth Report */}
+                                    <div className="bg-white rounded-2xl p-4 shadow-md">
+                                        {!v2UploadedImage ? (
+                                            <label className="w-full aspect-square bg-purple-50 rounded-xl border-4 border-dashed border-purple-200 flex flex-col items-center justify-center cursor-pointer hover:bg-purple-100 transition-all">
+                                                <input type="file" accept="image/*" onChange={onV2Upload} className="hidden" />
+                                                <Camera className="w-16 h-16 text-purple-400 mb-3" />
+                                                <span className="text-purple-900 font-black">Upload V2</span>
+                                                <span className="text-purple-500 text-xs mt-1">Try the suggestions!</span>
+                                            </label>
+                                        ) : (
+                                            <div className="relative">
+                                                <h4 className="text-sm font-black text-gray-500 uppercase mb-3 text-center">V2 - Improved</h4>
+                                                <img src={v2UploadedImage} alt="V2" className="w-full aspect-square object-cover rounded-xl border-2 border-purple-300" />
+                                                <button
+                                                    onClick={onResetV2}
+                                                    className="absolute top-0 right-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600"
+                                                >
+                                                    ×
+                                                </button>
+
+                                                {/* Growth Report */}
+                                                {improvementReport && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        className="mt-4 bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border-4 border-green-200 shadow-lg"
+                                                    >
+                                                        <div className="text-center">
+                                                            <h5 className="text-lg font-black text-green-800 mb-2">🎉 Growth Report</h5>
+                                                            <div className="text-7xl font-black text-green-600 mb-3">
+                                                                {improvementReport.improvement_score}%
+                                                            </div>
+                                                            <p className="text-green-900 font-bold text-sm mb-4">
+                                                                {improvementReport.feedback}
+                                                            </p>
+
+                                                            {/* Improvements Detected */}
+                                                            <div className="bg-white/60 rounded-xl p-4 mb-4">
+                                                                <h6 className="text-xs font-black text-green-700 uppercase mb-2">What You Improved:</h6>
+                                                                <ul className="space-y-1">
+                                                                    {improvementReport.improvements_detected?.map((imp: string, idx: number) => (
+                                                                        <li key={idx} className="text-xs text-green-800 flex items-center gap-2">
+                                                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                                                            {imp}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+
+                                                            {/* Next Suggestion */}
+                                                            {improvementReport.next_suggestion && (
+                                                                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
+                                                                    <p className="text-xs font-black text-yellow-800 uppercase mb-1">💡 Next Challenge:</p>
+                                                                    <p className="text-sm text-yellow-900">{improvementReport.next_suggestion}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Right: V2 Upload or Growth Report */}
-                                <div className="bg-white rounded-2xl p-4 shadow-md">
-                                    {!v2UploadedImage ? (
-                                        <label className="w-full aspect-square bg-purple-50 rounded-xl border-4 border-dashed border-purple-200 flex flex-col items-center justify-center cursor-pointer hover:bg-purple-100 transition-all">
-                                            <input type="file" accept="image/*" onChange={onV2Upload} className="hidden" />
-                                            <Camera className="w-16 h-16 text-purple-400 mb-3" />
-                                            <span className="text-purple-900 font-black">Upload V2</span>
-                                            <span className="text-purple-500 text-xs mt-1">Try the suggestions!</span>
-                                        </label>
-                                    ) : (
-                                        <div className="relative">
-                                            <h4 className="text-sm font-black text-gray-500 uppercase mb-3 text-center">V2 - Improved</h4>
-                                            <img src={v2UploadedImage} alt="V2" className="w-full aspect-square object-cover rounded-xl border-2 border-purple-300" />
-                                            <button
-                                                onClick={onResetV2}
-                                                className="absolute top-0 right-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600"
-                                            >
-                                                ×
-                                            </button>
-
-                                            {/* Growth Report */}
-                                            {improvementReport && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.9 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    className="mt-4 bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border-4 border-green-200 shadow-lg"
-                                                >
-                                                    <div className="text-center">
-                                                        <h5 className="text-lg font-black text-green-800 mb-2">🎉 Growth Report</h5>
-                                                        <div className="text-7xl font-black text-green-600 mb-3">
-                                                            {improvementReport.improvement_score}%
-                                                        </div>
-                                                        <p className="text-green-900 font-bold text-sm mb-4">
-                                                            {improvementReport.feedback}
-                                                        </p>
-
-                                                        {/* Improvements Detected */}
-                                                        <div className="bg-white/60 rounded-xl p-4 mb-4">
-                                                            <h6 className="text-xs font-black text-green-700 uppercase mb-2">What You Improved:</h6>
-                                                            <ul className="space-y-1">
-                                                                {improvementReport.improvements_detected?.map((imp: string, idx: number) => (
-                                                                    <li key={idx} className="text-xs text-green-800 flex items-center gap-2">
-                                                                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                                                        {imp}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-
-                                                        {/* Next Suggestion */}
-                                                        {improvementReport.next_suggestion && (
-                                                            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
-                                                                <p className="text-xs font-black text-yellow-800 uppercase mb-1">💡 Next Challenge:</p>
-                                                                <p className="text-sm text-yellow-900">{improvementReport.next_suggestion}</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
+                                {/* Action Buttons */}
+                                <div className="flex gap-4 justify-center flex-wrap">
+                                    {v2UploadedImage && !improvementReport && (
+                                        <button
+                                            onClick={onAnalyzeImprovement}
+                                            disabled={analyzingImprovement}
+                                            className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-xl hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {analyzingImprovement ? (
+                                                <>🔄 Analyzing...</>
+                                            ) : (
+                                                <>✨ Analyze Improvement</>
                                             )}
-                                        </div>
+                                        </button>
+                                    )}
+                                    {improvementReport && (
+                                        <>
+                                            <button
+                                                onClick={onKeepImproving}
+                                                className="px-6 py-3 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-all"
+                                            >
+                                                🔄 Keep Improving
+                                            </button>
+                                            <button
+                                                onClick={onFinalize}
+                                                className="px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all"
+                                            >
+                                                ✅ Use This One
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-4 justify-center flex-wrap">
-                                {v2UploadedImage && !improvementReport && (
-                                    <button
-                                        onClick={onAnalyzeImprovement}
-                                        disabled={analyzingImprovement}
-                                        className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-xl hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {analyzingImprovement ? (
-                                            <>🔄 Analyzing...</>
-                                        ) : (
-                                            <>✨ Analyze Improvement</>
-                                        )}
-                                    </button>
-                                )}
-                                {improvementReport && (
-                                    <>
-                                        <button
-                                            onClick={onKeepImproving}
-                                            className="px-6 py-3 bg-yellow-500 text-white font-bold rounded-xl hover:bg-yellow-600 transition-all"
-                                        >
-                                            🔄 Keep Improving
-                                        </button>
-                                        <button
-                                            onClick={onFinalize}
-                                            className="px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all"
-                                        >
-                                            ✅ Use This One
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </motion.div>
-            )}
+                        )}
+                    </motion.div>
+                )
+            }
 
             {/* "Evolution" Gallery */}
-            {series.chapters.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="space-y-6"
-                >
-                    <div className="flex items-center gap-3 px-4">
-                        <div className="h-px flex-1 bg-gray-200" />
-                        <span className="text-sm font-black text-indigo-400 uppercase tracking-widest">Masterpiece Evolution</span>
-                        <div className="h-px flex-1 bg-gray-200" />
-                    </div>
+            {
+                series.chapters.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="space-y-6"
+                    >
+                        <div className="flex items-center gap-3 px-4">
+                            <div className="h-px flex-1 bg-gray-200" />
+                            <span className="text-sm font-black text-indigo-400 uppercase tracking-widest">Masterpiece Evolution</span>
+                            <div className="h-px flex-1 bg-gray-200" />
+                        </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        {series.chapters.map((chapter: Chapter, idx: number) => (
-                            <motion.div
-                                key={idx}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="group relative"
-                            >
-                                <img
-                                    src={chapter.userImageUrl}
-                                    alt={`Iteration ${chapter.step}`}
-                                    className="w-full aspect-square object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-105 transition-transform"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col justify-end p-4">
-                                    <p className="text-[8px] text-white line-clamp-3 italic font-black leading-tight">
-                                        "{chapter.coachingFeedback.advice.actionableTask}"
-                                    </p>
-                                </div>
-                                <div className="absolute -top-2 -left-2 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-black shadow-lg border-2 border-white">
-                                    V{chapter.step}
-                                </div>
-                                <div className="absolute -bottom-2 right-2 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-indigo-600 shadow-sm border border-indigo-100">
-                                    {chapter.coachingFeedback.masterConnection.artist}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </motion.div>
-            )}
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            {series.chapters.map((chapter: Chapter, idx: number) => (
+                                <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    className="group relative"
+                                >
+                                    <img
+                                        src={chapter.userImageUrl}
+                                        alt={`Iteration ${chapter.step}`}
+                                        className="w-full aspect-square object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-105 transition-transform"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col justify-end p-4">
+                                        <p className="text-[8px] text-white line-clamp-3 italic font-black leading-tight">
+                                            "{chapter.coachingFeedback.advice.actionableTask}"
+                                        </p>
+                                    </div>
+                                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-black shadow-lg border-2 border-white">
+                                        V{chapter.step}
+                                    </div>
+                                    <div className="absolute -bottom-2 right-2 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-indigo-600 shadow-sm border border-indigo-100">
+                                        {chapter.coachingFeedback.masterConnection.artist}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )
+            }
 
-        </div>
+        </div >
     );
 }
 
@@ -1139,34 +1200,48 @@ function AudioPlayer({ audioUrl }: { audioUrl: string }) {
     };
 
     return (
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-lg relative group overflow-hidden">
+        <div className="bg-gradient-to-b from-indigo-500 to-purple-700 rounded-[2rem] p-8 text-white shadow-xl relative group overflow-hidden flex flex-col items-center text-center gap-6 border-4 border-white/20">
             {/* Sparkle Decoration */}
-            <div className="absolute top-0 right-0 p-2 opacity-20">
-                <Sparkles className="w-16 h-16 transform rotate-12" />
+            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-125 transition-transform duration-500">
+                <Sparkles className="w-24 h-24 transform rotate-12" />
             </div>
 
-            <div className="relative z-10 flex items-center justify-between gap-4">
-                <button
-                    onClick={togglePlay}
-                    className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-md hover:scale-110 active:scale-95 transition-all"
-                >
-                    {isPlaying ? <Volume2 className="w-8 h-8 animate-pulse" /> : <Volume2 className="w-8 h-8" />}
-                </button>
-
-                <div className="flex-1">
-                    <p className="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Magic Voice</p>
-                    <p className="text-sm font-bold leading-tight">Listen to your Art Coach!</p>
-                </div>
-
-                <audio
-                    ref={audioRef}
-                    src={audioUrl}
-                    onEnded={() => setIsPlaying(false)}
-                    onPause={() => setIsPlaying(false)}
-                    onPlay={() => setIsPlaying(true)}
-                    className="hidden"
-                />
+            <div className="absolute bottom-0 left-0 p-4 opacity-10">
+                <Volume2 className="w-16 h-16 transform -rotate-12" />
             </div>
+
+            <button
+                onClick={togglePlay}
+                className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-110 active:scale-95 transition-all relative z-10"
+            >
+                {isPlaying ? (
+                    <div className="relative">
+                        <Volume2 className="w-12 h-12 animate-pulse" />
+                        <motion.div
+                            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                            className="absolute inset-0 bg-indigo-200 rounded-full -z-10"
+                        />
+                    </div>
+                ) : (
+                    <Volume2 className="w-12 h-12 translate-x-0.5" />
+                )}
+            </button>
+
+            <div className="relative z-10">
+                <p className="text-xs font-black text-indigo-200 uppercase tracking-[0.2em] mb-2">Magic Voice Ready</p>
+                <h4 className="text-2xl font-black leading-tight drop-shadow-md">Listen to your Art Coach!</h4>
+                <p className="text-indigo-100/80 text-sm mt-2 font-medium">Magic Kat has some feedback for you ✨</p>
+            </div>
+
+            <audio
+                ref={audioRef}
+                src={audioUrl}
+                onEnded={() => setIsPlaying(false)}
+                onPause={() => setIsPlaying(false)}
+                onPlay={() => setIsPlaying(true)}
+                className="hidden"
+            />
         </div>
     );
 }

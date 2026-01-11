@@ -13,10 +13,14 @@ import { COMIC_STYLES } from '../../constants/comicStyles';
 const MOODS = [
     { id: 'mood_victory', label: 'Winner 🏆', icon: '🏆', color: '#FFD700', image: '/assets/moods/mood_winner.jpg' },
     { id: 'mood_explore', label: 'Explore 🗺️', icon: '🗺️', color: '#87CEEB', image: '/assets/moods/mood_explore.jpg' },
-    { id: 'mood_funny', label: 'Silly 🤡', icon: '🤡', color: '#FF69B4', image: '/assets/moods/mood_silly.jpg' },
+    { id: 'mood_funny', label: 'Silly  clowns', icon: '🤡', color: '#FF69B4', image: '/assets/moods/mood_silly.jpg' },
     { id: 'mood_cool', label: 'Cool 😎', icon: '😎', color: '#4ADE80', image: '/assets/moods/mood_cool.jpg' },
     { id: 'mood_friends', label: 'Team Up 🙌', icon: '🙌', color: '#FFA500', image: '/assets/moods/mood_teamup.jpg' },
-    { id: 'mood_dream', label: 'Dreamy ☁️', icon: '☁️', color: '#E0B0FF', image: '/assets/moods/mood_dreamy.png' }
+    { id: 'mood_dream', label: 'Dreamy ☁️', icon: '☁️', color: '#E0B0FF', image: '/assets/moods/mood_dreamy.png' },
+    { id: 'mood_battle', label: 'Battle 💥', icon: '💥', color: '#FF4500', image: '/assets/moods/mood_battle_v3.jpg' },
+    { id: 'mood_spooky', label: 'Spooky 👻', icon: '👻', color: '#9370DB', image: '/assets/moods/mood_spooky_v2.jpg' },
+    { id: 'mood_mystery', label: 'Mystery 🔍', icon: '🔍', color: '#483D8B', image: '/assets/moods/mood_mystery_v3.jpg' },
+    { id: 'mood_magic', label: 'Magic ✨', icon: '✨', color: '#DA70D6', image: '/assets/moods/mood_magic_v3.jpg' }
 ];
 
 // Redesigned Section 3: The Cast (Sidekicks)
@@ -28,12 +32,12 @@ const SIDEKICKS = [
 ];
 
 const CHARACTERS = [
-    { id: 'hero', label: 'Me!', icon: '🦸' },
-    { id: 'mom', label: 'Mom', icon: '👩' },
-    { id: 'dad', label: 'Dad', icon: '👨' },
-    { id: 'grandma', label: 'Grandma', icon: '👵' },
-    { id: 'grandpa', label: 'Grandpa', icon: '👴' },
-    { id: 'teacher', label: 'Teacher', icon: '👩‍🏫' },
+    { id: 'hero', label: 'Me!', icon: '🦸', image: '/assets/role_icons/role_hero.jpg' },
+    { id: 'mom', label: 'Mom', icon: '👩', image: '/assets/role_icons/role_mom.png' },
+    { id: 'dad', label: 'Dad', icon: '👨', image: '/assets/role_icons/role_dad.jpg' },
+    { id: 'grandma', label: 'Grandma', icon: '👵', image: '/assets/role_icons/role_grandma.png' },
+    { id: 'grandpa', label: 'Grandpa', icon: '👴', image: '/assets/role_icons/role_grandpa.jpg' },
+    { id: 'teacher', label: 'Teacher', icon: '👩‍🏫', image: '/assets/role_icons/role_teacher.png' },
     { id: 'other', label: 'Other', icon: '✨' },
 ];
 
@@ -56,58 +60,12 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
     const [visualStyleId, setVisualStyleId] = useState<string | null>(null);
     const [selectedMoodId, setSelectedMoodId] = useState<string | null>(null);
 
-    // V4.0 Independent Bubble State
-    const [questState, setQuestState] = useState<{ visible: boolean, text: string }>({ visible: false, text: "" });
-    const [lootState, setLootState] = useState<{ visible: boolean, text: string }>({ visible: false, text: "" });
     console.log("ComicBuilderPanel Loaded V5 - New Button");
     const [selectedSidekickId, setSelectedSidekickId] = useState<string | null>(null);
     const [showSidekickModal, setShowSidekickModal] = useState(false);
     const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(CHARACTERS[0].id);
     const [customCharacterName, setCustomCharacterName] = useState("");
     const [isListening, setIsListening] = useState(false);
-
-    // Magic Quests
-    const MAGIC_QUESTS = [
-        "Quest: Draw a robot baking a giant cake! 🤖🎂",
-        "Quest: Draw a dragon sleeping on a cloud! 🐉☁️",
-        "Quest: Draw a pixel cat chasing a mouse! 🐱🖱️",
-        "Quest: Draw a neon city in the sky! 🌃✨",
-        "Quest: Draw a blocky zombie dancing! 🧟🕺"
-    ];
-
-    const handleMagicQuest = () => {
-        const isOpening = !questState.visible;
-        if (isOpening) {
-            // Play Pop
-            playUiSound('pop');
-            // Right Side: Magic Quest
-            const randomQuest = MAGIC_QUESTS[Math.floor(Math.random() * MAGIC_QUESTS.length)];
-            setQuestState({ visible: true, text: randomQuest });
-        } else {
-            // Play Swoosh
-            playUiSound('swoosh');
-            setQuestState(prev => ({ ...prev, visible: false }));
-        }
-    };
-
-    const handleMagicLoot = () => {
-        const isOpening = !lootState.visible;
-        if (isOpening) {
-            // Play Pop
-            playUiSound('pop');
-            // Left Side: Magic Loot
-            const availableStyles = COMIC_STYLES.filter(s => s.id !== visualStyleId);
-            const secretStyle = availableStyles[Math.floor(Math.random() * availableStyles.length)];
-            const lootText = "Unlocking Rare Style... ✨ " + secretStyle.name + "!";
-
-            setVisualStyleId(secretStyle.id);
-            setLootState({ visible: true, text: lootText });
-        } else {
-            // Play Swoosh
-            playUiSound('swoosh');
-            setLootState(prev => ({ ...prev, visible: false }));
-        }
-    };
 
     // Sparkle Voice Interaction Listener
     React.useEffect(() => {
@@ -162,13 +120,15 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
     return (
         <div className="w-full flex flex-col md:grid md:grid-cols-[330px_1fr_330px] md:gap-3 items-center md:items-start p-4 md:p-10 max-w-7xl mx-auto relative">
 
-            {/* Left Column: STYLE ZONE + MAGIC LOOT */}
-            {/* Left Column: STYLE ZONE + MAGIC LOOT */}
+            {/* Left Column: STYLE ZONE */}
             <div className="w-full md:w-auto order-2 md:order-1 flex flex-col gap-8 relative min-h-[400px]">
                 <div className="flex flex-col gap-4">
-                    <h3 className="text-lg font-black text-white flex items-center gap-2 justify-center md:justify-start">
-                        <span className="bg-orange-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm">1</span>
-                        Style 🎨
+                    <h3 className="text-lg font-black text-white flex flex-col items-center md:items-start gap-1">
+                        <div className="flex items-center gap-2">
+                            <span className="bg-orange-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm">1</span>
+                            Comic Look 🎨
+                        </div>
+                        <span className="text-xs font-bold text-orange-200 uppercase tracking-wider ml-10">Choose an Art Style</span>
                     </h3>
                     <div className="grid grid-cols-3 md:grid-cols-2 gap-2 pb-2 md:pb-0 justify-items-center relative z-10">
                         {/* Render ALL 6 Styles */}
@@ -202,48 +162,12 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                     </div>
                 </div>
 
-                {/* Left Floating Key: Magic Loot (In-Flow) */}
-                <div className="mt-8 relative z-20 flex flex-col items-center w-full">
-                    <button
-                        className="relative flex flex-col items-center justify-center p-0 rounded-2xl bg-gradient-to-bl from-yellow-300 to-orange-500 w-full aspect-square text-white shadow-[0_0_20px_rgba(250,204,21,0.6)] transform hover:scale-110 active:scale-95 transition-all animate-wiggle overflow-hidden z-30"
-                        onClick={handleMagicLoot}
-                    >
-                        <div className="absolute inset-0 rounded-2xl overflow-hidden isolation-auto">
-                            <video
-                                src="/assets/videos/loot.mp4"
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                disablePictureInPicture
-                                controlsList="nodownload noremoteplayback"
-                                className="w-full h-full object-cover"
-                            />
-                            {/* Overlay Label */}
-                            <div className="absolute inset-x-0 bottom-0 bg-black/40 backdrop-blur-[2px] py-0.5 z-10">
-                                <span className="text-[9px] font-black text-white uppercase tracking-wider block text-center shadow-sm">Magic Loot</span>
-                            </div>
-                        </div>
-                        {/* Border Overlay */}
-                        <div className="absolute inset-0 rounded-2xl border-4 border-yellow-200 pointer-events-none z-20"></div>
-                    </button>
-
-                    {/* Loot Bubble (Left) - Below Button */}
-                    <div className={cn("bubble-container", lootState.visible ? "active" : "inactive")}>
-                        <div className="bg-purple-900 border-4 border-purple-400 p-4 rounded-xl shadow-xl w-full text-center relative mt-4">
-                            {/* Triangle (Points Up) */}
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-purple-900 border-t-4 border-l-4 border-purple-400 rotate-45"></div>
-                            <div className="text-sm font-black text-purple-200 mb-1">Rare Loot! 🎁</div>
-                            <div className="text-xs font-bold text-white">{lootState.text}</div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Center Column: Upload Box + Role Labels + Generate */}
-            <div className="w-full order-1 md:order-2 flex flex-col items-center gap-6">
+            <div className="w-full order-1 md:order-2 flex flex-col items-center gap-6 md:pt-[60px]">
                 {/* Upload Box */}
-                <div className="w-[85%] max-w-md aspect-[4/3] shadow-2xl rounded-3xl overflow-hidden border-4 border-white/50 bg-white/10 backdrop-blur-sm">
+                <div className="w-full max-w-[330px] aspect-[4/3] shadow-2xl rounded-3xl overflow-hidden border-4 border-white/50 bg-white/10 backdrop-blur-sm">
                     {children}
                 </div>
 
@@ -251,24 +175,43 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
 
                 {/* Section 4: Role Labels (Optimized layout) */}
                 <div className="w-full flex flex-col gap-4 bg-white/40 backdrop-blur-sm p-6 rounded-[32px] border-2 border-slate-100 shadow-xl">
-                    <h3 className="text-lg font-black text-white flex items-center gap-2 justify-center md:justify-start">
-                        <span className="bg-green-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shadow-sm">3</span>
-                        Role Labels 🏷️
+                    <h3 className="text-lg font-black text-white flex flex-col items-center md:items-start gap-1">
+                        <div className="flex items-center gap-2">
+                            <span className="bg-green-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shadow-sm">3</span>
+                            Who is this? 🏷️
+                        </div>
+                        <span className="text-xs font-bold text-green-200 uppercase tracking-wider ml-10">Assign a Role to your photo!</span>
                     </h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                    <div className="grid grid-cols-3 gap-2 pb-2 justify-items-center">
                         {CHARACTERS.map(item => (
                             <button
                                 key={item.id}
                                 onClick={() => setSelectedCharacterId(prev => prev === item.id ? null : item.id)}
                                 className={cn(
-                                    "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all shrink-0 hover:bg-green-50 shadow-sm aspect-square w-full relative group",
+                                    "rounded-2xl border-4 transition-all w-full aspect-square animate-float overflow-hidden relative",
                                     selectedCharacterId === item.id
-                                        ? "border-green-500 bg-green-50 text-green-700 shadow-md scale-105 z-10"
-                                        : "border-slate-100 bg-white text-slate-500 hover:border-green-200"
+                                        ? "border-green-500 scale-105 shadow-xl z-10"
+                                        : "border-white/20 bg-transparent hover:border-green-200 hover:scale-105",
+                                    item.id === 'other' && "col-start-2"
                                 )}
                             >
-                                <span className="text-2xl sm:text-3xl filter drop-shadow-sm group-hover:scale-110 transition-transform">{item.icon}</span>
-                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight text-center leading-tight mt-1">{item.label}</span>
+                                {(item as any).image ? (
+                                    <img src={(item as any).image} alt={item.label} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-3xl mb-1 flex items-center justify-center h-full bg-black/10">{item.icon}</span>
+                                )}
+
+                                {/* Selection Checkmark Overlay */}
+                                {selectedCharacterId === item.id && (
+                                    <div className="absolute top-1 right-1 bg-green-500 rounded-full p-1 shadow-md z-20">
+                                        <span className="text-xs text-white">✅</span>
+                                    </div>
+                                )}
+
+                                {/* Overlay Label */}
+                                <div className="absolute inset-x-0 bottom-0 bg-black/40 backdrop-blur-[2px] py-0.5">
+                                    <span className="text-[9px] font-black text-white uppercase tracking-wider block text-center shadow-sm">{item.label}</span>
+                                </div>
                             </button>
                         ))}
                     </div>
@@ -348,14 +291,17 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                 </div>
             </div>
 
-            {/* Right Column: MOOD ZONE + MAGIC QUEST */}
+            {/* Right Column: MOOD ZONE */}
             <div className="w-full md:w-auto order-3 flex flex-col gap-8 relative min-h-[400px]">
 
                 {/* Section 2: Mood */}
                 <div className="flex flex-col gap-4">
-                    <h3 className="text-lg font-black text-white flex items-center gap-2 justify-center md:justify-start">
-                        <span className="bg-yellow-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm">2</span>
-                        Mood 🎭
+                    <h3 className="text-lg font-black text-white flex flex-col items-center md:items-start gap-1">
+                        <div className="flex items-center gap-2">
+                            <span className="bg-yellow-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm">2</span>
+                            Story Vibe 🎭
+                        </div>
+                        <span className="text-xs font-bold text-yellow-200 uppercase tracking-wider ml-10">What is happening?</span>
                     </h3>
                     <div className="grid grid-cols-3 md:grid-cols-2 gap-2 pb-2 md:pb-0 justify-items-center relative z-10">
                         {/* Render 6 V4 Moods */}
@@ -389,44 +335,6 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                     </div>
                 </div>
 
-                {/* Right Floating Key: Magic Quest (In-Flow) */}
-                <div className="mt-8 relative z-20 flex flex-col items-center w-full">
-                    <button
-                        className="relative flex flex-col items-center justify-center p-0 rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 w-full aspect-square text-white shadow-[0_0_20px_rgba(245,158,11,0.6)] transform hover:scale-110 active:scale-95 transition-all animate-wiggle overflow-hidden z-30"
-                        onClick={handleMagicQuest}
-                    >
-                        <div className="absolute inset-0 rounded-2xl overflow-hidden isolation-auto">
-                            <video
-                                src="/assets/videos/quest.mp4"
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                disablePictureInPicture
-                                controlsList="nodownload noremoteplayback"
-                                className="w-full h-full object-cover"
-                            />
-                            {/* Overlay Label */}
-                            <div className="absolute inset-x-0 bottom-0 bg-black/50 backdrop-blur-[2px] py-1 z-10">
-                                <span className="text-[10px] font-black uppercase tracking-wide leading-tight drop-shadow-md block text-center text-yellow-100">Magic Quest</span>
-                            </div>
-                        </div>
-                        {/* Border Overlay */}
-                        <div className="absolute inset-0 rounded-2xl border-4 border-yellow-200 pointer-events-none z-20"></div>
-
-
-                    </button>
-
-                    {/* Quest Bubble (Right) - Below Button */}
-                    <div className={cn("bubble-container", questState.visible ? "active" : "inactive")}>
-                        <div className="bg-white border-4 border-yellow-400 p-4 rounded-xl shadow-xl w-full text-center relative mt-4">
-                            {/* Triangle (Points Up) */}
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-t-4 border-l-4 border-yellow-400 rotate-45"></div>
-                            <div className="text-sm font-black text-yellow-600 mb-1">Quest Logic! 💡</div>
-                            <div className="text-xs font-bold text-slate-700">{questState.text}</div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Sidekick Modal (Keep existing) */}

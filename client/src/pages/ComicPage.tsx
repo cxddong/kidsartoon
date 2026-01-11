@@ -13,6 +13,7 @@ import { ShareDialog } from '../components/ShareDialog';
 import jsPDF from 'jspdf';
 
 import { ComicBuilderPanel, type ComicBuilderData } from '../components/builder/ComicBuilderPanel';
+import { ComicBubbleGrid } from '../components/ComicBubble';
 import comicVideo from '../assets/comic.mp4';
 import magicBookVideo from '../assets/magicbook.mp4';
 
@@ -68,7 +69,10 @@ export const ComicPage: React.FC = () => {
                 }
 
                 // Restore editable captions if available
-                if (data.storyCaptions) {
+                // PRIORITY: Use panels data (new format with emotion/bubble metadata)
+                if (data.panels && Array.isArray(data.panels) && data.panels.length === 4) {
+                    setEditableCaptions(data.panels.map((p: any) => p.caption || p.dialogue || ''));
+                } else if (data.storyCaptions) {
                     setEditableCaptions(data.storyCaptions);
                 } else if (data.pages) {
                     setEditableCaptions(data.pages.map((p: any) => p.text || p.text_overlay || p.narrativeText));
@@ -144,45 +148,75 @@ export const ComicPage: React.FC = () => {
                 format: 'a4'
             });
 
+            // 1. Get Image URL
             const imageUrl = resultData.gridImageUrl || resultData.coverImageUrl || resultData.pages?.[0]?.imageUrl;
             if (!imageUrl) {
                 alert('No image found to export');
                 return;
             }
 
-            // Add title
-            pdf.setFontSize(20);
-            pdf.text('My Magic Comic', 105, 20, { align: 'center' });
+            // 2. Fetch Image safely (Avoids some CORS issues with direct Image() usage)
+            const response = await fetch(imageUrl);
+            if (!response.ok) throw new Error("Failed to fetch image data");
+            const blob = await response.blob();
 
-            // Load and add image
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = imageUrl;
-
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
+            // 3. Convert to Base64
+            const base64Data = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
             });
 
-            // Calculate dimensions to fit on page
-            const maxWidth = 180;
-            const maxHeight = 250;
-            let width = img.width;
-            let height = img.height;
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width *= ratio;
-            height *= ratio;
+            // 4. Add Title
+            pdf.setFontSize(22);
+            pdf.setTextColor(40, 40, 70);
+            pdf.text('My Magic Comic', 105, 20, { align: 'center' });
 
-            const x = (210 - width) / 2; // Center horizontally
-            const y = 30; // Start below title
+            // 5. Add Parameters (User Request)
+            pdf.setFontSize(10);
+            pdf.setTextColor(100, 100, 100);
 
-            pdf.addImage(img, 'PNG', x, y, width, height);
+            const params = resultData.tags || {};
+            const paramText = [
+                `Style: ${params.visualStyle || 'Magic Style'}`,
+                `Story: ${params.storyType || 'Adventure'}`,
+                `Characters: ${(params.characters || []).join(', ') || 'Friends'}`
+            ].join(' | ');
 
-            // Save PDF
+            pdf.text(paramText, 105, 28, { align: 'center' });
+
+            // 6. Add Image
+            const imgProps = pdf.getImageProperties(base64Data);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+
+            // Margins
+            const marginX = 15;
+            const marginY = 35; // Below title/text
+            const maxWidth = pdfWidth - (marginX * 2);
+            const maxHeight = pdfHeight - marginY - 15; // Bottom margin
+
+            const ratio = Math.min(maxWidth / imgProps.width, maxHeight / imgProps.height);
+            const width = imgProps.width * ratio;
+            const height = imgProps.height * ratio;
+
+            // Center
+            const x = (pdfWidth - width) / 2;
+
+            pdf.addImage(base64Data, 'PNG', x, marginY, width, height);
+
+            // Footer
+            pdf.setFontSize(8);
+            pdf.setTextColor(150, 150, 150);
+            pdf.text('Created with KidsArtToon', 105, pdfHeight - 10, { align: 'center' });
+
+            // Save
             pdf.save(`kidsartoon-comic-${Date.now()}.pdf`);
+
         } catch (error) {
             console.error('PDF export failed:', error);
-            alert('Failed to export PDF. Please try again.');
+            alert('Failed to save PDF. The image might be protected or network is busy. Please try "Make Another"!');
         }
     };
 
@@ -297,7 +331,10 @@ export const ComicPage: React.FC = () => {
                 setResultData(finalData);
 
                 // Architecture C: Initialize editable captions
-                if (finalData.storyCaptions) {
+                // PRIORITY: Use panels data (new format with emotion/bubble metadata)
+                if (finalData.panels && Array.isArray(finalData.panels) && finalData.panels.length === 4) {
+                    setEditableCaptions(finalData.panels.map((p: any) => p.caption || p.dialogue || ''));
+                } else if (finalData.storyCaptions) {
                     setEditableCaptions(finalData.storyCaptions);
                 } else if (finalData.pages) {
                     setEditableCaptions(data.pages.map((p: any) => p.text || p.text_overlay || p.narrativeText));
@@ -507,23 +544,17 @@ export const ComicPage: React.FC = () => {
                                         alt="Comic Strip"
                                     />
 
-                                    {/* Architecture C: Interactive Text Overlays for 2x2 Grid */}
+                                    {/* Enhanced Comic Bubbles with Tails - Overlaying on Image */}
                                     {editableCaptions.length === 4 && !resultData.isTextBurnedIn && (
-                                        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 w-full h-full pointer-events-none">
-                                            {editableCaptions.map((caption, i) => (
-                                                <div
-                                                    key={i} className="relative w-full h-full flex flex-col justify-end items-center p-2 md:p-4">
-                                                    <div
-                                                        className="bg-white px-3 py-2 rounded-[1rem] border-2 border-slate-900 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] pointer-events-auto text-center transition-all hover:scale-[1.05] max-w-[95%] max-h-[35%] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent flex items-center justify-center cursor-pointer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <div className="w-full bg-transparent border-none text-[9px] md:text-[13px] font-bold text-slate-800 text-center leading-snug" style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", sans-serif' }}>
-                                                            {caption}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <ComicBubbleGrid
+                                            panels={editableCaptions.map((caption, i) => ({
+                                                caption,
+                                                bubblePosition: resultData.panels?.[i]?.bubblePosition || resultData.pages?.[i]?.bubblePosition || 'bottom',
+                                                bubbleType: resultData.panels?.[i]?.bubbleType || resultData.pages?.[i]?.bubbleType || 'speech',
+                                                emotion: resultData.panels?.[i]?.emotion || resultData.pages?.[i]?.emotion || 'happy'
+                                            }))}
+                                            onBubbleClick={(i) => console.log(`Bubble ${i + 1} clicked`)}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -636,28 +667,41 @@ export const ComicPage: React.FC = () => {
 
                     {/* State 2: Generating (Loading with Gallery) */}
                     {step === 'generating' && (
-                        <motion.div key="loading"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="relative z-10 bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-xl flex flex-col items-center mb-12"
-                        >
-                            <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                            <h3 className="text-xl font-bold text-slate-800">Drawing... {Math.round(progress)}%</h3>
-                            <div className="w-48 h-3 bg-slate-200 rounded-full mt-4 overflow-hidden relative">
-                                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.round(progress)}%` }} />
-                            </div>
+                        <div key="generating-container" className="relative z-10 w-full flex flex-col items-center">
+                            <motion.div key="loading"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-xl flex flex-col items-center mb-6"
+                            >
+                                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+                                <h3 className="text-xl font-bold text-slate-800">Drawing... {Math.round(progress)}%</h3>
+                                <div className="w-48 h-3 bg-slate-200 rounded-full mt-4 overflow-hidden relative">
+                                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.round(progress)}%` }} />
+                                </div>
 
-                            {/* Gallery Display */}
+                                <div className="mt-8">
+                                    <GenerationCancelButton
+                                        isGenerating={true}
+                                        onCancel={() => navigate('/generate')}
+                                    />
+                                </div>
+                            </motion.div>
+
+                            {/* Gallery Display - Moved outside the main loader box to avoid blocking */}
                             {publicGallery.length > 0 && (
-                                <div className="mt-8 w-full max-w-md">
-                                    <p className="text-sm text-slate-600 font-medium text-center mb-4">While you wait, check out other comics! 🎨</p>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="w-full max-w-[280px] mt-2"
+                                >
+                                    <p className="text-xs text-white/70 font-bold text-center mb-3 drop-shadow-md">While you wait, check out other comics! 🎨</p>
                                     <motion.div
                                         key={galleryIndex}
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="relative aspect-square rounded-2xl overflow-hidden shadow-lg"
+                                        className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20"
                                     >
                                         <img
                                             src={publicGallery[galleryIndex]?.imageUrl || publicGallery[galleryIndex]?.gridImageUrl}
@@ -665,16 +709,9 @@ export const ComicPage: React.FC = () => {
                                             className="w-full h-full object-cover"
                                         />
                                     </motion.div>
-                                </div>
+                                </motion.div>
                             )}
-
-                            <div className="mt-8">
-                                <GenerationCancelButton
-                                    isGenerating={true}
-                                    onCancel={() => navigate('/generate')}
-                                />
-                            </div>
-                        </motion.div>
+                        </div>
                     )}
 
                     {/* State 3: Upload / Builder (Default) */}

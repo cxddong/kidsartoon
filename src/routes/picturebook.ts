@@ -171,7 +171,8 @@ router.post('/create', async (req, res) => {
             {
                 pageCount,
                 version: 'v2',
-                originalImageUrl: imageUrl // Persist original upload
+                originalImageUrl: imageUrl, // Persist original upload
+                pages: renderedPages // CRITICAL: Include pages for profile viewer
             }
         );
 

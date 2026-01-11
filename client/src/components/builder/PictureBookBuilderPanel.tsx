@@ -241,12 +241,23 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
 
             </div>
 
-            {/* Center Column: Upload + Pace + Roles + Generate */}
-            <div className="w-full order-1 md:order-2 flex flex-col items-center gap-6">
+            {/* Center Column: Upload + Page + Roles + Generate */}
+            <div className="w-full order-1 md:order-2 flex flex-col items-center gap-8">
                 {/* Upload Box (Children) */}
                 <div className="w-[85%] max-w-sm aspect-square shadow-2xl rounded-3xl overflow-hidden border-4 border-white/50 bg-white/10 backdrop-blur-sm">
                     {children}
                 </div>
+
+                {/* Helper Text (Moved here) */}
+                {!isReady && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-sm text-amber-400 text-center font-black animate-pulse tracking-widest uppercase drop-shadow-md"
+                    >
+                        ✨ Upload a photo to start the magic! ✨
+                    </motion.p>
+                )}
 
 
 
@@ -265,64 +276,6 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
 
 
 
-                {/* Module 6: Story Text Input (NEW) */}
-                <section className="mt-8">
-                    <div className="relative">
-                        <textarea
-                            value={storyText}
-                            onChange={(e) => setStoryText(e.target.value)}
-                            placeholder="Add your own story ideas here... 😊 (Optional)"
-                            className="w-full p-4 pr-12 rounded-2xl border-2 border-slate-100 bg-white/50 focus:bg-white focus:border-purple-300 focus:ring-0 transition-all outline-none resize-none h-28 text-sm text-slate-700 shadow-inner"
-                        />
-                        {storyText && (
-                            <button
-                                onClick={() => setStoryText('')}
-                                className="absolute right-3 top-3 text-xs text-red-300 hover:text-red-500 font-bold transition-colors z-10"
-                            >
-                                Clear
-                            </button>
-                        )}
-                        <button
-                            onClick={toggleVoiceInput}
-                            type="button"
-                            className={cn(
-                                "absolute right-3 bottom-3 p-2 rounded-xl transition-all shadow-sm hover:scale-105 active:scale-95",
-                                isListening
-                                    ? "bg-red-500 text-white animate-pulse shadow-red-200"
-                                    : "bg-slate-100 text-slate-400 hover:text-purple-600 hover:bg-purple-50"
-                            )}
-                            title="Voice Input"
-                        >
-                            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                        </button>
-                    </div>
-                </section>
-
-                {/* Generate Button (Video Replacement) */}
-                {/* Generate Button (Floating Fixed Bottom) */}
-                {/* Generate Button (Static Below Textarea) */}
-                <div className="w-full mt-8 flex justify-center flex-col items-center">
-                    <button
-                        onClick={() => onGenerate({ theme, illustrationStyle, vibe, character, pageCount, storyText })}
-                        disabled={!isReady}
-                        className="relative w-40 h-40 rounded-full overflow-hidden shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group border-4 border-white/30"
-                    >
-                        <video
-                            src={generateVideo}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover scale-110"
-                        />
-                    </button>
-                    {/* Helper Text */}
-                    {!isReady && (
-                        <p className="text-xs text-white/70 text-center mt-2 font-bold animate-pulse">
-                            Upload a photo to start!
-                        </p>
-                    )}
-                </div>
             </div>
 
             {/* Right Column: Role Labels */}
@@ -416,7 +369,60 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                 </div>
             </div>
 
+            {/* Bottom Section: Story Text & Generate Button */}
+            <div className="w-full max-w-4xl mx-auto px-4 mt-12 flex flex-col items-center gap-8 pb-20 order-last md:col-span-3">
+                {/* Module 6: Story Text Input */}
+                <section className="w-full">
+                    <div className="relative">
+                        <textarea
+                            value={storyText}
+                            onChange={(e) => setStoryText(e.target.value)}
+                            placeholder="Add your own story ideas here... 😊 (Optional)"
+                            className="w-full p-6 pr-12 rounded-[2rem] border-2 border-white/30 bg-white/10 backdrop-blur-md text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white/50 focus:ring-0 transition-all outline-none resize-none h-32 text-lg shadow-xl"
+                        />
+                        {storyText && (
+                            <button
+                                onClick={() => setStoryText('')}
+                                className="absolute right-6 top-6 text-sm text-red-300 hover:text-red-500 font-bold transition-colors z-10"
+                            >
+                                Clear
+                            </button>
+                        )}
+                        <button
+                            onClick={toggleVoiceInput}
+                            type="button"
+                            className={cn(
+                                "absolute right-6 bottom-6 p-3 rounded-2xl transition-all shadow-lg hover:scale-105 active:scale-95",
+                                isListening
+                                    ? "bg-red-500 text-white animate-pulse shadow-red-200"
+                                    : "bg-white/10 text-white hover:bg-white/20"
+                            )}
+                            title="Voice Input"
+                        >
+                            {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                        </button>
+                    </div>
+                </section>
 
+                {/* Generate Button */}
+                <div className="flex flex-col items-center gap-4">
+                    <button
+                        onClick={() => onGenerate({ theme, illustrationStyle, vibe, character, pageCount, storyText })}
+                        disabled={!isReady}
+                        className="relative w-48 h-48 rounded-full overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:shadow-[0_0_70px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group border-8 border-white/20"
+                    >
+                        <video
+                            src={generateVideo}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover scale-110"
+                        />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

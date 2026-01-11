@@ -401,7 +401,7 @@ export const ProfilePage: React.FC = () => {
 
             {/* Modals */}
             <ImageModal
-                image={selectedImage && !selectedImage.meta?.isStoryBook && selectedImage.type !== 'picturebook' ? selectedImage : null}
+                image={selectedImage && !selectedImage.meta?.isStoryBook && selectedImage.type !== 'picturebook' && selectedImage.type !== 'graphic-novel' ? selectedImage : null}
                 onClose={() => setSelectedImage(null)}
                 onToggleFavorite={async (id) => {
                     setImages(prev => prev.map(img => img.id === id ? { ...img, favorite: !img.favorite } : img));

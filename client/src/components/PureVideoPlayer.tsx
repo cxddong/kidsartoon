@@ -27,15 +27,12 @@ export const PureVideoPlayer: React.FC<PureVideoPlayerProps> = ({ src, className
             <video
                 ref={videoRef}
                 src={src}
-                className="w-full h-full object-contain" // Allow interaction, contain to see full video
+                className="w-full h-full object-contain bg-black"
                 playsInline
-                loop
-                autoPlay
-                muted // Essential for autoplay
-                controls // Native controls
+                controls // Native controls for volume/fullscreen
                 disablePictureInPicture
-                controlsList="noremoteplayback" // Allow download
-                onContextMenu={(e) => e.stopPropagation()} // Allow context menu
+                controlsList="nodownload noremoteplayback" // Custom download button provided
+                onContextMenu={(e) => e.stopPropagation()}
             />
         </div>
     );

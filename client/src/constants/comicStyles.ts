@@ -42,5 +42,33 @@ export const COMIC_STYLES = [
         icon: '✏️',
         image: '/assets/styles/sketch_icon.jpg',
         prompt_modifier: 'Cute Sketch Style, colored pencil drawing, hand-drawn paper texture, artistic, creative, doodle'
+    },
+    {
+        id: 'super_hero',
+        name: 'Super Hero',
+        icon: '🦸‍♂️',
+        image: '/assets/styles/super_hero_v4.jpg',
+        prompt_modifier: 'American comic book style, bold lines, high saturation colors, pop art aesthetic, action-packed, superhero motifs, cinematic lighting, dramatic shadows'
+    },
+    {
+        id: 'anime_manga',
+        name: 'Anime',
+        icon: '🥺',
+        image: '/assets/styles/anime_manga_v3.jpg',
+        prompt_modifier: 'Japanese anime style, cel-shaded, big expressive eyes, delicate lines, vibrant colors, high detail, aesthetic, modern shonen/shoujo look'
+    },
+    {
+        id: 'ink_noir',
+        name: 'Ink',
+        icon: '✒️',
+        image: '/assets/styles/ink_noir_v3.png',
+        prompt_modifier: 'Black and white ink drawing, graphic novel style, high contrast, hand-drawn brush strokes, artistic noir aesthetic, detailed cross-hatching, classic comic ink'
+    },
+    {
+        id: 'paper_craft',
+        name: 'Paper',
+        icon: '✂️',
+        image: '/assets/styles/paper_icon_v2.jpg',
+        prompt_modifier: 'Paper cutout style, 3d layered paper craft, textured paper, soft drop shadows, scrapbook aesthetic, tactile feel, colorful paper layers'
     }
 ];

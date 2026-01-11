@@ -835,27 +835,55 @@ router.post('/image-to-video/task', (req, res, next) => {
 
     console.log(`[API Magic] Calling Doubao with simplified params...`);
 
-    // Call NEW Doubao Seedance Service (Kids Version)
-    const taskId = await doubaoService.createSeedanceVideoTask(finalImageUrl, {
-      action: action,           // Required: 'dance', 'run', 'fly', etc.
-      style: style,             // Optional: 'clay', 'cartoon', etc.
-      effect: effect,           // Optional: 'sparkle', 'bubbles', etc.
-      duration: duration,       // 5 | 8 | 10
-      generateAudio: generateAudio
-    });
+    // NEW: Extract Audio Mode parameters for Seedance 1.5
+    const audioMode = req.body.audioMode || 'scene';  // 'talk' or 'scene'
+    const voiceStyle = req.body.voiceStyle || 'cute';  // 'cute', 'robot', 'monster'
+    const sceneMood = req.body.sceneMood || 'happy';   // 'happy', 'mysterious', 'action'
+    const textInput = req.body.textInput || '';        // Character Speech (Talk Mode)
+    const videoPrompt = req.body.videoPrompt || '';    // Additional Requirements / Scene Description
+
+    console.log(`[Video Magic] AudioMode='${audioMode}', VoiceStyle='${voiceStyle}', TextInput='${textInput.substring(0, 30)}...', Prompt='${videoPrompt.substring(0, 30)}...'`);
+
+    let taskId: string;
+
+    // If Talk mode with textInput, use Seedance 1.5 Pro with speech
+    if (audioMode === 'talk' && textInput.trim()) {
+      console.log(`[API Magic] Using Seedance 1.5 Pro with Speech Mode`);
+      taskId = await doubaoService.createSeedanceVideoTask1_5(finalImageUrl, {
+        spell: duration === 5 ? 'quick' : duration === 8 ? 'story' : 'cinema',
+        audioMode: 'talk',
+        textInput: textInput,
+        voiceStyle: voiceStyle,
+        sceneMood: sceneMood,
+        videoPrompt: videoPrompt // Pass additional requirements
+      });
+    } else {
+      // Otherwise use the Kids Version (action-based) but allow videoPrompt enrichment
+      console.log(`[API Magic] Using Seedance Kids Version (action-based)`);
+      taskId = await doubaoService.createSeedanceVideoTask(finalImageUrl, {
+        action: action,           // Required: 'dance', 'run', 'fly', etc.
+        style: style,             // Optional: 'clay', 'cartoon', etc.
+        effect: effect,           // Optional: 'sparkle', 'bubbles', etc.
+        duration: duration,       // 5 | 8 | 10
+        generateAudio: generateAudio,
+        extraPrompt: videoPrompt  // Pass additional requirements
+      });
+    }
 
     console.log(`[API Magic] Task created: ${taskId}`);
 
-    // Track task (Flatten meta to avoid Firestore nested entity errors)
-    await databaseService.saveVideoTask(taskId, userId, cost, `${action}${style ? '+' + style : ''}${effect ? '+' + effect : ''}`, {
+    // Track task
+    await databaseService.saveVideoTask(taskId, userId, cost, `${action}${style ? '+' + style : ''}`, {
       originalImageUrl: originalImageUrl || '',
       engine: 'doubao-seedance-1.5',
       action: action || '',
       style: style || '',
-      effect: effect || ''
+      effect: effect || '',
+      audioMode: audioMode,
+      textInput: textInput.substring(0, 50),
+      videoPrompt: videoPrompt.substring(0, 50)
     });
 
-    // Return extended info (usedModel: doubao-seedance-1-5-pro-251215)
     res.json({ taskId, usedModel: 'doubao-seedance-1-5-pro-251215', status: 'PENDING' });
 
   } catch (error: any) {
@@ -887,6 +915,7 @@ router.get('/image-to-video/status/:taskId', async (req, res) => {
         let permanentVideoUrl = result.videoUrl!;
         try {
           console.log(`[API] Uploading video ${taskId} to storage...`);
+          const fetch = (await import('node-fetch')).default;
           const vidRes = await fetch(result.videoUrl!);
           if (vidRes.ok) {
             const ab = await vidRes.arrayBuffer();
@@ -897,13 +926,18 @@ router.get('/image-to-video/status/:taskId', async (req, res) => {
           console.error('[API] Failed to upload video to storage:', err);
         }
 
-        await databaseService.saveImageRecord(
-          localTask.userId,
-          permanentVideoUrl,
-          'animation',
-          localTask.prompt || "Animation",
-          { taskId, cost: localTask.cost, model: 'musesteamer-2.0', originalImageUrl: localTask.meta?.originalImageUrl }
-        );
+        try {
+          await databaseService.saveImageRecord(
+            localTask.userId,
+            permanentVideoUrl,
+            'animation',
+            localTask.prompt || "Animation",
+            { taskId, cost: localTask.cost, model: 'musesteamer-2.0', originalImageUrl: localTask.meta?.originalImageUrl }
+          );
+        } catch (saveErr) {
+          console.error('[API] Failed to save video record to DB:', saveErr);
+        }
+
         await databaseService.markTaskCompleted(taskId);
 
         // Fix: Return the PERMANENT URL to the frontend immediately

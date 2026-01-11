@@ -1,13 +1,23 @@
 // client/src/components/viewer/GraphicNovelViewer.tsx
 
 import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Download, Share2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Download, Share2, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ComicBubbleGrid } from '../ComicBubble';
+import jsPDF from 'jspdf';
 
 interface GraphicNovelPage {
     pageNumber: number;
     imageUrl: string;
     text?: string;
+    panels?: Array<{     // NEW: Panel dialogue data
+        panel: number;
+        caption: string;
+        sceneDescription: string;
+        emotion?: string;
+        bubbleType?: string;
+        bubblePosition?: string;
+    }>;
 }
 
 interface GraphicNovelViewerProps {
@@ -72,6 +82,127 @@ export const GraphicNovelViewer: React.FC<GraphicNovelViewerProps> = ({
         }
     };
 
+    const handleDownloadPDF = async () => {
+        try {
+            console.log('[PDF] Starting PDF generation for', pages.length, 'pages...');
+
+            const pdf = new jsPDF('portrait', 'mm', 'a4');
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const margin = 10;
+            const imgWidth = pageWidth - (2 * margin);
+
+            for (let i = 0; i < pages.length; i++) {
+                if (i > 0) pdf.addPage();
+                console.log(`[PDF] Processing page ${i + 1}/${pages.length}...`);
+
+                const pageData = pages[i];
+                let imageLoaded = false;
+                let finalImgHeight = 0;
+
+                try {
+                    // ROBUST IMAGE LOADING: Use Backend Proxy to bypass CORS completely
+                    const rawImageUrl = pageData.imageUrl;
+                    if (rawImageUrl) {
+                        const proxyUrl = `/api/media/proxy-image?url=${encodeURIComponent(rawImageUrl)}`;
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+
+                        const imgDataUrl = await new Promise<string>((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Proxy timeout')), 15000);
+                            img.onload = () => {
+                                clearTimeout(timeout);
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                    ctx.drawImage(img, 0, 0);
+                                    try {
+                                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                                    } catch (e) {
+                                        reject(e);
+                                    }
+                                } else {
+                                    reject(new Error('Failed canvas ctx'));
+                                }
+                            };
+                            img.onerror = () => {
+                                clearTimeout(timeout);
+                                reject(new Error('Failed to load proxied image'));
+                            };
+                            img.src = proxyUrl;
+                        });
+
+                        const tempImg = new Image();
+                        tempImg.src = imgDataUrl;
+                        await new Promise(r => tempImg.onload = r);
+
+                        const imgHeight = (tempImg.height / tempImg.width) * imgWidth;
+                        const maxHeight = pageHeight - 110; // Extra room for panel text
+                        finalImgHeight = Math.min(imgHeight, maxHeight);
+                        const finalWidth = (tempImg.width / tempImg.height) * finalImgHeight;
+
+                        pdf.addImage(imgDataUrl, 'JPEG', margin, margin, finalWidth, finalImgHeight);
+                        imageLoaded = true;
+                    }
+                } catch (imgError) {
+                    console.error(`[PDF] Proxy error on page ${i + 1}:`, imgError);
+
+                    pdf.setFontSize(10);
+                    pdf.setTextColor(255, 0, 0);
+                    pdf.text(`[Image load failed: ${i + 1}] Connection to Magic Lab Proxy failed.`, margin, 50);
+                    pdf.setTextColor(0, 0, 0);
+                    finalImgHeight = 35;
+                }
+
+                // IMPROVED: Render panel scripts instead of overall chapter text
+                if (pageData.panels && pageData.panels.length > 0) {
+                    pdf.setFontSize(10);
+
+                    let yPos = margin + finalImgHeight + 10;
+                    pageData.panels.forEach((p: any, pIdx: number) => {
+                        const content = p.dialogue || p.caption || p.story_text || p.text || '';
+                        if (!content) return;
+
+                        const panelLabel = `Panel ${pIdx + 1}: `;
+
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setTextColor(128, 0, 128); // Purple label
+                        pdf.text(panelLabel, margin, yPos);
+
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.setTextColor(40, 40, 40);
+                        const labelWidth = pdf.getTextWidth(panelLabel);
+                        const textLines = pdf.splitTextToSize(content, imgWidth - labelWidth);
+
+                        pdf.text(textLines, margin + labelWidth, yPos);
+                        yPos += (textLines.length * 5) + 4;
+                    });
+                } else if (pageData.text) {
+                    // Fallback to page text if no panels
+                    pdf.setFontSize(12);
+                    pdf.setFont('helvetica', 'italic');
+                    pdf.setTextColor(100, 100, 100);
+                    const textY = margin + finalImgHeight + 15;
+                    const textLines = pdf.splitTextToSize(pageData.text, imgWidth);
+                    pdf.text(textLines, margin, textY);
+                }
+            }
+
+            // Save PDF
+            const filename = `${title.replace(/[^a-z0-9]/gi, '_')}_graphic_novel.pdf`;
+            pdf.save(filename);
+
+            console.log('[PDF] PDF saved successfully:', filename);
+            alert(`✅ PDF downloaded: ${filename}`);
+
+        } catch (error) {
+            console.error('[PDF] Critical error:', error);
+            alert(`❌ PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <motion.div
@@ -116,7 +247,22 @@ export const GraphicNovelViewer: React.FC<GraphicNovelViewerProps> = ({
                                     alt={`Page ${currentPage + 1}`}
                                     className="w-full h-full object-contain rounded-xl shadow-2xl border-4 border-white/20"
                                 />
-                                {pages[currentPage]?.text && (
+                                {/* Comic Bubbles Overlay - if panel data exists */}
+                                {pages[currentPage]?.panels && pages[currentPage].panels.length > 0 && (
+                                    <div className="absolute inset-0 rounded-xl">
+                                        <ComicBubbleGrid
+                                            panels={pages[currentPage].panels.map(p => ({
+                                                caption: p.caption,
+                                                bubblePosition: p.bubblePosition || 'bottom',
+                                                bubbleType: p.bubbleType || 'speech',
+                                                emotion: p.emotion || 'happy'
+                                            }))}
+                                            onBubbleClick={(i) => console.log(`Panel ${i + 1} clicked`)}
+                                        />
+                                    </div>
+                                )}
+                                {/* Fallback: Chapter text if no panel data */}
+                                {pages[currentPage]?.text && !pages[currentPage]?.panels && (
                                     <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm p-4 rounded-xl">
                                         <p className="text-slate-800 text-center font-medium">
                                             {pages[currentPage].text}
@@ -142,11 +288,11 @@ export const GraphicNovelViewer: React.FC<GraphicNovelViewerProps> = ({
                             <h3 className="text-white text-xl font-black mb-4">Creation Details</h3>
 
                             {/* Assets Used */}
-                            {assets && (
+                            {assets && Object.keys(assets).length > 0 && (
                                 <div className="mb-6">
                                     <h4 className="text-white/70 text-sm font-bold mb-3">Assets Used:</h4>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {Object.entries(assets).map(([key, asset]) => asset && (
+                                        {Object.entries(assets).map(([key, asset]) => asset && asset.imageUrl && (
                                             <div key={key} className="bg-white/10 rounded-lg p-2">
                                                 <img
                                                     src={asset.imageUrl}
@@ -178,7 +324,13 @@ export const GraphicNovelViewer: React.FC<GraphicNovelViewerProps> = ({
 
                             {/* Created At */}
                             <div className="text-white/60 text-xs">
-                                Created: {new Date(createdAt).toLocaleDateString()}
+                                Created: {(() => {
+                                    if (!createdAt) return 'Recently';
+                                    const date = typeof createdAt === 'number' ? new Date(createdAt) :
+                                        (createdAt as any).seconds ? new Date((createdAt as any).seconds * 1000) :
+                                            new Date(createdAt);
+                                    return isNaN(date.getTime()) ? 'Recently' : date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                })()}
                             </div>
                         </motion.div>
                     )}
@@ -207,7 +359,14 @@ export const GraphicNovelViewer: React.FC<GraphicNovelViewerProps> = ({
                                 className="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-bold text-white transition-all flex items-center gap-2"
                             >
                                 <Download className="w-5 h-5" />
-                                Download
+                                Page
+                            </button>
+                            <button
+                                onClick={handleDownloadPDF}
+                                className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl font-bold text-white transition-all flex items-center gap-2"
+                            >
+                                <FileDown className="w-5 h-5" />
+                                PDF
                             </button>
                             <button
                                 onClick={handleShare}

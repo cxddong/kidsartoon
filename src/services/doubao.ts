@@ -71,9 +71,9 @@ export class DoubaoService {
             // New Model: Seedream 4.0 (Default fallback, overridden by env if needed)
             const model = process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-pro-4-0-t2i-250415';
 
-            // Map old size params to new format if needed, or use fixed 1024x1024 as requested
-            // The user requested explicit "1024x1024"
-            const sizeParam = "1024x1024";
+            // Doubao Seedream-4.0 supports 1280x720 to 4096x4096
+            // Using maximum 4096x4096 for highest quality
+            const sizeParam = "4096x4096";
 
             const response = await fetch(`${this.baseUrl}/images/generations`, {
                 method: 'POST',
@@ -448,39 +448,77 @@ Your task is to generate a 4-page story based on the user's theme.
 
     /**
      * Summarize a children's story into 4 short scene descriptions for a comic strip
+     * Now includes emotion, bubble type, and positioning for enhanced UI rendering
      */
-    async summarizeStoryToComicPanels(storyText: string): Promise<{ panel: number; caption: string; sceneDescription: string }[]> {
+    async summarizeStoryToComicPanels(storyText: string): Promise<{
+        panel: number;
+        caption: string;
+        sceneDescription: string;
+        emotion?: string;
+        bubbleType?: string;
+        bubblePosition?: string;
+    }[]> {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 120000); // 120s timeout
 
         try {
             const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20251130051132-bqhrh';
-            console.log(`[Doubao] Summarizing story into 4 comic panel descriptions...`);
+            console.log(`[Doubao] Creating engaging 4-panel comic story with emotional depth...`);
 
-            const systemPrompt = `You are a professional children's story editor and comic scripter. Your task is to take a story idea or a short description and expand/summarize it into exactly 4 short, distinct scene captions and visual descriptions for a 4-panel comic strip.
+            const systemPrompt = `You are a master children's story writer specializing in 4-panel comic strips. Create an engaging, emotionally rich story for children aged 4-8.
 
-If the input is short (e.g., just character tags), expand it into a full creative narrative arc: Setup -> Action -> Climax -> Resolution.
-If the input is a full story, summarize it into those same 4 key moments.
+**Your Mission:**
+Transform the user's input into a complete 4-panel comic story with:
+- Vivid, specific dialogue (not generic phrases)
+- Clear emotional progression
+- Engaging character actions
+- A satisfying narrative arc
 
-Requirements:
-1. Create exactly 4 scenes that capture a logical progression.
-2. Each caption should be short (10-20 words), suitable for children aged 4-8.
-3. Each scene description MUST vary significantly:
-   - Use DIFFERENT camera angles (e.g., Panel 1: Wide shot, Panel 2: Close up, Panel 3: Side profile, Panel 4: Action shot).
-   - Use DIFFERENT actions (e.g., Running, jumping, sitting, talking).
-   - Describe character expressions and background changes.
-4. The scenes MUST flow logically: Setup -> Action -> Climax -> Resolution.
-5. Output format: Return a pure JSON array (no markdown).
+**Story Structure (CRITICAL):**
+Panel 1 (SETUP): Introduce character with a goal or discovery. Emotion: happy/excited/curious
+Panel 2 (CONFLICT): Challenge or obstacle appears. Emotion: surprised/worried/determined  
+Panel 3 (CLIMAX): Character takes action or finds solution. Emotion: excited/brave/hopeful
+Panel 4 (RESOLUTION): Happy ending with lesson or friendship. Emotion: joyful/satisfied/proud
 
-Output JSON structure:
+**Dialogue Requirements:**
+- Use direct quotes from characters (e.g., "Wow! What a beautiful day!")
+- Make each line specific to the story, not generic
+- Keep it 8-15 words per panel
+- Use exclamation points and questions to show emotion
+- Match the dialogue to the character's emotion
+
+**Visual Variety (CRITICAL):**
+- Panel 1: Wide establishing shot
+- Panel 2: Medium shot showing reaction
+- Panel 3: Close-up on action/emotion
+- Panel 4: Wide shot showing resolution
+
+**Bubble Positioning:**
+Automatically choose where speech bubbles should appear:
+- "top" - character looking up or speaking upward
+- "bottom" - default, character grounded
+- "middle-left" - character on right side
+- "middle-right" - character on left side
+
+**Output Format:** Pure JSON array (no markdown formatting)
+
 [
   {
     "panel": 1,
-    "caption": "Short text caption for panel 1",
-    "sceneDescription": "Detailed visual description for image generation"
+    "dialogue": "Character's exact spoken words or thought",
+    "sceneDescription": "Detailed visual scene for image generation",
+    "emotion": "happy/excited/curious/surprised/worried/determined/brave/hopeful/joyful/satisfied/proud",
+    "bubbleType": "speech/thought/narration",
+    "bubblePosition": "top/bottom/middle-left/middle-right"
   },
-  ... (repeat for 4 panels)
-]`;
+  ... (4 panels total)
+]
+
+**Example Quality:**
+BAD: "Once upon a time..." / "Something happened!"
+GOOD: "Look! A magic door appeared in my garden!" / "Oh no! It's locked and I don't have a key!"
+
+Make every word count. Make every emotion clear. Make kids FEEL the story!`;
 
             const response = await fetch(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
@@ -489,7 +527,7 @@ Output JSON structure:
                     model,
                     messages: [
                         { role: 'system', content: systemPrompt },
-                        { role: 'user', content: `Story to summarize:\n\n${storyText}` }
+                        { role: 'user', content: `Story to create:\n\n${storyText}` }
                     ]
                 }),
                 signal: controller.signal
@@ -517,25 +555,57 @@ Output JSON structure:
                 }
                 parsed = JSON.parse(content);
 
-                // Validate structure
+                // Validate structure and normalize fields
                 if (!Array.isArray(parsed) || parsed.length !== 4) {
                     throw new Error('Invalid array length');
                 }
+
+                // Normalize: support both "dialogue" (new) and "caption" (old) fields
+                parsed = parsed.map((panel, i) => ({
+                    panel: i + 1,
+                    caption: panel.dialogue || panel.caption || '',
+                    sceneDescription: panel.sceneDescription || '',
+                    emotion: panel.emotion || 'happy',
+                    bubbleType: panel.bubbleType || 'speech',
+                    bubblePosition: panel.bubblePosition || 'bottom'
+                }));
             } catch (e) {
-                console.warn('[Doubao] JSON Parse failed, using fallback panels', e);
-                // Fallback: Split story into 4 parts
-                const sentences = storyText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-                const chunkSize = Math.ceil(sentences.length / 4);
-                parsed = [];
-                for (let i = 0; i < 4; i++) {
-                    const start = i * chunkSize;
-                    const end = Math.min(start + chunkSize, sentences.length);
-                    const chunk = sentences.slice(start, end).join('. ').trim();
-                    parsed.push({
-                        panel: i + 1,
-                        caption: chunk.length > 50 ? chunk.substring(0, 50) + '...' : chunk,
-                        sceneDescription: `Scene ${i + 1}: ${chunk}`
-                    });
+                console.warn('[Doubao] JSON Parse failed, generating creative fallback story', e);
+
+                // Enhanced fallback: Create themed story based on input keywords
+                const theme = storyText.substring(0, 50).toLowerCase();
+                const isMagic = theme.includes('magic') || theme.includes('wizard');
+                const isFriendship = theme.includes('friend') || theme.includes('together');
+                const isAdventure = theme.includes('adventure') || theme.includes('explore');
+
+                if (isMagic) {
+                    parsed = [
+                        { panel: 1, caption: "Look! Something magical is glowing!", sceneDescription: "Wide shot: Child discovering glowing magical object in enchanted forest", emotion: "excited", bubbleType: "speech", bubblePosition: "bottom" },
+                        { panel: 2, caption: "Oh no! The magic is fading!", sceneDescription: "Medium shot: Child reaching toward fading glow, concerned", emotion: "worried", bubbleType: "speech", bubblePosition: "middle-right" },
+                        { panel: 3, caption: "My wish can save it!", sceneDescription: "Close-up: Child making wish gesture, sparkles surrounding", emotion: "hopeful", bubbleType: "thought", bubblePosition: "top" },
+                        { panel: 4, caption: "The magic is back, stronger than ever!", sceneDescription: "Wide shot: Magical energy fills scene, rainbow colors", emotion: "joyful", bubbleType: "speech", bubblePosition: "bottom" }
+                    ];
+                } else if (isFriendship) {
+                    parsed = [
+                        { panel: 1, caption: "Hi! Want to play together?", sceneDescription: "Wide shot: Two characters meeting in playground", emotion: "happy", bubbleType: "speech", bubblePosition: "middle-left" },
+                        { panel: 2, caption: "We both want the same toy!", sceneDescription: "Medium shot: Both looking at toy, confused", emotion: "surprised", bubbleType: "speech", bubblePosition: "top" },
+                        { panel: 3, caption: "Let's share and play together!", sceneDescription: "Close-up: Characters holding toy together, smiling", emotion: "determined", bubbleType: "speech", bubblePosition: "middle-right" },
+                        { panel: 4, caption: "Best friends forever!", sceneDescription: "Wide shot: Playing happily, high-five, sunny", emotion: "joyful", bubbleType: "speech", bubblePosition: "bottom" }
+                    ];
+                } else if (isAdventure) {
+                    parsed = [
+                        { panel: 1, caption: "I found a treasure map!", sceneDescription: "Wide shot: Character holding old map, excited", emotion: "excited", bubbleType: "speech", bubblePosition: "bottom" },
+                        { panel: 2, caption: "This path looks tricky...", sceneDescription: "Medium shot: Looking at obstacles, thinking", emotion: "curious", bubbleType: "thought", bubblePosition: "top" },
+                        { panel: 3, caption: "I can do this! Let's go!", sceneDescription: "Action shot: Bravely stepping forward", emotion: "brave", bubbleType: "speech", bubblePosition: "middle-left" },
+                        { panel: 4, caption: "The real treasure was friendship!", sceneDescription: "Wide shot: Celebrating with friends, warm sunset", emotion: "satisfied", bubbleType: "speech", bubblePosition: "bottom" }
+                    ];
+                } else {
+                    parsed = [
+                        { panel: 1, caption: "What a beautiful day!", sceneDescription: "Wide shot: Character waking to sunny morning", emotion: "happy", bubbleType: "speech", bubblePosition: "bottom" },
+                        { panel: 2, caption: "What's that strange sound?", sceneDescription: "Medium shot: Pausing and listening curiously", emotion: "curious", bubbleType: "thought", bubblePosition: "top" },
+                        { panel: 3, caption: "I'll check it out!", sceneDescription: "Close-up: Running with determination", emotion: "determined", bubbleType: "speech", bubblePosition: "middle-right" },
+                        { panel: 4, caption: "A friendly surprise! How wonderful!", sceneDescription: "Wide shot: Discovering something delightful", emotion: "joyful", bubbleType: "speech", bubblePosition: "bottom" }
+                    ];
                 }
             }
 
@@ -543,13 +613,12 @@ Output JSON structure:
         } catch (error) {
             clearTimeout(timeout);
             console.error('summarizeStoryToComicPanels failed:', error);
-            // Return fallback
-            const fallback = storyText.substring(0, 100);
+            // Creative fallback on total failure
             return [
-                { panel: 1, caption: 'The story begins...', sceneDescription: `Scene 1: ${fallback}` },
-                { panel: 2, caption: 'Something exciting happens...', sceneDescription: `Scene 2: ${fallback}` },
-                { panel: 3, caption: 'The adventure continues...', sceneDescription: `Scene 3: ${fallback}` },
-                { panel: 4, caption: 'A happy ending!', sceneDescription: `Scene 4: ${fallback}` }
+                { panel: 1, caption: "Today feels special!", sceneDescription: "Cheerful character in bright setting", emotion: "excited", bubbleType: "speech", bubblePosition: "bottom" },
+                { panel: 2, caption: "What's happening over there?", sceneDescription: "Character noticing something interesting", emotion: "curious", bubbleType: "speech", bubblePosition: "middle-left" },
+                { panel: 3, caption: "This is amazing!", sceneDescription: "Character rushing forward with excitement", emotion: "excited", bubbleType: "speech", bubblePosition: "top" },
+                { panel: 4, caption: "Best day ever!", sceneDescription: "Character celebrating with joy", emotion: "joyful", bubbleType: "speech", bubblePosition: "bottom" }
             ];
         }
     }
@@ -635,8 +704,10 @@ Output JSON structure:
             effect?: string;          // Optional: 'sparkle', 'bubbles', 'hearts', 'snow', 'fire', 'confetti'
             duration?: 5 | 8 | 10;
             generateAudio?: boolean;
+            extraPrompt?: string; // New: Additional user requirements
         }
     ): Promise<string> {
+        const { action, style, effect, duration, generateAudio, extraPrompt } = options;
         // Action mappings (with camera and motion settings)
         const ACTION_MAP: Record<string, { prompt: string; motion?: number; camera?: string }> = {
             'dance': { prompt: 'character dancing happily, rhythmic movement', motion: 0.8 },
@@ -669,18 +740,30 @@ Output JSON structure:
         };
 
         // 1. Lookup action data
-        const actionData = ACTION_MAP[options.action];
+        const actionData = ACTION_MAP[action];
         if (!actionData) {
-            throw new Error(`Invalid action: ${options.action}. Must be one of: ${Object.keys(ACTION_MAP).join(', ')}`);
+            throw new Error(`Invalid action: ${action}. Must be one of: ${Object.keys(ACTION_MAP).join(', ')}`);
         }
 
         // 2. Construct layered prompt: action + style + effect
         let finalPrompt = actionData.prompt;
-        if (options.style && STYLE_MAP[options.style]) {
-            finalPrompt += `, ${STYLE_MAP[options.style]}`;
+        if (style && STYLE_MAP[style]) {
+            finalPrompt += `, ${STYLE_MAP[style]}`;
         }
-        if (options.effect && EFFECT_MAP[options.effect]) {
-            finalPrompt += `, ${EFFECT_MAP[options.effect]}`;
+        if (effect && EFFECT_MAP[effect]) {
+            const effectDesc = EFFECT_MAP[effect];
+            finalPrompt += `, ${effectDesc}`;
+        }
+
+        // Add extra user requirements if provided
+        if (extraPrompt) {
+            finalPrompt += `, ${extraPrompt}`;
+        }
+
+        // FIX: Enforce "Medium shot" to prevent zooming and add "Loud audio" request
+        finalPrompt += `, medium shot, static camera, keep entire character visible`;
+        if (generateAudio) {
+            finalPrompt += `, loud clear sound, audible effects`;
         }
 
         // 3. Auto-determine camera settings
@@ -690,18 +773,20 @@ Output JSON structure:
         // 4. Fixed technical params
         const model = 'doubao-seedance-1-5-pro-251215';
         const url = process.env.VOLC_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks';
-        const duration = options.duration || 5;
-        const generateAudio = options.generateAudio !== undefined ? options.generateAudio : true;
+        const duration_val = duration || 5;
+        const generateAudio_val = generateAudio !== undefined ? generateAudio : true;
         const resolution = '720p'; // Fixed for kids version
         const fps = 24; // Fixed cinematic FPS
         const ratio = '1:1'; // Fixed mobile-friendly ratio
 
-        console.log(`[Doubao Magic] Creating video with Action='${options.action}', Style='${options.style || 'none'}', Effect='${options.effect || 'none'}'`);
+        console.log(`[Doubao Magic] Creating video with Action='${action}', Style='${style || 'none'}', Effect='${effect || 'none'}'`);
         console.log(`[Doubao Magic] Final Prompt: "${finalPrompt}"`);
-        console.log(`[Doubao Magic] Auto Camera: ${cameraMove}, Duration: ${duration}s, Audio: ${generateAudio}`);
+        console.log(`[Doubao Magic] Duration: ${duration_val}s, Audio: ${generateAudio_val}`);
 
-        // 5. Append technical params to prompt (Volcengine format)
-        const promptWithParams = `${finalPrompt} --resolution ${resolution} --duration ${duration} --camera_fixed ${cameraFixed} --generate_audio ${generateAudio} --watermark false --fps ${fps} --ratio ${ratio}`;
+        // 5. Append technical params to prompt (only use confirmed Seedance 1.5 parameters)
+        // Confirmed params: resolution, duration, generate_audio, watermark
+        // Removed unconfirmed: camera_fixed, fps, ratio (let model auto-detect from input image)
+        const promptWithParams = `${finalPrompt} --resolution ${resolution} --duration ${duration_val} --generate_audio ${generateAudio_val} --watermark false`;
 
         const payload = {
             model: model,
@@ -746,7 +831,8 @@ Output JSON structure:
         }
     }
     /**
-     * Seedance 1.5 Video Generation - "Spell" & "Audio Mode" Version
+     * Seedance 1.5 Video Generation - Correct API Implementation
+     * Key: use generate_audio=true and put dialogue in double quotes in the prompt
      */
     async createSeedanceVideoTask1_5(
         imageUrl: string,
@@ -754,11 +840,12 @@ Output JSON structure:
             spell: 'quick' | 'story' | 'cinema';
             audioMode: 'talk' | 'scene';
             textInput: string;
-            voiceStyle?: string; // 'cute', 'robot', 'monster'
-            sceneMood?: string; // 'happy', 'mysterious', etc.
+            voiceStyle?: string; // For prompt enhancement only, not API param
+            sceneMood?: string;  // For prompt enhancement only
+            videoPrompt?: string; // New: Additional scene/action description
         }
     ): Promise<string> {
-        const { spell, audioMode, textInput } = options;
+        const { spell, audioMode, textInput, videoPrompt } = options;
         const voiceStyle = options.voiceStyle || 'cute';
         const sceneMood = options.sceneMood || 'happy';
 
@@ -770,47 +857,47 @@ Output JSON structure:
         };
         const config = SPELL_MAP[spell] || SPELL_MAP['story'];
 
-        // 2. Construct Prompts based on Audio Mode
+        // 2. Construct Prompt with dialogue in double quotes for auto lip-sync
         let video_prompt = "";
-        let audio_prompt = "";
-        let lip_sync = false;
+        let generate_audio = true; // Always generate audio for Seedance 1.5 Pro
 
-        if (audioMode === 'talk') {
-            // Path A: Lip-Sync
-            // Note: Seedance 1.5 typically extracts speech from audio_prompt if provided as text or TTS?
-            // User logic: video_prompt="Character talking...", audio_prompt="[Style] voice..."
-            video_prompt = `Close-up of character talking, saying '${textInput}', facial animation matches speech, high quality`;
-
-            // Map icon styles to descriptive prompts
-            const VOICE_PROMPTS: Record<string, string> = {
-                'cute': 'cute child voice, happy and energetic',
-                'robot': 'robotic mechanical voice, metallic texture',
-                'monster': 'playful monster voice, slightly deep but friendly'
+        if (audioMode === 'talk' && textInput.trim()) {
+            // Talk Mode: Character speaks the text
+            // Enhanced voice hint mapping
+            const cleanVoice = voiceStyle.toLowerCase();
+            const speechMap: Record<string, string> = {
+                'cute': 'cute child voice, high pitch, happy tone, speaking loudly and clearly',
+                'robot': 'robotic voice, mechanical tone, steady rhythm, loud clear audio',
+                'monster': 'deep monster voice, growling tone, low pitch, booming loud voice'
             };
-            const voiceDesc = VOICE_PROMPTS[voiceStyle] || 'cute child voice';
+            const voiceHint = speechMap[cleanVoice] || 'natural voice, speaking clearly';
 
-            // For Seedance, ensuring the character speaks exactly what's in textInput often requires 
-            // a specific text_content field OR using the audio_prompt implies TTS. 
-            // We'll follow the user's "audio_prompt" instruction.
-            // "audio_prompt = [Style] voice, clear speech" -> Wait, where does the text go?
-            // Usually: prompt="... --tts_text 'Hello world'" or similar.
-            // Let's rely on the user's prompt structure: audio_prompt describes the voice.
-            audio_prompt = `${voiceDesc}, speaking clear English: "${textInput}"`;
-            lip_sync = true;
+            // Escape quotes to prevent prompt breakage
+            const safeText = textInput.replace(/"/g, '\\"');
+            // FIX: Changed "Close-up" to "Medium shot" and added "do not zoom" to keep subject in frame per user request
+            video_prompt = `Medium shot of character talking with ${voiceHint}, saying "${safeText}", natural facial expressions, correct lip-sync to the dialogue, keep entire character visible, static camera`;
+
+            // Add extra scene/action description if provided
+            if (videoPrompt) {
+                video_prompt += `, ${videoPrompt}`;
+            }
+        } else if (audioMode === 'scene') {
+            // Scene Mode: Background ambience, no speech
+            const moodHint = sceneMood === 'mysterious' ? 'mysterious atmosphere, eerie ambient sounds' :
+                sceneMood === 'action' ? 'action-packed, dramatic music' :
+                    'happy cheerful atmosphere, pleasant background music';
+            video_prompt = `Cinematic scene, ${textInput}, ${moodHint}, immersive environment`;
         } else {
-            // Path B: Scene Sound
-            video_prompt = `Cinematic scene, ${textInput}, high quality, detailed background`;
-            audio_prompt = `${textInput}, ${sceneMood} background music, immersive sound effects`;
-            lip_sync = false;
+            // Default: just video with ambient sound
+            video_prompt = textInput || 'Character in a cheerful scene, natural movement';
         }
 
-        // 3. Technical Params
+        // 3. Technical Params - Use CORRECT Seedance 1.5 format
         const model = 'doubao-seedance-1-5-pro-251215';
         const url = process.env.VOLC_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks';
 
-        // Construct final prompt string with flags
-        // Doubao 1.5 often takes flags in the text prompt itself
-        const promptWithParams = `${video_prompt} --audio_prompt "${audio_prompt}" --lip_sync ${lip_sync} --resolution ${config.res} --duration ${config.duration} --watermark false`;
+        // Correct parameter format: --generate_audio true (NOT --audio_prompt or --lip_sync)
+        const promptWithParams = `${video_prompt} --resolution ${config.res} --duration ${config.duration} --generate_audio ${generate_audio} --watermark false`;
 
         console.log(`[Doubao 1.5] Creating Task: Spell=${spell}, Mode=${audioMode}`);
         console.log(`[Doubao 1.5] Prompt: ${promptWithParams}`);

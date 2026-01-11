@@ -312,6 +312,40 @@ You must respond in JSON format. Always return a valid JSON object:
             throw e;
         }
     }
+
+    async generateJSON(prompt: string, systemPrompt: string = "You are a helpful assistant."): Promise<any> {
+        if (!API_KEY) throw new Error("OpenAI API Key missing");
+
+        try {
+            const response = await fetch(OPENAI_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: prompt }
+                    ],
+                    response_format: { type: "json_object" },
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error(`OpenAI JSON Error: ${response.status} ${err}`);
+            }
+
+            const jsonResponse: any = await response.json();
+            return JSON.parse(jsonResponse.choices[0].message.content);
+        } catch (e: any) {
+            console.error("[OpenAI] JSON Generation Failed:", e.message);
+            throw e;
+        }
+    }
 }
 
 export const openAIService = new OpenAIService();

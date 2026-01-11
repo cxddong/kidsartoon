@@ -27,6 +27,20 @@ const popInVariants = {
     visible: { scale: 1, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 20 } }
 };
 
+interface SpellInfo {
+    duration: string;
+    limit: number;
+    cost: number;
+    name: string;
+    ph: string;
+}
+
+const SPELLS: any = {
+    'quick': { duration: '4s', limit: 50, cost: 15, name: 'Quick Zap', ph: 'Say hi! (Max 10 words)' },
+    'story': { duration: '8s', limit: 120, cost: 30, name: 'Story Time', ph: 'Tell a short story... (Max 25 words)' },
+    'cinema': { duration: '12s', limit: 180, cost: 60, name: 'Cinema Mode', ph: 'Long story for a movie! (Max 40 words)' }
+};
+
 export const AnimationPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -51,20 +65,17 @@ export const AnimationPage: React.FC = () => {
     const [audioMode, setAudioMode] = useState<'talk' | 'scene'>('talk');
     const [voiceStyle, setVoiceStyle] = useState<'cute' | 'robot' | 'monster'>('cute');
     const [sceneMood, setSceneMood] = useState<'happy' | 'mysterious' | 'action'>('happy');
-    const [textInput, setTextInput] = useState('');
+    const [textInput, setTextInput] = useState(""); // Character Speech - Start empty
+    const [isSoundOn, setIsSoundOn] = useState(true); // New: Sound Toggle
+    const [videoPrompt, setVideoPrompt] = useState(''); // Additional Prompt / Scene Description
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef<any>(null);
 
-    const SPELLS = {
-        'quick': { duration: '4s', limit: 50, cost: 15, name: 'Quick Zap', ph: 'Say hi! (Max 10 words)' },
-        'story': { duration: '8s', limit: 120, cost: 30, name: 'Story Time', ph: 'Tell a short story... (Max 25 words)' },
-        'cinema': { duration: '12s', limit: 180, cost: 60, name: 'Cinema Mode', ph: 'Long story for a movie! (Max 40 words)' }
-    };
 
-    const addTag = (tag: string) => { setTextInput(prev => (tag + ' ' + prev).substring(0, SPELLS[selectedSpell].limit)); };
+    const addTag = (tag: string) => { setVideoPrompt(prev => (tag + ' ' + prev).substring(0, (SPELLS as any)[selectedSpell].limit)); };
 
     const calculateCredits = (): number => {
-        return SPELLS[selectedSpell].cost;
+        return (SPELLS as any)[selectedSpell].cost;
     };
 
     React.useEffect(() => {
@@ -134,8 +145,17 @@ export const AnimationPage: React.FC = () => {
         // Duration mapping: spell -> duration in seconds
         const durationMap = { 'quick': '5', 'story': '8', 'cinema': '10' };
         formData.append('duration', durationMap[selectedSpell]);
-        formData.append('generateAudio', 'true'); // Always true for now
+        formData.append('generateAudio', isSoundOn ? 'true' : 'false'); // User controlled
         formData.append('userId', user.uid);
+
+        // NEW: Audio Mode and Voice Style parameters
+        formData.append('audioMode', audioMode); // 'talk' or 'scene'
+        formData.append('voiceStyle', voiceStyle); // 'cute', 'robot', 'monster'
+        formData.append('sceneMood', sceneMood); // 'happy', 'mysterious', 'action'
+        if (textInput.trim()) {
+            formData.append('textInput', textInput.trim()); // User's speech/scene description
+        }
+
 
         try {
             setStatusMessage('Sending to AI...');
@@ -258,7 +278,7 @@ export const AnimationPage: React.FC = () => {
                 if (transcript) {
                     setTextInput(prev => {
                         const newText = prev ? `${prev} ${transcript}`.trim() : transcript;
-                        const maxChars = selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50;
+                        const maxChars = selectedSpell === 'cinema' ? 180 : selectedSpell === 'story' ? 100 : 40;
                         return newText.slice(0, maxChars);
                     });
                 }
@@ -294,6 +314,7 @@ export const AnimationPage: React.FC = () => {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
+            a.style.display = 'none';
             a.href = url;
             a.download = `magic-video-${Date.now()}.mp4`;
             document.body.appendChild(a);
@@ -301,8 +322,9 @@ export const AnimationPage: React.FC = () => {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         } catch (err) {
-            console.error('Download failed:', err);
-            alert('Download failed. Please try right-clicking the video and selecting "Save video as..."');
+            console.error('Download fetch failed, trying direct open:', err);
+            // Fallback: Open in new tab which usually triggers download
+            window.open(resultData.videoUrl, '_blank');
         }
     };
 
@@ -509,11 +531,11 @@ export const AnimationPage: React.FC = () => {
                             <div>
                                 <div className="flex justify-between items-end mb-2">
                                     <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center gap-2">🪄 Choose Spell</h3>
-                                    <span className="text-xs font-bold text-yellow-400">{SPELLS[selectedSpell].cost} Credits</span>
+                                    <span className="text-xs font-bold text-yellow-400">{(SPELLS as any)[selectedSpell]?.cost || 10} Credits</span>
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-3">
-                                    <button onClick={() => { setSelectedSpell('quick'); setTextInput(prev => prev.slice(0, 50)); }}
+                                    <button onClick={() => { setSelectedSpell('quick'); setVideoPrompt(prev => prev.slice(0, 50)); }}
                                         className={cn("flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
                                             selectedSpell === 'quick' ? "ring-2 ring-blue-400 bg-slate-700/80 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
                                         )}>
@@ -524,7 +546,7 @@ export const AnimationPage: React.FC = () => {
 
                                     <div className="relative group">
                                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-600 text-[9px] px-2 py-0.5 rounded-full text-white font-bold whitespace-nowrap z-20 shadow-lg border border-purple-400">BEST</div>
-                                        <button onClick={() => { setSelectedSpell('story'); setTextInput(prev => prev.slice(0, 120)); }}
+                                        <button onClick={() => { setSelectedSpell('story'); setVideoPrompt(prev => prev.slice(0, 120)); }}
                                             className={cn("w-full h-full flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden",
                                                 selectedSpell === 'story' ? "ring-2 ring-purple-500 bg-slate-700/80 border-transparent shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "bg-white/5 border-white/10 hover:bg-white/10"
                                             )}>
@@ -545,67 +567,192 @@ export const AnimationPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* 2. More (Optional) with Mic Inside */}
-                            <div className="bg-slate-800/50 rounded-2xl p-3 border-2 border-slate-700/50">
-                                <div>
-                                    <div className="flex justify-between items-end mb-1">
-                                        <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center gap-2">✨ More (Optional)</h3>
-                                    </div>
+                            {/* 2. AUDIO MODE & SOUND TOGGLE */}
+                            <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center gap-2">🎙️ Audio Mode</h3>
 
-                                    {/* Textarea with Mic and Clear Buttons on Right */}
-                                    <div className="relative">
-                                        <textarea
-                                            value={textInput}
-                                            onChange={e => {
-                                                const maxChars = selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50;
-                                                setTextInput(e.target.value.slice(0, maxChars));
-                                            }}
-                                            placeholder="e.g., The character jumps and waves hello!"
-                                            className="w-full h-24 bg-slate-900/50 border-2 border-slate-700/50 rounded-xl p-3 pr-16 text-white placeholder-slate-500 resize-none focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
-                                            maxLength={selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50}
-                                        />
-                                        {/* Clear Button - Top Right */}
-                                        {textInput && (
-                                            <button
-                                                onClick={() => setTextInput('')}
-                                                className="absolute right-2 top-2 p-1.5 rounded-lg transition-all hover:bg-slate-700/50 group"
-                                                title="Clear text"
-                                            >
-                                                <svg className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
+                                    {/* Mute/Sound Toggle Switch */}
+                                    <button
+                                        onClick={() => setIsSoundOn(!isSoundOn)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold",
+                                            isSoundOn ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300" : "bg-slate-700/50 border-slate-600 text-slate-400"
                                         )}
-                                        {/* Mic Button - Bottom Right */}
+                                    >
+                                        {isSoundOn ? (
+                                            <>
+                                                <span className="text-sm">🔊</span>
+                                                <span>Sound ON</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-sm">🔇</span>
+                                                <span>Sound OFF</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+
+                                <div className={cn("transition-opacity duration-300", !isSoundOn && "opacity-50 pointer-events-none grayscale")}>
+                                    <div className="grid grid-cols-2 gap-3">
                                         <button
-                                            onClick={() => {
-                                                if (isListening) handleStopListen();
-                                                else handleListen();
-                                            }}
+                                            onClick={() => setAudioMode('talk')}
                                             className={cn(
-                                                "absolute right-2 bottom-2 p-2 rounded-lg transition-all group",
-                                                isListening ? "bg-red-500/20 animate-pulse" : "hover:bg-purple-500/20"
+                                                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all",
+                                                audioMode === 'talk' ? "ring-2 ring-pink-400 bg-pink-500/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
                                             )}
-                                            title={isListening ? "Stop Listening" : "Click to Speak"}
                                         >
-                                            <img
-                                                src="/mic_icon_3d.png"
-                                                alt="Mic"
-                                                className={cn(
-                                                    "w-10 h-10 object-contain drop-shadow-lg transition-transform",
-                                                    isListening ? "scale-110" : "group-hover:scale-110"
-                                                )}
-                                            />
+                                            <div className="text-2xl mb-1">🗣️</div>
+                                            <div className="text-sm font-bold text-white">Talk</div>
+                                            <div className="text-[10px] text-slate-400">Character speaks</div>
+                                        </button>
+                                        <button
+                                            onClick={() => setAudioMode('scene')}
+                                            className={cn(
+                                                "flex flex-col items-center justify-center p-3 rounded-xl border transition-all",
+                                                audioMode === 'scene' ? "ring-2 ring-blue-400 bg-blue-500/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <div className="text-2xl mb-1">🎵</div>
+                                            <div className="text-sm font-bold text-white">Scene</div>
+                                            <div className="text-[10px] text-slate-400">Background music</div>
                                         </button>
                                     </div>
 
-                                    <div className="text-right mt-1">
-                                        <span className="text-[10px] text-slate-500">
-                                            {textInput.length}/{selectedSpell === 'cinema' ? 200 : selectedSpell === 'story' ? 120 : 50}
-                                        </span>
-                                    </div>
+                                    {/* Voice Style - Only show in Talk mode */}
+                                    {audioMode === 'talk' && (
+                                        <div className="mt-4">
+                                            <h4 className="text-white/70 text-xs font-bold uppercase tracking-wider mb-2">Voice Style</h4>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <button
+                                                    onClick={() => setVoiceStyle('cute')}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
+                                                        voiceStyle === 'cute' ? "ring-2 ring-pink-300 bg-pink-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    <div className="text-xl">🥰</div>
+                                                    <div className="text-[10px] font-bold text-white mt-1">Cute</div>
+                                                </button>
+                                                <button
+                                                    onClick={() => setVoiceStyle('robot')}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
+                                                        voiceStyle === 'robot' ? "ring-2 ring-cyan-300 bg-cyan-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    <div className="text-xl">🤖</div>
+                                                    <div className="text-[10px] font-bold text-white mt-1">Robot</div>
+                                                </button>
+                                                <button
+                                                    onClick={() => setVoiceStyle('monster')}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
+                                                        voiceStyle === 'monster' ? "ring-2 ring-green-300 bg-green-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    <div className="text-xl">👾</div>
+                                                    <div className="text-[10px] font-bold text-white mt-1">Monster</div>
+                                                </button>
+                                            </div>
+
+                                            {/* Character Speech Input - Talk mode needs text for lip-sync */}
+                                            <div className="mt-4">
+                                                <h4 className="text-white/70 text-xs font-bold uppercase tracking-wider mb-2">💬 What should your character say?</h4>
+                                                <div className="relative">
+                                                    <textarea
+                                                        value={textInput}
+                                                        onChange={e => {
+                                                            const maxChars = selectedSpell === 'cinema' ? 180 : selectedSpell === 'story' ? 100 : 40;
+                                                            setTextInput(e.target.value.slice(0, maxChars));
+                                                        }}
+                                                        placeholder='e.g., "Hello everyone! I love you!"'
+                                                        className="w-full h-24 bg-slate-900/50 border-2 border-pink-500/30 rounded-xl p-3 pr-12 text-white placeholder-slate-500 resize-none focus:outline-none focus:border-pink-500/70 transition-colors text-sm"
+                                                        maxLength={selectedSpell === 'cinema' ? 180 : selectedSpell === 'story' ? 100 : 40}
+                                                    />
+
+                                                    {/* Mic Button */}
+                                                    <button
+                                                        onClick={() => {
+                                                            if (isListening) handleStopListen();
+                                                            else handleListen();
+                                                        }}
+                                                        className={cn(
+                                                            "absolute right-2 top-2 p-2 rounded-lg transition-all group",
+                                                            isListening ? "bg-red-500/20 animate-pulse" : "hover:bg-pink-500/20"
+                                                        )}
+                                                        title={isListening ? "Stop Listening" : "Click to Speak"}
+                                                    >
+                                                        <div className={cn("text-xl transition-transform", isListening ? "scale-110" : "group-hover:scale-110")}>
+                                                            {isListening ? "⏹️" : "🎙️"}
+                                                        </div>
+                                                    </button>
+
+                                                    <div className="absolute bottom-2 right-2 text-[10px] text-slate-500">
+                                                        {textInput.length}/{selectedSpell === 'cinema' ? 180 : selectedSpell === 'story' ? 100 : 40}
+                                                    </div>
+                                                </div>
+
+                                                {/* Suggestions Chips */}
+                                                <div className="flex flex-wrap gap-2 mt-3">
+                                                    {["Hello! I love you!", "Sing a song", "Tell me a joke", "Happy Birthday!"].map(text => (
+                                                        <button
+                                                            key={text}
+                                                            onClick={() => setTextInput(text)}
+                                                            className="px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[10px] text-white/70 transition-colors"
+                                                        >
+                                                            {text}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <p className="text-[10px] text-pink-400/70 mt-2">✨ Tap a suggestion or type your own!</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Scene Mood - Only show in Scene mode */}
+                                    {audioMode === 'scene' && (
+                                        <div className="mt-4">
+                                            <h4 className="text-white/70 text-xs font-bold uppercase tracking-wider mb-2">Scene Mood</h4>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <button
+                                                    onClick={() => setSceneMood('happy')}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
+                                                        sceneMood === 'happy' ? "ring-2 ring-yellow-300 bg-yellow-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    <div className="text-xl">☀️</div>
+                                                    <div className="text-[10px] font-bold text-white mt-1">Happy</div>
+                                                </button>
+                                                <button
+                                                    onClick={() => setSceneMood('mysterious')}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
+                                                        sceneMood === 'mysterious' ? "ring-2 ring-purple-300 bg-purple-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    <div className="text-xl">🌙</div>
+                                                    <div className="text-[10px] font-bold text-white mt-1">Mystery</div>
+                                                </button>
+                                                <button
+                                                    onClick={() => setSceneMood('action')}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
+                                                        sceneMood === 'action' ? "ring-2 ring-red-300 bg-red-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    <div className="text-xl">⚡</div>
+                                                    <div className="text-[10px] font-bold text-white mt-1">Action</div>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+
+
 
                             {/* Generate Button */}
                             <button
@@ -656,13 +803,13 @@ export const AnimationPage: React.FC = () => {
                                                 </span>
                                             )}
                                             <span className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/50 rounded-full text-purple-200 text-sm font-bold flex items-center gap-1">
-                                                🪄 {SPELLS[resultData.params?.spell]?.name} ({resultData.params?.duration}s)
+                                                🪄 {resultData.params?.spell && (SPELLS as any)[resultData.params.spell as string]?.name} ({resultData.params?.duration}s)
                                             </span>
                                         </div>
                                     )}
 
-                                    <div className="rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl">
-                                        <PureVideoPlayer src={resultData?.videoUrl} className="max-h-[70vh]" />
+                                    <div className="rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl flex justify-center bg-black/50 backdrop-blur-sm">
+                                        <PureVideoPlayer src={resultData?.videoUrl} className="w-full max-h-[70vh] aspect-square md:aspect-video" />
                                     </div>
                                     <div className="space-y-4">
                                         {/* Action Buttons */}

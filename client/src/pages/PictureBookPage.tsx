@@ -278,10 +278,6 @@ export const PictureBookPage: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* Upload Hint */}
-                                <p className="text-center text-sm font-bold text-white/80 mt-2 drop-shadow-md">
-                                    👆 Click above to upload your photo
-                                </p>
                             </PictureBookBuilderPanel>
 
 

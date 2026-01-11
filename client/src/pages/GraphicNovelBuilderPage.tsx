@@ -22,24 +22,52 @@ interface Vibe {
     name: string;
     emoji: string;
     description: string;
+    image?: string;
 }
 
 const STORY_VIBES: Record<string, Vibe> = {
-    adventure: { id: 'adventure', name: 'Adventure', emoji: '🌋', description: 'Hero vs Villain' },
-    funny: { id: 'funny', name: 'Funny', emoji: '🤪', description: 'Pranks & Mishaps' },
-    fairytale: { id: 'fairytale', name: 'Fairy Tale', emoji: '🧚', description: 'Magic & Wonder' },
-    school: { id: 'school', name: 'School Life', emoji: '🏫', description: 'Friends & Teachers' }
+    adventure: { id: 'adventure', name: 'Adventure', emoji: '🌋', description: 'Hero vs Villain', image: '/assets/vibes/adventure.jpg' },
+    funny: { id: 'funny', name: 'Funny', emoji: '🤪', description: 'Pranks & Mishaps', image: '/assets/vibes/funny.png' },
+    fairytale: { id: 'fairytale', name: 'Fairy Tale', emoji: '🧚', description: 'Magic & Wonder', image: '/assets/vibes/fairytale.png' },
+    school: { id: 'school', name: 'School Life', emoji: '🏫', description: 'Friends & Teachers', image: '/assets/vibes/school.png' }
+};
+
+const VIBE_HINTS: Record<string, string[]> = {
+    adventure: [
+        "Finds a hidden treasure map in the attic",
+        "Discovers a secret portal behind the waterfall",
+        "Rescues a baby dragon from a dark cave",
+        "Solves the riddle of the ancient stone guardians"
+    ],
+    funny: [
+        "Accidentally drinks a potion that makes them float",
+        "A regular sandwich starts telling jokes",
+        "Dresses up as a bush to prank the gardener",
+        "The pet cat starts wearing human clothes and dancing"
+    ],
+    fairytale: [
+        "A magical fairy grants three unusual wishes",
+        "Travels to a kingdom made entirely of candy",
+        "Meets a misunderstood dragon who loves to knit",
+        "Finds a pair of boots that can jump over mountains"
+    ],
+    school: [
+        "Finds a magical pen that does homework automatically",
+        "The school bus turns into a space rocket",
+        "A science experiment creates a friendly slime monster",
+        "Wins the talent show with a real magic trick"
+    ]
 };
 
 const VISUAL_STYLES = [
-    { id: 'movie_magic', label: 'Movie Magic', emoji: '🎬', prompt: '3D Pixar style, high detail, vibrant, character-focused' },
+    { id: 'movie_magic', label: 'Movie Magic', emoji: '🎬', prompt: '3D Pixar style, high detail, vibrant, character-focused', image: '/styles/movie_magic.jpg' },
     { id: 'toy_kingdom', label: 'Toy Kingdom', emoji: '🧸', prompt: 'Toy style, plastic textures, miniature world' },
     { id: 'clay_world', label: 'Clay World', emoji: '🎨', prompt: 'Clay stop-motion, Aardman style, soft shadows' },
-    { id: 'paper_craft', label: 'Paper Craft', emoji: '📄', prompt: 'Cut paper layers, origami, textured paper' },
+    { id: 'paper_craft', label: 'Paper Craft', emoji: '📄', prompt: 'Cut paper layers, origami, textured paper', image: '/styles/paper_craft.jpg' },
     { id: 'pixel_land', label: 'Pixel Land', emoji: '🎮', prompt: 'Minecraft/Roblox style, blocky, 8-bit voxel art' },
     { id: 'doodle_magic', label: 'Doodle Magic', emoji: '✏️', prompt: 'Chalkboard drawing, glowing chalk lines' },
-    { id: 'watercolor', label: 'Watercolor', emoji: '🌸', prompt: 'Soft watercolor painting, gentle brushstrokes' },
-    { id: 'comic_book', label: 'Comic Book', emoji: '💥', prompt: 'Classic American comic book style, bold lines, halftone dots' },
+    { id: 'watercolor', label: 'Watercolor', emoji: '🌸', prompt: 'Soft watercolor painting, gentle brushstrokes', image: '/styles/watercolor.png' },
+    { id: 'comic_book', label: 'Comic Book', emoji: '💥', prompt: 'Classic American comic book style, bold lines, halftone dots', image: '/styles/comic_book.jpg' },
 ];
 
 export const GraphicNovelBuilderPage: React.FC = () => {
@@ -146,8 +174,9 @@ export const GraphicNovelBuilderPage: React.FC = () => {
         }
 
         setStep('generating');
-        setProgress(0);
-        setStatusMessage('Starting generation...');
+        // Immediate feedback so user doesn't think it's frozen
+        setProgress(5);
+        setStatusMessage('Connecting to Magic Lab AI...');
 
         try {
             const response = await fetch('/api/graphic-novel/create', {
@@ -193,12 +222,23 @@ export const GraphicNovelBuilderPage: React.FC = () => {
                 const res = await fetch(`/api/graphic-novel/status/${id}`);
                 const data = await res.json();
 
-                console.log('[GraphicNovel] Status check:', data.status, `${data.pagesCompleted}/${data.totalPages}`);
+                console.log('[GraphicNovel] Status check:', data.status, `${data.pagesCompleted}/${data.totalPages}`, data.statusMessage);
 
                 setPagesCompleted(data.pagesCompleted || 0);
-                const progressPercent = ((data.pagesCompleted || 0) / (data.totalPages || 4)) * 100;
-                setProgress(progressPercent);
-                setStatusMessage(`Generating page ${data.currentPage || 1} of ${data.totalPages || 4}...`);
+
+                // Use backend progress if available, otherwise fallback to page-based calculation
+                if (data.progress !== undefined) {
+                    setProgress(data.progress);
+                } else {
+                    const pageBase = ((data.pagesCompleted || 0) / (data.totalPages || 4)) * 100;
+                    setProgress(pageBase);
+                }
+
+                if (data.statusMessage) {
+                    setStatusMessage(data.statusMessage);
+                } else {
+                    setStatusMessage(`Generating page ${data.currentPage || 1} of ${data.totalPages || 4}...`);
+                }
 
                 if (data.status === 'COMPLETED') {
                     console.log('[GraphicNovel] Generation COMPLETED!');
@@ -333,7 +373,7 @@ export const GraphicNovelBuilderPage: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/home')}
                         className="flex items-center gap-2 text-white hover:text-white/80 transition-colors"
                     >
                         <ArrowLeft className="w-6 h-6" />
@@ -367,13 +407,23 @@ export const GraphicNovelBuilderPage: React.FC = () => {
                                 <button
                                     key={vibe.id}
                                     onClick={() => handleVibeSelect(vibe.id)}
-                                    className="group relative bg-white/10 backdrop-blur-xl rounded-3xl p-8 border-2 border-white/20 hover:border-white hover:scale-105 transition-all"
+                                    className="group relative bg-white/10 backdrop-blur-xl rounded-[2.5rem] p-12 border-2 border-white/20 hover:border-white hover:scale-[1.02] transition-all overflow-hidden aspect-[16/9] shadow-xl"
                                 >
-                                    <div className="text-center">
-                                        <div className="text-8xl mb-4 group-hover:scale-110 transition-transform">{vibe.emoji}</div>
-                                        <h3 className="text-white text-3xl font-black mb-2">{vibe.name}</h3>
-                                        <p className="text-white/70 text-lg font-bold">{vibe.description}</p>
+                                    {vibe.image && (
+                                        <>
+                                            <div className="absolute inset-0 w-full h-full group-hover:scale-110 transition-transform duration-700">
+                                                <img src={vibe.image} alt={vibe.name} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                        </>
+                                    )}
+                                    <div className="absolute bottom-8 left-8 text-left relative z-10">
+                                        <h3 className="text-white text-4xl font-black mb-2 drop-shadow-xl tracking-tight">{vibe.name}</h3>
+                                        <p className="text-white/80 text-lg font-bold drop-shadow-lg">{vibe.description}</p>
                                     </div>
+
+                                    {/* Glass reflection effect */}
+                                    <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent transform skew-x-[-25deg] group-hover:left-[100%] transition-all duration-1000" />
                                 </button>
                             ))}
                         </div>
@@ -484,14 +534,60 @@ export const GraphicNovelBuilderPage: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Art Style Selection */}
+                            <div>
+                                <label className="text-white text-xl font-bold block mb-4">🖌️ Art Style:</label>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {VISUAL_STYLES.map(style => (
+                                        <button
+                                            key={style.id}
+                                            onClick={() => setVisualStyle(style.id)}
+                                            className={`relative overflow-hidden p-4 rounded-xl font-bold transition-all text-center group ${visualStyle === style.id
+                                                ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white scale-105 shadow-lg ring-2 ring-yellow-400'
+                                                : 'bg-white/20 text-white/70 hover:bg-white/30'
+                                                }`}
+                                        >
+                                            {style.image ? (
+                                                <div className="absolute inset-0 w-full h-full opacity-40 group-hover:opacity-60 transition-opacity">
+                                                    <img src={style.image} alt={style.label} className="w-full h-full object-cover" />
+                                                </div>
+                                            ) : null}
+                                            <div className="relative z-10">
+                                                <div className="text-3xl mb-1 drop-shadow-md">{style.emoji}</div>
+                                                <div className="text-sm font-black drop-shadow-md">{style.label}</div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                {/* Show selected style description */}
+                                <div className="mt-3 text-white/60 text-sm text-center italic">
+                                    {VISUAL_STYLES.find(s => s.id === visualStyle)?.prompt}
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="text-white text-lg font-bold block mb-3">Story Direction (Optional)</label>
+
+                                {selectedVibe && VIBE_HINTS[selectedVibe] && (
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {VIBE_HINTS[selectedVibe].map((hint, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setPlotHint(hint)}
+                                                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full text-xs text-white/80 transition-all"
+                                            >
+                                                + {hint}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
                                 <div className="relative">
                                     <textarea
                                         value={plotHint}
                                         onChange={e => setPlotHint(e.target.value)}
                                         className="w-full p-4 pr-24 rounded-xl bg-white/10 text-white border border-white/20 focus:border-purple-500 focus:outline-none" rows={4}
-                                        placeholder="e.g., The hero must save the kingdom..."
+                                        placeholder={`e.g., ${VIBE_HINTS[selectedVibe]?.[0] || 'The hero must save the kingdom...'}`}
                                     />
                                     {/* Voice & Clear Buttons */}
                                     <div className="absolute top-3 right-3 flex gap-2">

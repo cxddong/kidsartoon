@@ -62,6 +62,14 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
                 return { icon: <BookOpen size={20} />, color: 'bg-blue-500', label: 'Story' };
             case 'generated':
                 return { icon: <ImageIcon size={20} />, color: 'bg-pink-500', label: 'Greeting Card' };
+            case 'cards':
+                return { icon: <ImageIcon size={20} />, color: 'bg-pink-500', label: 'Greeting Card' };
+            case 'upload':
+                return { icon: <ImageIcon size={20} />, color: 'bg-teal-500', label: 'Upload' };
+            case 'masterpiece':
+                return { icon: <ImageIcon size={20} />, color: 'bg-amber-500', label: 'Journey' };
+            case 'graphic-novel':
+                return { icon: <BookOpen size={20} />, color: 'bg-indigo-500', label: 'Graphic Novel' };
             default:
                 return { icon: <ImageIcon size={20} />, color: 'bg-slate-500', label: 'Image' };
         }
