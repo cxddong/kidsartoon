@@ -194,7 +194,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Frida Kahlo",
         title: "Self-Portrait with Thorn Necklace and Hummingbird",
         tags: ["portrait", "bright", "flowers", "self-portrait", "colorful", "mexican", "nature"],
-        imagePath: "/assets/masterpieces/kahlo_thorns.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/en/9/95/Frida_Kahlo_%28self_portrait%29.jpg",
         kidFriendlyFact: "She painted herself 55 times with flowers and animals!",
         biography: "Frida Kahlo (1907-1954) was a Mexican artist famous for her colorful self-portraits! She loved wearing flowers in her hair and traditional Mexican clothing. She painted her feelings, her dreams, and her life experiences with bright, bold colors inspired by Mexican folk art."
     },
@@ -203,7 +203,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Jean-Michel Basquiat",
         title: "Untitled",
         tags: ["graffiti", "bold", "street art", "expressive", "colorful", "text", "crowns"],
-        imagePath: "/assets/masterpieces/basquiat_untitled.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/en/3/37/Jean-Michel_Basquiat%2C_Untitled%2C_1981.jpg",
         kidFriendlyFact: "He started as a street artist and became world-famous!",
         biography: "Jean-Michel Basquiat (1960-1988) was an American artist who started creating graffiti art on the streets of New York! His paintings are full of bold colors, words, symbols, and crowns. He mixed street art with fine art, creating a unique style that expressed his thoughts about the world."
     },
@@ -212,7 +212,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Yayoi Kusama",
         title: "Infinity Dots",
         tags: ["dots", "patterns", "repetitive", "colorful", "polka dots", "abstract"],
-        imagePath: "/assets/masterpieces/kusama_dots.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/en/6/69/Yayoi_Kusama_Infinity_Nets.jpg",
         kidFriendlyFact: "She covers entire rooms with colorful polka dots!",
         biography: "Yayoi Kusama (born 1929) is a Japanese artist obsessed with polka dots! She creates entire rooms, pumpkins, and paintings covered in endless dots. She calls them 'infinity nets.' She also creates magical mirror rooms that make you feel like you're floating in space with lights!"
     },
@@ -221,7 +221,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Caravaggio",
         title: "The Calling of Saint Matthew",
         tags: ["dramatic", "light", "shadow", "realistic", "dark", "baroque"],
-        imagePath: "/assets/masterpieces/caravaggio_matthew.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/The_Calling_of_Saint_Matthew-Caravaggo_%281599-1600%29.jpg/1024px-The_Calling_of_Saint_Matthew-Caravaggo_%281599-1600%29.jpg",
         kidFriendlyFact: "He used dramatic spotlights in his paintings like theater!",
         biography: "Caravaggio (1571-1610) was an Italian master who revolutionized painting! He used a technique called 'chiaroscuro' - dramatic contrasts between light and dark. His paintings look like theatrical scenes with a spotlight shining on the important parts, making them super dramatic!"
     },
@@ -230,7 +230,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Johannes Vermeer",
         title: "Girl with a Pearl Earring",
         tags: ["soft", "portrait", "blue", "yellow", "delicate", "realistic", "quiet"],
-        imagePath: "/assets/masterpieces/vermeer_pearl.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg",
         kidFriendlyFact: "He painted light so realistically it looks like a photograph!",
         biography: "Johannes Vermeer (1632-1675) was a Dutch painter who captured light like magic! He painted quiet, peaceful scenes of everyday life with soft, glowing light. His paintings are so realistic and detailed that they look almost like photographs, even though cameras didn't exist yet!"
     },
@@ -239,7 +239,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "J.M.W. Turner",
         title: "The Fighting Temeraire",
         tags: ["sunset", "ships", "atmospheric", "orange", "water", "romantic", "sky"],
-        imagePath: "/assets/masterpieces/turner_temeraire.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg/1024px-The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg",
         kidFriendlyFact: "He loved painting storms, sunsets, and the power of nature!",
         biography: "J.M.W. Turner (1775-1851) was an English painter known as the 'painter of light!' He created breathtaking landscapes with glowing sunsets, dramatic storms, and misty atmospheres. His paintings of the sea and sky look like they're made of pure light and color!"
     },
@@ -248,7 +248,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Sandro Botticelli",
         title: "The Birth of Venus",
         tags: ["classical", "beautiful", "flowing", "renaissance", "mythological", "soft"],
-        imagePath: "/assets/masterpieces/botticelli_venus.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/1024px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg",
         kidFriendlyFact: "He painted a goddess floating on a giant seashell!",
         biography: "Sandro Botticelli (1445-1510) was an Italian Renaissance painter who created graceful, flowing artworks! His paintings look like beautiful dreams with soft colors and elegant figures. He loved painting mythological stories and made them look magical and otherworldly."
     },
@@ -257,7 +257,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Rembrandt van Rijn",
         title: "The Night Watch",
         tags: ["group", "dark", "dramatic", "detailed", "realistic", "dutch", "golden"],
-        imagePath: "/assets/masterpieces/rembrandt_nightwatch.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_HD.jpg/1024px-The_Night_Watch_-_HD.jpg",
         kidFriendlyFact: "He was a master of painting with light and shadow!",
         biography: "Rembrandt van Rijn (1606-1669) was a Dutch master painter famous for his dramatic use of light! He painted detailed portraits and group scenes where light seems to glow from within. He was also an incredible storyteller, making every painting feel alive with emotion and drama."
     },
@@ -266,7 +266,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "James McNeill Whistler",
         title: "Arrangement in Grey and Black",
         tags: ["simple", "portrait", "elegant", "minimal", "calm", "monochrome"],
-        imagePath: "/assets/masterpieces/whistler_mother.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Whistlers_Mother_high_res.jpg/800px-Whistlers_Mother_high_res.jpg",
         kidFriendlyFact: "He believed art should be like music - beautiful arrangements of color!",
         biography: "James McNeill Whistler (1834-1903) was an American artist who believed paintings were like music! He gave his paintings musical titles like 'Symphony' and 'Arrangement.' He loved simple, elegant compositions with harmonious colors, creating calm and beautiful scenes."
     },
@@ -275,7 +275,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Edgar Degas",
         title: "The Dance Class",
         tags: ["ballet", "movement", "dancers", "impressionist", "graceful", "pink", "blue"],
-        imagePath: "/assets/masterpieces/degas_dancers.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Edgar_Degas_-_The_Dance_Class_-_Google_Art_Project.jpg/1024px-Edgar_Degas_-_The_Dance_Class_-_Google_Art_Project.jpg",
         kidFriendlyFact: "He loved painting ballerinas practicing and dancing!",
         biography: "Edgar Degas (1834-1917) was a French artist who captured movement and grace! He painted over half of his artworks featuring ballet dancers. He showed them not just performing, but practicing, stretching, and resting - capturing the beauty of movement in every pose!"
     },
@@ -284,7 +284,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Banksy",
         title: "Girl with Balloon",
         tags: ["street art", "simple", "stencil", "red", "black", "heart", "modern"],
-        imagePath: "/assets/masterpieces/banksy_balloon.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Banksy_-_Graffiti_-_Southbank.jpg/800px-Banksy_-_Graffiti_-_Southbank.jpg",
         kidFriendlyFact: "This mysterious street artist's identity is still a secret!",
         biography: "Banksy is a mysterious street artist whose real name is unknown! Active since the 1990s, Banksy creates thought-provoking art on city walls using stencils. The art often features children, animals, and simple but powerful messages about peace, freedom, and kindness!"
     },
@@ -293,7 +293,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Utagawa Hiroshige",
         title: "Sudden Shower over Shin-Ōhashi Bridge",
         tags: ["rain", "japan", "woodblock", "lines", "blue", "atmospheric", "weather"],
-        imagePath: "/assets/masterpieces/hiroshige_rain.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Hiroshige%2C_Sudden_shower_over_Shin-%C5%8Chashi_bridge_and_Atake.jpg/800px-Hiroshige%2C_Sudden_shower_over_Shin-%C5%8Chashi_bridge_and_Atake.jpg",
         kidFriendlyFact: "He showed rain as thousands of tiny vertical lines!",
         biography: "Utagawa Hiroshige (1797-1858) was a Japanese master of woodblock prints! He created beautiful landscapes showing Japan's seasons, weather, and famous places. He was amazing at depicting rain, snow, and mist - making you feel like you're really there!"
     },
@@ -302,7 +302,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Roy Lichtenstein",
         title: "Whaam!",
         tags: ["pop art", "comic", "dots", "bold", "action", "colorful", "fun"],
-        imagePath: "/assets/masterpieces/lichtenstein_whaam.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/en/thumb/b/b6/Roy_Lichtenstein_Whaam.jpg/1024px-Roy_Lichtenstein_Whaam.jpg",
         kidFriendlyFact: "He made paintings that look like giant comic book panels!",
         biography: "Roy Lichtenstein (1923-1997) was an American Pop Artist who turned comic book panels into huge paintings! He used Ben-Day dots (tiny colored dots like in printed comics) and bold outlines. His artwork celebrates everyday pop culture and makes it into fine art!"
     },
@@ -311,7 +311,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Giuseppe Arcimboldo",
         title: "Vertumnus",
         tags: ["portrait", "fruits", "vegetables", "creative", "fun", "playful", "nature"],
-        imagePath: "/assets/masterpieces/arcimboldo_vegetables.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arcimboldo_Vertumnus.jpeg/682px-Arcimboldo_Vertumnus.jpeg",
         kidFriendlyFact: "He created portraits using only fruits and vegetables!",
         biography: "Giuseppe Arcimboldo (1526-1593) was an Italian painter famous for creating imaginative portrait heads made entirely from fruits, vegetables, flowers, fish, and books! Turn his paintings upside down and they transform - pure magical fun that makes you see things in new ways!"
     },
@@ -320,7 +320,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "M.C. Escher",
         title: "Drawing Hands",
         tags: ["impossible", "illusion", "detailed", "black and white", "mind-bending", "clever"],
-        imagePath: "/assets/masterpieces/escher_hands.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/en/thumb/b/ba/DrawingHands.jpg/800px-DrawingHands.jpg",
         kidFriendlyFact: "He drew pictures of things that can't exist in real life!",
         biography: "M.C. Escher (1898-1972) was a Dutch artist who created impossible worlds! He drew staircases that go up forever, hands that draw themselves, and fish that turn into birds. His mathematical and perspective tricks make your brain say 'Wait, how is that possible?!'"
     },
@@ -329,7 +329,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Frida Kahlo",
         title: "Roots",
         tags: ["surreal", "nature", "vines", "lying down", "green", "fantasy", "personal"],
-        imagePath: "/assets/masterpieces/kahlo_roots.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f8/Frida_Kahlo_-_Roots_-_Google_Art_Project.jpg/800px-Frida_Kahlo_-_Roots_-_Google_Art_Project.jpg",
         kidFriendlyFact: "She painted herself connected to the earth like a plant!",
         biography: "Frida Kahlo (1907-1954) expressed her emotions through surreal self-portraits! In 'Roots,' she shows herself becoming one with nature, with vines growing from her body. She used art to share her feelings, pain, and connection to Mexican culture and nature."
     },
@@ -338,7 +338,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Alphonse Mucha",
         title: "The Seasons",
         tags: ["art nouveau", "decorative", "flowing", "beautiful", "elegant", "nature", "flowers"],
-        imagePath: "/assets/masterpieces/mucha_seasons.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Alfons_Mucha_-_1896_-_The_Seasons.jpg/800px-Alfons_Mucha_-_1896_-_The_Seasons.jpg",
         kidFriendlyFact: "He made art that looks like it's made of flowing ribbons and flowers!",
         biography: "Alphonse Mucha (1860-1939) was a Czech artist who created the Art Nouveau style! His artwork features beautiful women surrounded by flowing hair, flowers, and decorative curves. Everything looks elegant and natural, like ornate jewelry come to life!"
     },
@@ -347,7 +347,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Berthe Morisot",
         title: "The Cradle",
         tags: ["impressionist", "gentle", "mother", "soft", "domestic", "tender", "delicate"],
-        imagePath: "/assets/masterpieces/morisot_cradle.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Berthe_Morisot_-_The_Cradle_-_Google_Art_Project.jpg/800px-Berthe_Morisot_-_The_Cradle_-_Google_Art_Project.jpg",
         kidFriendlyFact: "She was one of the first female Impressionist painters!",
         biography: "Berthe Morisot (1841-1895) was a French Impressionist painter who captured tender moments of everyday life! She painted with soft, loose brushstrokes showing mothers, children, gardens, and peaceful domestic scenes. She broke barriers as a leading female artist in the Impressionist movement!"
     },
@@ -356,7 +356,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Beatriz Milhazes",
         title: "Meu Limão",
         tags: ["colorful", "patterns", "bright", "abstract", "festive", "brazilian", "circles"],
-        imagePath: "/assets/masterpieces/milhazes_limao.jpg",
+        imagePath: "https://images.squarespace-cdn.com/content/v1/5c3b6d0e96e76fb11b8ab4d4/1550604844394-KWIPTZRZ4B2DNYZKW78W/beatriz-milhazes-meu-limao.jpg",
         kidFriendlyFact: "She creates art inspired by Brazilian carnival and tropical colors!",
         biography: "Beatriz Milhazes (born 1960) is a Brazilian artist who creates explosively colorful abstract paintings! Her work is inspired by Brazilian culture, carnival decorations, and tropical nature. She layers bright colors and patterns in collages that feel like a celebration!"
     },
@@ -365,7 +365,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Katsushika Hokusai",
         title: "Red Fuji",
         tags: ["mountain", "red", "japan", "simple", "majestic", "landscape", "iconic"],
-        imagePath: "/assets/masterpieces/hokusai_fuji.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Red_Fuji_southern_wind_clear_morning.jpg/800px-Red_Fuji_southern_wind_clear_morning.jpg",
         kidFriendlyFact: "He created 36 different views of the same mountain!",
         biography: "Katsushika Hokusai created a famous series called 'Thirty-six Views of Mount Fuji' showing Japan's sacred mountain in different seasons, weather, and times of day. 'Red Fuji' shows the mountain glowing red in morning light - a rare and magical sight!"
     },
@@ -374,7 +374,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Pieter Bruegel",
         title: "The Tower of Babel",
         tags: ["detailed", "architectural", "fantasy", "medieval", "biblical", "grand", "complex"],
-        imagePath: "/assets/masterpieces/bruegel_babel.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pieter_Bruegel_the_Elder_-_The_Tower_of_Babel_%28Vienna%29_-_Google_Art_Project_-_edited.jpg/1024px-Pieter_Bruegel_the_Elder_-_The_Tower_of_Babel_%28Vienna%29_-_Google_Art_Project_-_edited.jpg",
         kidFriendlyFact: "He painted a giant tower with thousands of tiny details!",
         biography: "Pieter Bruegel the Elder (1525-1569) was a Flemish painter famous for detailed landscapes full of tiny people and activities! His Tower of Babel shows an impossibly huge spiral building with hundreds of little workers. Look closely - every section has something new to discover!"
     },
@@ -383,7 +383,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Mary Cassatt",
         title: "The Child's Bath",
         tags: ["impressionist", "mother", "child", "gentle", "intimate", "tender", "domestic"],
-        imagePath: "/assets/masterpieces/cassatt_bath.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Mary_Cassatt_-_The_Child%27s_Bath_-_Google_Art_Project.jpg/800px-Mary_Cassatt_-_The_Child%27s_Bath_-_Google_Art_Project.jpg",
         kidFriendlyFact: "She specialized in painting the special bond between mothers and children!",
         biography: "Mary Cassatt (1844-1926) was an American Impressionist who painted beautiful scenes of mothers and children! She captured tender everyday moments with soft colors and gentle brushstrokes. She was one of only three women in the French Impressionist movement!"
     },
@@ -392,7 +392,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Georgia O'Keeffe",
         title: "Cow's Skull with Calico Roses",
         tags: ["desert", "skull", "flowers", "contrast", "american", "southwestern", "bold"],
-        imagePath: "/assets/masterpieces/okeefe_skull.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Georgia_O%27Keeffe_-_Cow%27s_Skull_with_Calico_Roses_-_Google_Art_Project.jpg/800px-Georgia_O%27Keeffe_-_Cow%27s_Skull_with_Calico_Roses_-_Google_Art_Project.jpg",
         kidFriendlyFact: "She combined desert bones with beautiful flowers!",
         biography: "Georgia O'Keeffe loved the desert landscape of New Mexico! She collected sun-bleached bones from the desert and painted them alongside colorful flowers, creating striking contrasts between life and the stark beauty of the desert. She found beauty in unexpected places!"
     },
@@ -401,7 +401,7 @@ export const MASTERPIECES: Masterpiece[] = [
         artist: "Wassily Kandinsky",
         title: "Composition VIII",
         tags: ["geometric", "abstract", "shapes", "colorful", "dynamic", "musical", "playful"],
-        imagePath: "/assets/masterpieces/kandinsky_composition.jpg",
+        imagePath: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Vassily_Kandinsky%2C_1923_-_Composition_8%2C_huile_sur_toile%2C_140_cm_x_201_cm%2C_Mus%C3%A9e_Guggenheim%2C_New_York.jpg/1024px-Vassily_Kandinsky%2C_1923_-_Composition_8%2C_huile_sur_toile%2C_140_cm_x_201_cm%2C_Mus%C3%A9e_Guggenheim%2C_New_York.jpg",
         kidFriendlyFact: "He arranged shapes and colors like notes in a symphony!",
         biography: "In 'Composition VIII,' Kandinsky created a symphony of geometric shapes! Circles, triangles, and lines dance across the canvas in perfect harmony. He believed abstract art could express emotions and ideas better than realistic paintings - just like music does without words!"
     }
