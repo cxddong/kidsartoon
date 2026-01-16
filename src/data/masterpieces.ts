@@ -278,5 +278,131 @@ export const MASTERPIECES: Masterpiece[] = [
         imagePath: "/assets/masterpieces/degas_dancers.jpg",
         kidFriendlyFact: "He loved painting ballerinas practicing and dancing!",
         biography: "Edgar Degas (1834-1917) was a French artist who captured movement and grace! He painted over half of his artworks featuring ballet dancers. He showed them not just performing, but practicing, stretching, and resting - capturing the beauty of movement in every pose!"
+    },
+    {
+        id: "banksy_balloon",
+        artist: "Banksy",
+        title: "Girl with Balloon",
+        tags: ["street art", "simple", "stencil", "red", "black", "heart", "modern"],
+        imagePath: "/assets/masterpieces/banksy_balloon.jpg",
+        kidFriendlyFact: "This mysterious street artist's identity is still a secret!",
+        biography: "Banksy is a mysterious street artist whose real name is unknown! Active since the 1990s, Banksy creates thought-provoking art on city walls using stencils. The art often features children, animals, and simple but powerful messages about peace, freedom, and kindness!"
+    },
+    {
+        id: "hiroshige_rain",
+        artist: "Utagawa Hiroshige",
+        title: "Sudden Shower over Shin-Ōhashi Bridge",
+        tags: ["rain", "japan", "woodblock", "lines", "blue", "atmospheric", "weather"],
+        imagePath: "/assets/masterpieces/hiroshige_rain.jpg",
+        kidFriendlyFact: "He showed rain as thousands of tiny vertical lines!",
+        biography: "Utagawa Hiroshige (1797-1858) was a Japanese master of woodblock prints! He created beautiful landscapes showing Japan's seasons, weather, and famous places. He was amazing at depicting rain, snow, and mist - making you feel like you're really there!"
+    },
+    {
+        id: "lichtenstein_whaam",
+        artist: "Roy Lichtenstein",
+        title: "Whaam!",
+        tags: ["pop art", "comic", "dots", "bold", "action", "colorful", "fun"],
+        imagePath: "/assets/masterpieces/lichtenstein_whaam.jpg",
+        kidFriendlyFact: "He made paintings that look like giant comic book panels!",
+        biography: "Roy Lichtenstein (1923-1997) was an American Pop Artist who turned comic book panels into huge paintings! He used Ben-Day dots (tiny colored dots like in printed comics) and bold outlines. His artwork celebrates everyday pop culture and makes it into fine art!"
+    },
+    {
+        id: "arcimboldo_vegetables",
+        artist: "Giuseppe Arcimboldo",
+        title: "Vertumnus",
+        tags: ["portrait", "fruits", "vegetables", "creative", "fun", "playful", "nature"],
+        imagePath: "/assets/masterpieces/arcimboldo_vegetables.jpg",
+        kidFriendlyFact: "He created portraits using only fruits and vegetables!",
+        biography: "Giuseppe Arcimboldo (1526-1593) was an Italian painter famous for creating imaginative portrait heads made entirely from fruits, vegetables, flowers, fish, and books! Turn his paintings upside down and they transform - pure magical fun that makes you see things in new ways!"
+    },
+    {
+        id: "escher_hands",
+        artist: "M.C. Escher",
+        title: "Drawing Hands",
+        tags: ["impossible", "illusion", "detailed", "black and white", "mind-bending", "clever"],
+        imagePath: "/assets/masterpieces/escher_hands.jpg",
+        kidFriendlyFact: "He drew pictures of things that can't exist in real life!",
+        biography: "M.C. Escher (1898-1972) was a Dutch artist who created impossible worlds! He drew staircases that go up forever, hands that draw themselves, and fish that turn into birds. His mathematical and perspective tricks make your brain say 'Wait, how is that possible?!'"
+    },
+    {
+        id: "kahlo_roots",
+        artist: "Frida Kahlo",
+        title: "Roots",
+        tags: ["surreal", "nature", "vines", "lying down", "green", "fantasy", "personal"],
+        imagePath: "/assets/masterpieces/kahlo_roots.jpg",
+        kidFriendlyFact: "She painted herself connected to the earth like a plant!",
+        biography: "Frida Kahlo (1907-1954) expressed her emotions through surreal self-portraits! In 'Roots,' she shows herself becoming one with nature, with vines growing from her body. She used art to share her feelings, pain, and connection to Mexican culture and nature."
+    },
+    {
+        id: "mucha_seasons",
+        artist: "Alphonse Mucha",
+        title: "The Seasons",
+        tags: ["art nouveau", "decorative", "flowing", "beautiful", "elegant", "nature", "flowers"],
+        imagePath: "/assets/masterpieces/mucha_seasons.jpg",
+        kidFriendlyFact: "He made art that looks like it's made of flowing ribbons and flowers!",
+        biography: "Alphonse Mucha (1860-1939) was a Czech artist who created the Art Nouveau style! His artwork features beautiful women surrounded by flowing hair, flowers, and decorative curves. Everything looks elegant and natural, like ornate jewelry come to life!"
+    },
+    {
+        id: "morisot_cradle",
+        artist: "Berthe Morisot",
+        title: "The Cradle",
+        tags: ["impressionist", "gentle", "mother", "soft", "domestic", "tender", "delicate"],
+        imagePath: "/assets/masterpieces/morisot_cradle.jpg",
+        kidFriendlyFact: "She was one of the first female Impressionist painters!",
+        biography: "Berthe Morisot (1841-1895) was a French Impressionist painter who captured tender moments of everyday life! She painted with soft, loose brushstrokes showing mothers, children, gardens, and peaceful domestic scenes. She broke barriers as a leading female artist in the Impressionist movement!"
+    },
+    {
+        id: "leyenaar_paper",
+        artist: "Beatriz Milhazes",
+        title: "Meu Limão",
+        tags: ["colorful", "patterns", "bright", "abstract", "festive", "brazilian", "circles"],
+        imagePath: "/assets/masterpieces/milhazes_limao.jpg",
+        kidFriendlyFact: "She creates art inspired by Brazilian carnival and tropical colors!",
+        biography: "Beatriz Milhazes (born 1960) is a Brazilian artist who creates explosively colorful abstract paintings! Her work is inspired by Brazilian culture, carnival decorations, and tropical nature. She layers bright colors and patterns in collages that feel like a celebration!"
+    },
+    {
+        id: "hokusai_fuji",
+        artist: "Katsushika Hokusai",
+        title: "Red Fuji",
+        tags: ["mountain", "red", "japan", "simple", "majestic", "landscape", "iconic"],
+        imagePath: "/assets/masterpieces/hokusai_fuji.jpg",
+        kidFriendlyFact: "He created 36 different views of the same mountain!",
+        biography: "Katsushika Hokusai created a famous series called 'Thirty-six Views of Mount Fuji' showing Japan's sacred mountain in different seasons, weather, and times of day. 'Red Fuji' shows the mountain glowing red in morning light - a rare and magical sight!"
+    },
+    {
+        id: "bruegel_babel",
+        artist: "Pieter Bruegel",
+        title: "The Tower of Babel",
+        tags: ["detailed", "architectural", "fantasy", "medieval", "biblical", "grand", "complex"],
+        imagePath: "/assets/masterpieces/bruegel_babel.jpg",
+        kidFriendlyFact: "He painted a giant tower with thousands of tiny details!",
+        biography: "Pieter Bruegel the Elder (1525-1569) was a Flemish painter famous for detailed landscapes full of tiny people and activities! His Tower of Babel shows an impossibly huge spiral building with hundreds of little workers. Look closely - every section has something new to discover!"
+    },
+    {
+        id: "cassatt_bath",
+        artist: "Mary Cassatt",
+        title: "The Child's Bath",
+        tags: ["impressionist", "mother", "child", "gentle", "intimate", "tender", "domestic"],
+        imagePath: "/assets/masterpieces/cassatt_bath.jpg",
+        kidFriendlyFact: "She specialized in painting the special bond between mothers and children!",
+        biography: "Mary Cassatt (1844-1926) was an American Impressionist who painted beautiful scenes of mothers and children! She captured tender everyday moments with soft colors and gentle brushstrokes. She was one of only three women in the French Impressionist movement!"
+    },
+    {
+        id: "okeefe_skull",
+        artist: "Georgia O'Keeffe",
+        title: "Cow's Skull with Calico Roses",
+        tags: ["desert", "skull", "flowers", "contrast", "american", "southwestern", "bold"],
+        imagePath: "/assets/masterpieces/okeefe_skull.jpg",
+        kidFriendlyFact: "She combined desert bones with beautiful flowers!",
+        biography: "Georgia O'Keeffe loved the desert landscape of New Mexico! She collected sun-bleached bones from the desert and painted them alongside colorful flowers, creating striking contrasts between life and the stark beauty of the desert. She found beauty in unexpected places!"
+    },
+    {
+        id: "kandinsky_composition",
+        artist: "Wassily Kandinsky",
+        title: "Composition VIII",
+        tags: ["geometric", "abstract", "shapes", "colorful", "dynamic", "musical", "playful"],
+        imagePath: "/assets/masterpieces/kandinsky_composition.jpg",
+        kidFriendlyFact: "He arranged shapes and colors like notes in a symphony!",
+        biography: "In 'Composition VIII,' Kandinsky created a symphony of geometric shapes! Circles, triangles, and lines dance across the canvas in perfect harmony. He believed abstract art could express emotions and ideas better than realistic paintings - just like music does without words!"
     }
 ];

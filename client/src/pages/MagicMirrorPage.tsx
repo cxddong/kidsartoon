@@ -196,7 +196,7 @@ export const MagicMirrorPage: React.FC = () => {
             <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                 {/* Left Column: Upload & Image */}
                 <div className="space-y-6">
-                    <div className="relative aspect-square bg-gray-900 rounded-3xl overflow-hidden border-4 border-purple-500/30 shadow-2xl">
+                    <div className="relative aspect-square backdrop-blur-sm bg-black/20 rounded-3xl overflow-hidden border-4 border-purple-500/30 shadow-2xl">
                         {selectedImage ? (
                             <>
                                 <img src={selectedImage} alt="Uploaded" className="w-full h-full object-contain" />

@@ -119,7 +119,7 @@ const FeaturePreviewBox = ({ to, onClose }: { to: string; onClose: () => void })
 };
 
 // Component for Dock Items
-const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; badge?: string; activePreview: string | null; onPreview: (to: string | null) => void }) => {
+const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, alignBottom }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; badge?: string; activePreview: string | null; onPreview: (to: string | null) => void; alignBottom?: boolean }) => {
     const navigate = useNavigate();
     const isActive = activePreview === to;
 
@@ -134,7 +134,10 @@ const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview }
             }}
         >
             {/* Text Label to the Left of Button */}
-            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block">
+            <span className={cn(
+                "text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block",
+                alignBottom && "self-end"
+            )}>
                 {label}
             </span>
 
@@ -335,9 +338,9 @@ export const HomePage: React.FC = () => {
                     <DockItem to="/generate/audio" icon={<Music size={24} />} videoSrc={audioVideo} label="Audio" badge="FREE" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/comic" icon={<MessageCircle size={24} />} videoSrc={comicVideo} label="Comic" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/picture" icon={<BookOpen size={24} />} videoSrc={bookVideo} label="Book" activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/generate/video" icon={<Video size={24} />} videoSrc={cartoonVideo} label="Video" activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/generate/greeting-card" icon={<Heart size={24} />} videoSrc={greetingCardVideo} label="Card" activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/magic-art" icon={<Palette size={24} />} videoSrc={artStudioVideo} label="Art Studio" activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/generate/video" icon={<Video size={24} />} videoSrc={cartoonVideo} label="Video" alignBottom activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/generate/greeting-card" icon={<Heart size={24} />} videoSrc={greetingCardVideo} label="Card" alignBottom activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/magic-art" icon={<Palette size={24} />} videoSrc={artStudioVideo} label="Art Studio" alignBottom activePreview={activePreview} onPreview={setActivePreview} />
                 </div>
             </div>
 
