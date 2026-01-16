@@ -42,6 +42,33 @@ router.post('/consume', async (req, res) => {
     }
 });
 
+// POST /api/points/deduct
+// Flexible deduction endpoint (accepts custom amount)
+router.post('/deduct', async (req, res) => {
+    const { userId, amount, reason } = req.body;
+    if (!userId || !amount) return res.status(400).json({ success: false, error: 'userId and amount required' });
+
+    try {
+        // Use consumePoints with costOverride
+        const result = await pointsService.consumePoints(userId, reason || 'custom_deduction', amount);
+
+        if (result.success) {
+            res.json({
+                success: true,
+                newBalance: result.after,
+                deducted: amount,
+                before: result.before,
+                after: result.after
+            });
+        } else {
+            res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error: any) {
+        console.error('[Points] Deduct error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // POST /api/points/refund
 router.post('/refund', async (req, res) => {
     const { userId, action, reason } = req.body;

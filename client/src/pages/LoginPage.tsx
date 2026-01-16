@@ -12,41 +12,31 @@ const LoginPage: React.FC = () => {
     const [err, setErr] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // DEBUGGING STATE
-    const [debugLogs, setDebugLogs] = useState<string[]>([]);
-    const addLog = (msg: string) => setDebugLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+    // Password reset states
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetSuccess, setResetSuccess] = useState(false);
 
-    // Install Global Error Handlers
-    useEffect(() => {
-        const handleError = (event: ErrorEvent) => {
-            addLog(`Global Error: ${event.message} at ${event.filename}:${event.lineno}`);
-        };
-        const handleRejection = (event: PromiseRejectionEvent) => {
-            addLog(`Unhandled Rejection: ${event.reason}`);
-        };
+    // DEBUGGING STATE (Removed)
+    // const [debugLogs, setDebugLogs] = useState<string[]>([]);
+    // const addLog = ... (Removed)
 
-        window.addEventListener('error', handleError);
-        window.addEventListener('unhandledrejection', handleRejection);
-
-        return () => {
-            window.removeEventListener('error', handleError);
-            window.removeEventListener('unhandledrejection', handleRejection);
-        };
-    }, []);
+    // Install Global Error Handlers (Removed)
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setErr('');
         setLoading(true);
-        addLog(`Starting email login with: ${email}`);
+        // addLog(`Starting email login with: ${email}`);
 
         try {
             await login(email, password);
-            addLog('Email login successful, navigating...');
+            // addLog('Email login successful, navigating...');
             navigate('/home');
         } catch (error: any) {
             console.error("Login Error:", error);
-            addLog(`Login Error: ${error.message} (${error.code})`);
+            // addLog(`Login Error: ${error.message} (${error.code})`);
 
             const code = error.code || '';
             const msg = error.message || '';
@@ -60,7 +50,7 @@ const LoginPage: React.FC = () => {
                 // Firebase/Firestore permission error - not a login issue
                 // This error should not prevent login, might be from background services
                 console.warn('Firestore permission issue detected, but login succeeded at auth level');
-                addLog('Firestore permission warning (ignoring)');
+                // addLog('Firestore permission warning (ignoring)');
                 // Still navigate since authentication might have succeeded
                 navigate('/home');
             } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
@@ -74,22 +64,16 @@ const LoginPage: React.FC = () => {
     };
 
     const handleProvider = async (provider: 'google' | 'apple') => {
-        // BLOCKING ALERT TO VERIFY CLICK
-        alert(`DEBUG: Clicked ${provider} login. Starting...`);
         try {
-            addLog(`Starting ${provider} login...`);
+            // addLog(`Starting ${provider} login...`);
             let isNew = false;
-
-            // ALERT BEFORE AWAIT
             if (provider === 'google') {
-                alert('DEBUG: calling loginWithGoogle()');
                 isNew = await loginWithGoogle();
             } else {
                 isNew = await loginWithApple();
             }
 
-            alert(`DEBUG: Login Success! isNew=${isNew}`);
-            addLog(`${provider} login success. isNew=${isNew}`);
+            // addLog(`${provider} login success. isNew=${isNew}`);
 
             if (isNew) {
                 navigate('/startup');
@@ -97,16 +81,61 @@ const LoginPage: React.FC = () => {
                 navigate('/home');
             }
         } catch (error: any) {
-            alert(`DEBUG: Catch Error! ${error.message}`);
             console.error("Login failed", error);
-            addLog(`PROVIDER LOGIN FAILED: ${error.message} / ${error.code}`);
+            // addLog(`PROVIDER LOGIN FAILED: ${error.message} / ${error.code}`);
             setErr(error.message || "Login failed");
         }
     };
 
     const handleForgotPassword = () => {
-        // Firebase handling would go here, for now alert is fine or sendPasswordResetEmail
-        alert("Please use the Google/Apple login for this demo, or contact support.");
+        setResetEmail(email); // Pre-fill with current email
+        setShowResetModal(true);
+        setResetSuccess(false);
+        setErr(''); // Clear any previous errors
+    };
+
+    const handleSendResetEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!resetEmail) return;
+
+        setResetLoading(true);
+        setErr('');
+
+        try {
+            // Import Firebase auth dynamically
+            const { getAuth, sendPasswordResetEmail } = await import('firebase/auth');
+            const auth = getAuth();
+
+            // Configure action code settings for proper redirect
+            const actionCodeSettings = {
+                // URL you want to redirect back to after clicking reset link
+                url: window.location.origin + '/reset-password',
+                handleCodeInApp: false,
+            };
+
+            await sendPasswordResetEmail(auth, resetEmail, actionCodeSettings);
+            setResetSuccess(true);
+
+            // Auto-close after 8 seconds (给用户更多时间阅读提示)
+            setTimeout(() => {
+                setShowResetModal(false);
+                setResetSuccess(false);
+                setResetEmail(''); // 重置邮箱，允许再次发送
+            }, 8000);
+        } catch (error: any) {
+            console.error('Password reset error:', error);
+            if (error.code === 'auth/user-not-found') {
+                setErr('No account found with this email.');
+            } else if (error.code === 'auth/invalid-email') {
+                setErr('Invalid email address.');
+            } else if (error.code === 'auth/too-many-requests') {
+                setErr('Too many requests. Please wait a few minutes and try again.');
+            } else {
+                setErr('Failed to send reset email. Please try again.');
+            }
+        } finally {
+            setResetLoading(false);
+        }
     };
 
     return (
@@ -203,21 +232,77 @@ const LoginPage: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* DEBUG LOG SECTION */}
-                    {debugLogs.length > 0 && (
-                        <div className="w-full mt-8 p-4 bg-black/80 rounded-xl text-green-400 text-xs font-mono overflow-hidden">
-                            <div className="flex justify-between items-center mb-2 border-b border-white/20 pb-2">
-                                <span className="font-bold text-white">Debug Logs</span>
-                                <button onClick={() => setDebugLogs([])} className="text-xs text-white/50 hover:text-white">Clear</button>
-                            </div>
-                            <div className="h-40 overflow-y-auto">
-                                {debugLogs.map((log, i) => (
-                                    <div key={i} className="mb-1 border-b border-white/5 pb-1 last:border-0">{log}</div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    {/* DEBUG LOG SECTION (Removed) */}
                 </motion.div>
+
+                {/* Password Reset Modal */}
+                {showResetModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-white rounded-3xl p-8 max-w-md w-full mx-4"
+                        >
+                            {resetSuccess ? (
+                                <div className="text-center">
+                                    <div className="text-6xl mb-4">✅</div>
+                                    <h3 className="text-2xl font-black text-slate-800 mb-2">Email Sent!</h3>
+                                    <p className="text-slate-600 mb-3">
+                                        Password reset email has been sent.
+                                        <br />
+                                        <strong>Check your inbox now!</strong>
+                                    </p>
+                                    <p className="text-sm text-amber-600 bg-amber-50 px-4 py-2 rounded-xl mb-2">
+                                        ⏱️ Reset link valid for 1 hour
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        Don't see it? Check spam folder or wait a moment
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <h3 className="text-2xl font-black text-slate-800 mb-2">Reset Password</h3>
+                                    <p className="text-slate-500 mb-6 text-sm">
+                                        Enter your email to receive reset instructions
+                                    </p>
+
+                                    {err && <div className="mb-4 text-red-500 text-sm bg-red-50 px-4 py-2 rounded-xl">{err}</div>}
+
+                                    <form onSubmit={handleSendResetEmail} className="space-y-4">
+                                        <input
+                                            type="email"
+                                            placeholder="Email"
+                                            value={resetEmail}
+                                            onChange={e => setResetEmail(e.target.value)}
+                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                                            required
+                                            autoFocus
+                                        />
+                                        <div className="flex gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowResetModal(false);
+                                                    setErr('');
+                                                }}
+                                                className="flex-1 p-3 bg-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={resetLoading}
+                                                className="flex-1 p-3 bg-blue-500 text-white rounded-2xl font-bold hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {resetLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Send Email'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
 
                 <button
                     onClick={() => navigate('/signup')}

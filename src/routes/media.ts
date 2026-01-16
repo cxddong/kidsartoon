@@ -34,7 +34,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
           userId,
           req.body.imageUrl,
           type,
-          req.body.prompt || 'User Upload'
+          req.body.prompt || 'User Upload',
+          undefined,
+          req.body.profileId // Pass profileId
         );
         return res.json(newImage);
       }
@@ -59,7 +61,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       userId,
       publicUrl,
       type,
-      req.file.originalname
+      req.file.originalname,
+      undefined,
+      req.body.profileId // Pass profileId
     );
 
     console.log(`[Upload] Success: ${publicUrl}`);
@@ -498,7 +502,7 @@ and user context: ${userVoiceText}.
     const finalType = audioUrl ? 'story' : 'story'; // Could separate types if needed
 
     try {
-      await databaseService.saveImageRecord(userId || 'anonymous', finalMediaUrl, finalType, userVoiceText, { story, audioUrl, isFallback: !audioUrl, originalImageUrl: savedImageUrl });
+      await databaseService.saveImageRecord(userId || 'anonymous', finalMediaUrl, finalType, userVoiceText, { story, audioUrl, isFallback: !audioUrl, originalImageUrl: savedImageUrl }, req.body.profileId);
       if (userId) await databaseService.awardPoints(userId, 15, 'story');
     } catch (e) { console.error('DB Save error', e); }
 
@@ -678,9 +682,10 @@ Text: English only.`;
         await databaseService.saveImageRecord(
           userId || 'anonymous',
           cartoonImageUrl,
-          'cards',
+          req.body.type || 'generated',
           finalPrompt,
-          { originalImageUrl: savedOriginalUrl }
+          { originalImageUrl: savedOriginalUrl },
+          req.body.profileId // Pass profileId
         );
       }
     } catch (e) { console.error('DB Save error', e); }
@@ -721,6 +726,7 @@ router.post('/image-to-video/task', (req, res, next) => {
     const action = req.body.action;           // Required
     const style = req.body.style;             // Optional
     const effect = req.body.effect;           // Optional
+    const scene = req.body.scene;             // Optional: Custom prompt/Scene description
     const durationParam = parseInt(req.body.duration || '5');
     const duration: 5 | 8 | 10 = (durationParam === 10 ? 10 : durationParam === 8 ? 8 : 5);
     const generateAudio = req.body.generateAudio !== false; // Default true
@@ -846,12 +852,12 @@ router.post('/image-to-video/task', (req, res, next) => {
 
     let taskId: string;
 
-    // If Talk mode with textInput, use Seedance 1.5 Pro with speech
-    if (audioMode === 'talk' && textInput.trim()) {
-      console.log(`[API Magic] Using Seedance 1.5 Pro with Speech Mode`);
+    // If Talk mode with textInput OR Scene mode (for BG music), use Seedance 1.5 Pro
+    if ((audioMode === 'talk' && textInput.trim()) || audioMode === 'scene') {
+      console.log(`[API Magic] Using Seedance 1.5 Pro (${audioMode} mode)`);
       taskId = await doubaoService.createSeedanceVideoTask1_5(finalImageUrl, {
         spell: duration === 5 ? 'quick' : duration === 8 ? 'story' : 'cinema',
-        audioMode: 'talk',
+        audioMode: audioMode as 'talk' | 'scene',
         textInput: textInput,
         voiceStyle: voiceStyle,
         sceneMood: sceneMood,
@@ -860,13 +866,13 @@ router.post('/image-to-video/task', (req, res, next) => {
     } else {
       // Otherwise use the Kids Version (action-based) but allow videoPrompt enrichment
       console.log(`[API Magic] Using Seedance Kids Version (action-based)`);
-      taskId = await doubaoService.createSeedanceVideoTask(finalImageUrl, {
+      taskId = await doubaoService.createSeedanceVideoTask(finalImageUrl || originalImageUrl, {
         action: action,           // Required: 'dance', 'run', 'fly', etc.
         style: style,             // Optional: 'clay', 'cartoon', etc.
         effect: effect,           // Optional: 'sparkle', 'bubbles', etc.
         duration: duration,       // 5 | 8 | 10
         generateAudio: generateAudio,
-        extraPrompt: videoPrompt  // Pass additional requirements
+        extraPrompt: scene  // Pass scene as extraPrompt
       });
     }
 
@@ -882,7 +888,7 @@ router.post('/image-to-video/task', (req, res, next) => {
       audioMode: audioMode,
       textInput: textInput.substring(0, 50),
       videoPrompt: videoPrompt.substring(0, 50)
-    });
+    }, req.body.profileId);
 
     res.json({ taskId, usedModel: 'doubao-seedance-1-5-pro-251215', status: 'PENDING' });
 
@@ -2351,10 +2357,117 @@ router.get('/proxy/image', async (req, res) => {
   }
 });
 
+// Proxy endpoint for File Downloads (Attachments)
+router.get('/download', async (req, res) => {
+  try {
+    const fileUrl = req.query.url as string;
+    const filename = (req.query.filename as string) || `magic-file-${Date.now()}`;
+
+    if (!fileUrl) return res.status(400).send('URL required');
+
+    const fetch = global.fetch;
+    const response = await fetch(fileUrl);
+
+    if (!response.ok) throw new Error(`Failed to fetch file: ${response.status}`);
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Stream directly
+    const arrayBuffer = await response.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
+
+  } catch (error) {
+    console.error('Download Proxy Error:', error);
+    res.status(500).send('Download Failed');
+  }
+});
+
+// Endpoint for Rest Reminder (Random Story)
+router.get('/random-story', async (req, res) => {
+  try {
+    const story = await databaseService.getRandomCommunityStory();
+    if (!story) {
+      return res.status(404).json({ error: 'No stories found' });
+    }
+
+    res.json({
+      title: story.prompt || "A Magical Story",
+      audioUrl: story.meta?.audioUrl || story.imageUrl, // Fallback if image implies audio? usually story type has audioUrl in meta
+      imageUrl: story.meta?.originalImageUrl || story.imageUrl,
+      storyText: story.meta?.story || "Enjoy this story from our kingdom.",
+      authorId: story.userId
+    });
+  } catch (error) {
+    console.error('Random Story Error:', error);
+    res.status(500).json({ error: 'Failed to fetch story' });
+  }
+});
+
+/**
+ * Magic Art Studio Generation Endpoint
+ */
+router.post('/magic-art', async (req, res) => {
+  try {
+    const { userId, image, mode, stylePreset, colorVibe, targetStyle, prompt } = req.body;
+    const COST = 15;
+
+    // 1. Check Credits
+    const user = await databaseService.getUser(userId);
+    if (!user || (user.credits || 0) < COST) {
+      return res.status(403).json({ error: 'Not enough magic credits!' });
+    }
+
+    // 2. Deduct Credits
+    const deducted = await databaseService.deductCredits(userId, COST, `Magic Art: ${mode}`, 'IMAGE_TRANSFORM');
+    if (!deducted) return res.status(403).json({ error: 'Credit deduction failed' });
+
+    try {
+      // 3. Generate Art
+      console.log(`[MagicArt] Generating for ${userId} mode=${mode}`);
+      const imageUrl = await doubaoService.generateMagicArt(image, {
+        mode,
+        stylePreset,
+        colorVibe,
+        targetStyle,
+        prompt
+      });
+
+      // 4. Save Record
+      const record = await databaseService.saveImageRecord(
+        userId,
+        imageUrl,
+        'generated', // Using generic 'generated' type or specific 'magic-art' if schema allows. Existing schema has 'generated'.
+        `Magic Art (${mode}): ${prompt || stylePreset || 'Custom'}`,
+        {
+          mode,
+          stylePreset,
+          originalPrompt: prompt,
+          source: 'magic-art-studio'
+        }
+      );
+
+      // 5. Response
+      res.json({ success: true, imageUrl, record, remainingCredits: (user.credits || 0) - COST });
+
+    } catch (genError) {
+      console.error('[MagicArt] Generation failed:', genError);
+      // Refund
+      await databaseService.refundCredits(userId, COST, 'Generation Failed');
+      res.status(500).json({ error: 'Magic creation failed. Credits refunded.' });
+    }
+
+  } catch (error) {
+    console.error('[MagicArt] Endpoint error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 /**
  * Save Graphic Novel to User History
  */
-router.post('/save-graphic-novel', async (req, res) => {
+router.post('/save-cartoon-book', async (req, res) => {
   try {
     const { userId, taskId, title, type, imageUrl, prompt, meta } = req.body;
 
@@ -2362,18 +2475,18 @@ router.post('/save-graphic-novel', async (req, res) => {
       return res.status(400).json({ error: 'Missing userId or taskId' });
     }
 
-    console.log(`[Media] Saving graphic novel ${taskId} for user ${userId}`);
+    console.log(`[Media] Saving cartoon book ${taskId} for user ${userId}`);
 
     // Save to database
     await databaseService.saveImageRecord(
       userId,
-      imageUrl || meta?.graphicNovel?.pages?.[0]?.imageUrl || '',
-      type || 'graphic-novel',
-      prompt || `Graphic novel - ${meta?.graphicNovel?.vibe || 'adventure'}`,
+      imageUrl || meta?.cartoonBook?.pages?.[0]?.imageUrl || '',
+      type || 'cartoon-book',
+      prompt || `Cartoon book - ${meta?.cartoonBook?.vibe || 'adventure'}`,
       meta || {}
     );
 
-    console.log(`[Media] Graphic novel saved successfully`);
+    console.log(`[Media] Cartoon book saved successfully`);
     res.json({ success: true });
 
   } catch (error) {

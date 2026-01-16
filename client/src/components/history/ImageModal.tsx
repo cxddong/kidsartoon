@@ -1,16 +1,17 @@
 ﻿import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart, Trash2, RefreshCw, Download } from 'lucide-react';
+import { X, Heart, Trash2, RefreshCw, Download, Share2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import html2canvas from 'html2canvas';
 import { PuzzleButton } from '../puzzle/PuzzleButton';
 import { PuzzleGame } from '../puzzle/PuzzleGame';
+import { ShareModal } from '../share/ShareModal';
 
 export interface ImageRecord {
     id: string;
     userId: string;
     imageUrl: string;
-    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'graphic-novel' | 'cards';
+    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'graphic-novel' | 'cartoon-book' | 'cards';
     createdAt: string;
     prompt?: string;
     favorite?: boolean;
@@ -32,6 +33,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
     const [aiReview, setAiReview] = React.useState<{ loading: boolean, text: string | null, shown: boolean }>({ loading: false, text: null, shown: false });
     const [isReviewPlaying, setIsReviewPlaying] = React.useState(false);
     const [showPuzzle, setShowPuzzle] = React.useState(initialShowPuzzle);
+    const [showShare, setShowShare] = React.useState(false);
     const comicRef = React.useRef<HTMLDivElement>(null);
 
     const handleDownload = async () => {
@@ -237,6 +239,36 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                                             <div className="text-center">
                                                 <span className="text-xs font-bold text-orange-600">Page {idx + 1}</span>
                                                 <p className="text-xs text-slate-600 mt-1 line-clamp-2">{page.text_overlay}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (image.type === 'cartoon-book' || image.type === 'graphic-novel') && (image.meta?.cartoonBook?.pages || image.meta?.graphicNovel?.pages) ? (
+                            /* CARTOON BOOK LAYOUT */
+                            <div className="flex flex-col gap-6 h-full max-w-6xl mx-auto">
+                                <h4 className="text-center font-black text-purple-800 text-2xl">📚 Cartoon Book</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {(image.meta?.cartoonBook?.pages || image.meta?.graphicNovel?.pages).map((page: any, idx: number) => (
+                                        <div key={idx} className="flex flex-col gap-2 p-3 bg-white rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="aspect-[2/3] bg-white rounded-lg overflow-hidden border border-purple-100 relative group">
+                                                <img
+                                                    src={page.imageUrl}
+                                                    alt={`Page ${idx + 1}`}
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                                <a
+                                                    href={page.imageUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="absolute bottom-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <Download size={14} />
+                                                </a>
+                                            </div>
+                                            <div className="text-center">
+                                                <span className="text-xs font-bold text-purple-600">Page {idx + 1}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -510,6 +542,15 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                             >
                                 �?
                             </button>
+                            {/* Share Button - NEW */}
+                            <button
+                                onClick={() => setShowShare(true)}
+                                className="w-10 h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-full flex items-center justify-center transition-colors shadow-sm"
+                                title="Share Magic Pass"
+                            >
+                                <Share2 size={20} />
+                            </button>
+
                             <button
                                 onClick={() => onToggleFavorite(image.id)}
                                 className={cn(

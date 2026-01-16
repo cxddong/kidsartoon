@@ -4,6 +4,7 @@ import { geminiService } from './gemini.js';
 import { doubaoService } from './doubao.js';
 import { databaseService } from './database.js';
 import { openAIService } from './openai.js';
+import { safetyService } from './safetyService.js';
 
 // Story Vibe Templates
 export const STORY_VIBES = {
@@ -43,16 +44,16 @@ interface Asset {
     description: string;
 }
 
-interface GraphicNovelAssets {
+interface CartoonBookAssets {
     slot1?: Asset;  // Hero/Trickster/Protagonist/Student
     slot2?: Asset;  // Villain/Victim/Magical/Friend
     slot3?: Asset;  // Scene/Place
     slot4?: Asset;  // Extra (Pet/Object/Accessory)
 }
 
-interface GraphicNovelOptions {
+interface CartoonBookOptions {
     vibe?: 'adventure' | 'funny' | 'fairytale' | 'school';       // NEW
-    assets: GraphicNovelAssets;
+    assets: CartoonBookAssets;
     totalPages: 4 | 8 | 12;                                      // UPDATED: removed 6, added 12
     layout?: 'standard' | 'dynamic';                             // NEW
     plotHint?: string;
@@ -60,16 +61,18 @@ interface GraphicNovelOptions {
 }
 
 export class WorldBuilderService {
+    private tasks: Record<string, any> = {};
+
     /**
-     * Main entry point: Generate a complete graphic novel
+     * Main entry point: Generate a complete cartoon book
      */
-    async createGraphicNovel(
+    async createCartoonBook(
         userId: string,
-        options: GraphicNovelOptions
+        options: CartoonBookOptions
     ): Promise<string> {
         const { assets, totalPages, plotHint, style, vibe, layout } = options;
 
-        console.log(`[WorldBuilder] Starting graphic novel generation for user ${userId}`);
+        console.log(`[WorldBuilder] Starting cartoon book generation for user ${userId}`);
         console.log(`[WorldBuilder] Pages: ${totalPages}, Assets:`, Object.keys(assets));
 
         try {
@@ -79,12 +82,12 @@ export class WorldBuilderService {
             console.log('[WorldBuilder] Plot outline generated:', plotOutline);
 
             // 2. Create task record for tracking
-            const taskId = `gn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const taskId = `cb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            await databaseService.saveGraphicNovelTask({
+            await databaseService.saveCartoonBookTask({
                 id: taskId,
                 userId,
-                type: 'graphic_novel',
+                type: 'cartoon_book',
                 totalPages,
                 assets,
                 plotOutline,
@@ -101,14 +104,14 @@ export class WorldBuilderService {
             console.log(`[WorldBuilder] Task created: ${taskId}`);
 
             // 3. Generate pages asynchronously (don't await - runs in background)
-            this.generatePagesAsync(taskId, plotOutline, assets, vibe, style, layout, plotHint).catch(err => {
+            this.generatePagesAsync(taskId, plotOutline, assets, vibe, style, layout, plotHint, userId).catch(err => {
                 console.error(`[WorldBuilder] Async generation failed for ${taskId}:`, err);
             });
 
             return taskId;
 
         } catch (error) {
-            console.error('[WorldBuilder] Error creating graphic novel:', error);
+            console.error('[WorldBuilder] Error creating cartoon book:', error);
             throw error;
         }
     }
@@ -116,7 +119,7 @@ export class WorldBuilderService {
     /**
      * NEW: Analyze uploaded asset images with AI vision
      */
-    private async analyzeAssets(assets: GraphicNovelAssets): Promise<string> {
+    private async analyzeAssets(assets: CartoonBookAssets): Promise<string> {
         let assetContext = '';
 
         try {
@@ -176,7 +179,7 @@ export class WorldBuilderService {
     * NOW with vision analysis of uploaded assets!
     */
     private async generatePlotOutline(
-        assets: GraphicNovelAssets,
+        assets: CartoonBookAssets,
         totalPages: number,
         plotHint?: string,
         vibe?: string
@@ -261,6 +264,13 @@ ${vibe === 'school' ? 'REQUIRED: Story happens at SCHOOL (classroom/playground).
 
 ${plotHint ? `CRITICAL USER DIRECTION: ${plotHint}\n(MANDATORY: You MUST strictly follow this plot direction. Integrate it into the theme while keeping the requested vibe.)` : ''}
 
+TARGET AUDIENCE: Children (6-10 years old). 
+LANGUAGE: rigorous simplicity. Use short sentences. Avoid complex words.
+STRUCTURE: 
+1. Chapter 1 MUST be an INTRODUCTION. Clearly state WHO the main character is and WHERE they are. Do not start in the middle of action.
+2. The story must flow logically: Introduction -> inciting Incident -> Adventure -> Conclusion.
+3. CLEAR VISUALS: Each chapter must describe scenes that are easy to draw.
+
 CHARACTERS: ${assetAnalysis}
 OUTPUT FORMAT: Wrap your JSON array with START_JSON and END_JSON tags.
 ACHIEVEMENT: Each string MUST be a mini-chapter with 3-4 DESCRIPTIVE sentences.
@@ -311,7 +321,7 @@ GENERATE:`;
         vibe?: string,
         plotHint?: string
     ): Promise<any[]> {
-        const systemPrompt = `You are a professional graphic novel writer.
+        const systemPrompt = `You are a professional children's graphic novel author.
 STORY OUTLINE (${outline.length} Chapters):
 ${outline.map((ch, i) => `Chapter ${i + 1}: ${ch}`).join('\n')}
 
@@ -320,11 +330,12 @@ ${plotHint ? `CRITICAL USER DIRECTION (MANDATORY): ${plotHint}` : ''}
 MANDATORY REQUIREMENTS:
 1. Return EXACTLY ${totalPanels} panels.
 2. Continuity: Use this description for the main character in EVERY panel: "${assetAnalysis}".
-3. Dialogue: Write clean dialogue. NEVER include prefixes like "Protagonist:", "Hero:", or "(thinking):".
-4. Every single panel MUST have unique dialogue and a unique visual scene description. NO REPETITION.
-5. Each panel continues the story logically from the previous one.
-6. Choose "bubblePosition" (top, bottom, top-left, top-right, bottom-left, bottom-right).
-7. Output JSON with a "panels" array.`;
+3. Dialogue: Write SIMPLE, PUNCHY dialogue suitable for a 6-year-old. Short sentences!
+4. VISUALS: Panel 1 of Chapter 1 MUST be an ESTABLISHING SHOT introducing the character and location effectively.
+5. Every single panel MUST have unique dialogue and a unique visual scene description. NO REPETITION.
+6. Each panel continues the story logically from the previous one. matches the image description.
+7. Choose "bubblePosition" (top, bottom, top-left, top-right, bottom-left, bottom-right).
+8. Output JSON with a "panels" array.`;
 
         const userPrompt = `Generate a structured script for a ${vibe || 'adventure'} graphic novel in ${totalPanels} panels. 
 CRITICAL: ENSURE VISUAL CONTINUITY using the character description. Avoid repetitive text.`;
@@ -435,21 +446,42 @@ CRITICAL: ENSURE VISUAL CONTINUITY using the character description. Avoid repeti
     private async generatePagesAsync(
         taskId: string,
         plotOutline: string[],
-        assets: GraphicNovelAssets,
+        assets: CartoonBookAssets,
         vibe?: string,
         style?: string,
         layout?: 'standard' | 'dynamic',
-        plotHint?: string
+        plotHint?: string,
+        userId?: string // Pass userId
     ) {
         console.log('[WorldBuilder] Starting NEW coherent story generation...');
 
         try {
+            // 0. Safety Check
+            const safetyChecks = [];
+            if (plotHint) safetyChecks.push(safetyService.validatePrompt(plotHint));
+            if (assets.slot1?.imageUrl) safetyChecks.push(safetyService.validateImage(assets.slot1.imageUrl));
+            if (assets.slot2?.imageUrl) safetyChecks.push(safetyService.validateImage(assets.slot2.imageUrl));
+            if (assets.slot3?.imageUrl) safetyChecks.push(safetyService.validateImage(assets.slot3.imageUrl));
+
+            const safetyResults = await Promise.all(safetyChecks);
+            if (safetyResults.some(res => res === false)) {
+                console.warn('[WorldBuilder] Safety Check Failed');
+                // Persist the failure state so frontend can show "Refusal"
+                this.tasks[taskId] = {
+                    ...this.tasks[taskId],
+                    status: 'FAILED',
+                    error: "Oops, this magic is a bit too dark. Let's try a brighter spell!",
+                    cost: 0
+                };
+                return;
+            }
+
             // 1. Get asset analysis
             const assetAnalysis = await this.analyzeAssets(assets);
             console.log('[WorldBuilder] Asset analysis ready for full story');
 
             // PROGRESS UPDATE: Analysis complete
-            await databaseService.updateGraphicNovelTask(taskId, {
+            await databaseService.updateCartoonBookTask(taskId, {
                 status: 'GENERATING',
                 statusMessage: 'Character analysis complete! Designing your hero...',
                 progress: 10
@@ -472,7 +504,7 @@ CRITICAL: ENSURE VISUAL CONTINUITY using the character description. Avoid repeti
             console.log(`[WorldBuilder] ✅ Got ${allPanels.length} panels, proceeding with image generation`);
 
             // PROGRESS UPDATE: Script complete
-            await databaseService.updateGraphicNovelTask(taskId, {
+            await databaseService.updateCartoonBookTask(taskId, {
                 status: 'GENERATING',
                 statusMessage: 'Script written! Now drawing the first page...',
                 progress: 25
@@ -487,7 +519,7 @@ CRITICAL: ENSURE VISUAL CONTINUITY using the character description. Avoid repeti
                 console.log(`[WorldBuilder] Generating page ${pageNumber}/${plotOutline.length}...`);
 
                 // Update progress
-                await databaseService.updateGraphicNovelTask(taskId, {
+                await databaseService.updateCartoonBookTask(taskId, {
                     status: 'GENERATING',
                     currentPage: pageNumber,
                     statusMessage: `Drawing page ${pageNumber} of ${plotOutline.length}...`,
@@ -536,7 +568,7 @@ CRITICAL: Character appearance must match the description exactly.
                         if (imgRes.ok) {
                             const arrayBuffer = await imgRes.arrayBuffer();
                             const buffer = Buffer.from(arrayBuffer);
-                            imageUrl = await databaseService.uploadFile(buffer, 'image/png', 'graphic-novels');
+                            imageUrl = await databaseService.uploadFile(buffer, 'image/png', 'cartoon-books');
                             console.log(`[WorldBuilder] ✅ Page ${pageNumber} uploaded to permanent storage`);
                         } else {
                             console.warn(`[WorldBuilder] Failed to fetch image for upload, using temp URL`);
@@ -569,7 +601,7 @@ CRITICAL: Character appearance must match the description exactly.
                 pages.push(pageData);
 
                 // Save progress
-                await databaseService.updateGraphicNovelTask(taskId, {
+                await databaseService.updateCartoonBookTask(taskId, {
                     pagesCompleted: pageNumber,
                     pages: pages
                 });
@@ -577,21 +609,42 @@ CRITICAL: Character appearance must match the description exactly.
                 console.log(`[WorldBuilder] Page ${pageNumber} completed and saved`);
             }
 
+            // Save to History (Cartoon Book)
+            const coverImage = pages[0]?.imageUrl || '';
+            if (coverImage && userId) {
+                await databaseService.saveImageRecord(
+                    userId,
+                    coverImage,
+                    'cartoon-book', // STRICT TYPE
+                    `Cartoon Book: ${vibe || 'Adventure'}`,
+                    {
+                        cartoonBook: {
+                            taskId,
+                            pages,
+                            plotOutline,
+                            vibe,
+                            settings: { layout, plotHint },
+                            createdAt: Date.now()
+                        }
+                    }
+                );
+            }
+
             // Mark as completed
-            await databaseService.updateGraphicNovelTask(taskId, {
+            await databaseService.updateCartoonBookTask(taskId, {
                 status: 'COMPLETED',
                 pagesCompleted: plotOutline.length,
                 progress: 100,
                 statusMessage: 'Story completed! Preparing your masterpiece...'
             });
 
-            console.log(`[WorldBuilder] Graphic novel ${taskId} completed with coherent story!`);
+            console.log(`[WorldBuilder] Cartoon book ${taskId} completed with coherent story!`);
 
         } catch (error) {
             console.error('[WorldBuilder] Coherent story generation failed:', error);
 
             // Mark as failed
-            await databaseService.updateGraphicNovelTask(taskId, {
+            await databaseService.updateCartoonBookTask(taskId, {
                 status: 'FAILED',
                 error: error instanceof Error ? error.message : String(error)
             });
@@ -604,7 +657,7 @@ CRITICAL: Character appearance must match the description exactly.
      */
     private async generateComicPage(
         chapterPrompt: string,
-        assets: GraphicNovelAssets,
+        assets: CartoonBookAssets,
         pageNumber: number,
         style?: string
     ): Promise<{ imageUrl: string; panels: any[] }> {
@@ -666,8 +719,8 @@ CRITICAL: Character appearance must match the description exactly.
                         console.log(`[WorldBuilder] Using asset as reference: ${referenceImageUrl.substring(0, 40)}...`);
                         try {
                             imageUrl = await doubaoService.generateImageFromImage(
-                                referenceImageUrl,
                                 fullPrompt,
+                                referenceImageUrl,
                                 '2K'  // Just the size parameter
                             );
                         } catch (refError) {

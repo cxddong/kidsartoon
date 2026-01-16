@@ -4,7 +4,7 @@ import { ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { cn } from '../lib/utils';
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { AuthButton } from '../components/auth/AuthButton';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,6 +12,7 @@ import { PictureBookBuilderPanel, type PictureBookBuilderData } from '../compone
 import PictureBookReader from '../components/viewer/PictureBookReader';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import catlogoVideo from '../assets/catlogo.mp4';
+import pictureBookBg from '../assets/picturebook (2).mp4';
 
 type Step = 'upload' | 'generating-book' | 'finished';
 
@@ -141,7 +142,9 @@ export const PictureBookPage: React.FC = () => {
             // Map Backend Response to Frontend Reader Format
             // Backend: data.story = [{ text_overlay, imageUrl, ... }]
             const mappedBook = {
-                title: builderData.theme, // Or derive from story?
+                title: builderData.theme,
+                // Pass metadata if available
+                metadata: data.metadata || { theme: builderData.theme, storyText: builderData.storyText },
                 pages: data.story.map((p: any, idx: number) => ({
                     pageNumber: idx + 1,
                     imageUrl: p.imageUrl,
@@ -172,7 +175,19 @@ export const PictureBookPage: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 w-full h-full bg-gradient-to-b from-slate-900 to-indigo-900 z-[60] overflow-y-auto">
+        <div className="fixed inset-0 w-full h-full bg-black z-[60] overflow-y-auto">
+            {/* Background Video */}
+            <video
+                src={pictureBookBg}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="fixed inset-0 w-full h-full object-cover z-0"
+            />
+            {/* Dark Overlay for readability */}
+            <div className="fixed inset-0 bg-black/30 z-0" />
+
             {/* Top Center Logo Video Removed */}
 
             {/* Header */}
@@ -205,6 +220,7 @@ export const PictureBookPage: React.FC = () => {
                             <PictureBookReader
                                 title={bookData.title}
                                 pages={bookData.pages}
+                                metadata={bookData.metadata}
                                 onClose={() => {
                                     setStep('upload');
                                     setBookData(null);
@@ -295,9 +311,7 @@ export const PictureBookPage: React.FC = () => {
                 />
             )}
 
-            <BottomNav />
+            <MagicNavBar />
         </div >
     );
 };
-
-

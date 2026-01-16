@@ -14,8 +14,9 @@ import { useAuth } from '../context/AuthContext'; // Making sure we have auth
 import { getAuth } from 'firebase/auth'; // Direct auth fallback
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore'; // Direct firestore for speed or use service
 import { db } from '../firebase'; // Assuming export
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { storybookFlipVariants } from '../lib/animations';
+import magicLabBg from '../assets/magiclab.mp4';
 
 // Fallback scripts
 const VICTORY_SCRIPTS = {
@@ -207,7 +208,19 @@ export const MagicLabPage: React.FC = () => {
     };
 
     return (
-        <div className="magic-lab-container w-full h-screen overflow-y-auto flex flex-col relative text-white font-sans bg-slate-900" style={{ perspective: '1000px' }}>
+        <div className="magic-lab-container w-full h-screen overflow-y-auto flex flex-col relative text-white font-sans" style={{ perspective: '1000px' }}>
+
+            {/* Background Video */}
+            <div className="absolute inset-0 z-0">
+                <video
+                    src={magicLabBg}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+            </div>
 
             {/* Calibration / Fireworks Overlay */}
             <MagicFireworks isVisible={showFireworks} onComplete={() => setShowFireworks(false)} />
@@ -367,8 +380,10 @@ export const MagicLabPage: React.FC = () => {
             <WelcomeCard isVisible={showWelcome && !imageFile} />
 
             {/* NEW: Quick Chips */}
-            <div className="fixed bottom-24 left-0 right-0 z-40 flex flex-col items-center gap-4">
-                <QuickChips isVisible={showChips} onSelect={handleChipSelect} />
+            <div className="fixed bottom-32 left-0 right-0 z-40 flex flex-col items-center gap-4 pointer-events-none">
+                <div className="pointer-events-auto">
+                    <QuickChips isVisible={showChips} onSelect={handleChipSelect} />
+                </div>
 
                 {/* Command Input Bar */}
                 {imageFile && !isTransforming && (
@@ -376,7 +391,7 @@ export const MagicLabPage: React.FC = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         onSubmit={handleCommandSubmit}
-                        className="w-full max-w-md px-4"
+                        className="w-full max-w-md px-4 pointer-events-auto"
                     >
                         <div className="relative group">
                             <input
@@ -384,9 +399,9 @@ export const MagicLabPage: React.FC = () => {
                                 value={commandText}
                                 onChange={(e) => setCommandText(e.target.value)}
                                 placeholder='Command: "Turn this drawing into a cat."'
-                                className="w-full bg-white/10 backdrop-blur-md border-2 border-white/20 rounded-full py-3 px-6 text-white placeholder:text-white/40 focus:outline-none focus:border-yellow-400/50 transition-all font-bold"
+                                className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-white/20 rounded-full py-3 px-6 text-white placeholder:text-white/40 focus:outline-none focus:border-yellow-400/50 transition-all font-bold shadow-xl"
                             />
-                            <button type="submit" className="absolute right-2 top-1.2 p-2 bg-yellow-400 text-purple-900 rounded-full hover:scale-110 active:scale-95 transition-transform mt-1">
+                            <button type="submit" className="absolute right-2 top-1.5 p-2 bg-yellow-400 text-purple-900 rounded-full hover:scale-110 active:scale-95 transition-transform">
                                 <Zap className="w-4 h-4 fill-purple-900" />
                             </button>
                         </div>
@@ -397,7 +412,7 @@ export const MagicLabPage: React.FC = () => {
             {/* NEW: Magic Overlay */}
             <MagicOverlay isVisible={isTransforming} />
 
-            <BottomNav />
+            <MagicNavBar />
         </div>
     );
 };

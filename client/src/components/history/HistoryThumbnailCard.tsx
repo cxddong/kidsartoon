@@ -42,6 +42,15 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
             return image.meta.scenes[0].imageUrl;
         }
 
+        // Cartoon Book / Graphic Novel Fallback
+        if (image.type === 'graphic-novel' || image.type === 'cartoon-book') {
+            if (image.meta?.pages?.[0]?.imageUrl) return image.meta.pages[0].imageUrl;
+            if (image.meta?.cartoonBook?.pages?.[0]?.imageUrl) return image.meta.cartoonBook.pages[0].imageUrl;
+            if (!image.imageUrl || image.imageUrl.length < 5) {
+                return 'https://placehold.co/400x400/rose/white?text=Cartoon+Book';
+            }
+        }
+
         // Default legacy check
         if (image.imageUrl && image.imageUrl.length > 5 && !image.imageUrl.includes('undefined')) return image.imageUrl;
 
@@ -53,25 +62,28 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
     const getTypeConfig = () => {
         switch (image.type) {
             case 'animation':
-                return { icon: <Play size={20} className="fill-current" />, color: 'bg-purple-500', label: 'Cartoon' };
+                return { icon: <Play size={20} className="fill-current" />, color: 'bg-purple-500', label: 'Magic Cinema' };
             case 'picturebook':
-                return { icon: <BookOpen size={20} />, color: 'bg-orange-500', label: 'Picture Book' };
+                return { icon: <BookOpen size={20} />, color: 'bg-orange-500', label: 'Storybook' };
             case 'comic':
                 return { icon: <BookOpen size={20} />, color: 'bg-red-500', label: 'Comic' };
             case 'story':
-                return { icon: <BookOpen size={20} />, color: 'bg-blue-500', label: 'Story' };
+                // Audio Story - Use Play icon, distinct from Book
+                return { icon: <Play size={20} />, color: 'bg-indigo-500', label: 'Audio Story' };
             case 'generated':
-                return { icon: <ImageIcon size={20} />, color: 'bg-pink-500', label: 'Greeting Card' };
+                // Magic Art (Single Image)
+                return { icon: <ImageIcon size={20} />, color: 'bg-blue-500', label: 'Magic Art' };
             case 'cards':
-                return { icon: <ImageIcon size={20} />, color: 'bg-pink-500', label: 'Greeting Card' };
+                return { icon: <Heart size={20} />, color: 'bg-pink-500', label: 'Greeting Card' };
             case 'upload':
-                return { icon: <ImageIcon size={20} />, color: 'bg-teal-500', label: 'Upload' };
+                return { icon: <ImageIcon size={20} />, color: 'bg-teal-500', label: 'Gallery' };
             case 'masterpiece':
-                return { icon: <ImageIcon size={20} />, color: 'bg-amber-500', label: 'Journey' };
+                return { icon: <ImageIcon size={20} />, color: 'bg-amber-500', label: 'Magic Paint' };
             case 'graphic-novel':
-                return { icon: <BookOpen size={20} />, color: 'bg-indigo-500', label: 'Graphic Novel' };
+            case 'cartoon-book':
+                return { icon: <BookOpen size={20} />, color: 'bg-rose-500', label: 'Cartoon Book' };
             default:
-                return { icon: <ImageIcon size={20} />, color: 'bg-slate-500', label: 'Image' };
+                return { icon: <ImageIcon size={20} />, color: 'bg-slate-500', label: 'Artwork' };
         }
     };
 
@@ -180,9 +192,10 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
                 <span className="text-[9px] font-black uppercase tracking-wider leading-none shadow-black drop-shadow-sm">{typeConfig.label}</span>
             </div>
 
-            {/* Bottom Info */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 text-white">
-                <p className="text-xs font-medium truncate opacity-90">
+            {/* Bottom Info - ALWAYS VISIBLE DATE */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-8 text-white">
+                <p className="text-[10px] font-bold uppercase tracking-wider opacity-75 mb-0.5">Created</p>
+                <p className="text-xs font-medium truncate">
                     {new Date(image.createdAt).toLocaleDateString()}
                 </p>
             </div>

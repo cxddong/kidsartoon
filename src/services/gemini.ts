@@ -1,6 +1,17 @@
 import OpenAI from "openai";
 import { Part } from '@google/generative-ai';
 
+// Model Selection Strategy
+type TaskType = 'chat' | 'vision' | 'script' | 'analysis' | 'tts';
+
+const MODEL_ROUTER: Record<TaskType, string> = {
+    chat: 'gpt-4o-mini',      // Low cost for casual conversation
+    vision: 'gpt-4o',         // High quality for image analysis
+    script: 'gpt-4o',         // JSON stability for structured generation
+    analysis: 'gpt-4o',       // Deep analysis tasks
+    tts: 'tts-1-hd'           // High quality voice
+};
+
 // Get API Key
 const getApiKey = () => {
     return process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || "";
@@ -35,15 +46,26 @@ export class GeminiService {
     }
 
     /**
-     * Generate text content using GPT-4o
+     * Select appropriate model based on task type
      */
-    async generateText(prompt: string, userId?: string): Promise<string> {
+    private selectModel(taskType: TaskType): string {
+        const model = MODEL_ROUTER[taskType];
+        console.log(`[GeminiService] Task: ${taskType} -> Model: ${model}`);
+        return model;
+    }
+
+    /**
+     * Generate text content with task-based routing
+     * @param taskType - Specify task type for model selection
+     */
+    async generateText(prompt: string, userId?: string, taskType: TaskType = 'script'): Promise<string> {
         try {
             const openai = getOpenAI();
-            console.log("[GeminiService->OpenAI] Generating Text...");
+            const model = this.selectModel(taskType);
+            console.log(`[GeminiService->OpenAI] Generating Text with ${model}...`);
 
             const response = await openai.chat.completions.create({
-                model: "gpt-4o",
+                model: model,
                 messages: [
                     { role: "system", content: "You are a creative AI assistant for children's art and storytelling." },
                     { role: "user", content: prompt }
@@ -71,8 +93,9 @@ export class GeminiService {
             const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
             const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
 
+            const model = this.selectModel('vision');
             const response = await openai.chat.completions.create({
-                model: "gpt-4o", // 🔥 GPT-4o has superior vision capabilities
+                model: model, // ✨ Task-based routing for vision tasks
                 messages: [
                     {
                         role: "user",
@@ -302,8 +325,9 @@ Current Context: ${JSON.stringify(imageContext || {})}`
             const openai = getOpenAI();
             console.log(`[GeminiService->OpenAI] Generating Speech: "${text.substring(0, 30)}..."`);
 
+            const model = this.selectModel('tts');
             const response = await openai.audio.speech.create({
-                model: "tts-1-hd",
+                model: model,
                 voice: "nova", // Friendly voice for children
                 input: text,
                 speed: 1.0

@@ -45,7 +45,7 @@ export const MOODS = [
 ];
 
 export const VOICES = [
-    { id: 'standard', label: 'Standard Voice', tier: 'standard', cost: 0, icon: Volume2, description: 'Clear HD voice (OpenAI)', demoText: 'Hello! I am the standard narrator voice.', demoUrl: '/assets/audio_demos/standard_preview.mp3' },
+    { id: 'standard', label: 'Standard Voice', tier: 'standard', cost: 0, icon: Volume2, description: 'Clear HD voice', demoText: 'Hello! I am the standard narrator voice.', demoUrl: '/assets/audio_demos/standard_preview.mp3' },
     { id: 'kiki', label: 'Kiki (Premium)', tier: 'premium', cost: 20, icon: Volume2, description: '3-5yo girl, cute & curious', demoText: 'Hi there! I\'m Kiki, and I love telling magical stories!', demoUrl: '/assets/audio_demos/kiki_preview.mp3' },
     { id: 'aiai', label: 'Aiai (Premium)', tier: 'premium', cost: 20, icon: Volume2, description: 'British girl, educated', demoText: 'Good day! I\'m Aiai, and I shall narrate your wonderful tale.', demoUrl: '/assets/audio_demos/aiai_preview.mp3' },
     { id: 'titi', label: 'Titi (Premium)', tier: 'premium', cost: 20, icon: Volume2, description: 'Senior male, captivating & cold', demoText: 'Hey! I\'m Titi, and I\'m super excited to tell your story!', demoUrl: '/assets/audio_demos/titi_preview.mp3' },
@@ -176,20 +176,20 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
             <div className="p-5 bg-white/50 backdrop-blur-sm rounded-3xl shadow-lg border border-white/50">
                 <h3 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
                     <span className="bg-yellow-400 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">1</span>
-                    Story Theme 🌟
+                    Where is the story? 🌍
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                     {STORY_STYLES.map(item => (
                         <button key={item.id} onClick={() => setStoryStyle(item.id)}
-                            className={cn(
-                                "flex flex-col items-center gap-2 p-2 rounded-2xl border-4 transition-all group hover:bg-slate-50",
-                                storyStyle === item.id ? "border-yellow-400 bg-yellow-50 shadow-lg scale-105" : "border-transparent bg-white/50"
+                            className="flex flex-col items-center gap-2 transition-all group">
+                            <div className={cn(
+                                "relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all shadow-sm",
+                                storyStyle === item.id ? "border-yellow-500 ring-2 ring-yellow-300 scale-105" : "border-transparent bg-white/50"
                             )}>
-                            <div className="relative w-full aspect-square rounded-xl overflow-hidden shadow-sm">
                                 <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 {storyStyle === item.id && (
-                                    <div className="absolute top-2 right-2 bg-yellow-500 text-white rounded-full p-1 shadow-md z-10">
-                                        <Check className="w-3 h-3" />
+                                    <div className="absolute top-1 right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <div className="w-2.5 h-2.5 bg-white rounded-full" />
                                     </div>
                                 )}
                             </div>
@@ -245,15 +245,15 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                 <div className="grid grid-cols-3 gap-3">
                     {MOODS.map(item => (
                         <button key={item.id} onClick={() => setMood(item.id)}
-                            className={cn(
-                                "flex flex-col items-center gap-2 p-2 rounded-2xl border-4 transition-all group hover:bg-slate-50",
-                                mood === item.id ? "border-orange-400 bg-orange-50 shadow-lg scale-105" : "border-transparent bg-white/50"
+                            className="flex flex-col items-center gap-2 transition-all group">
+                            <div className={cn(
+                                "relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all shadow-sm",
+                                mood === item.id ? "border-orange-500 ring-2 ring-orange-300 scale-105" : "border-transparent bg-white/50"
                             )}>
-                            <div className="relative w-full aspect-square rounded-xl overflow-hidden shadow-sm">
                                 <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 {mood === item.id && (
-                                    <div className="absolute top-2 right-2 bg-orange-500 text-white rounded-full p-1 shadow-md z-10">
-                                        <Check className="w-3 h-3" />
+                                    <div className="absolute top-1 right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <div className="w-2.5 h-2.5 bg-white rounded-full" />
                                     </div>
                                 )}
                             </div>

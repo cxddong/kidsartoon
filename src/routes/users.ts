@@ -39,6 +39,23 @@ router.post('/:userId/profile', (req, res) => {
   }
 });
 
+// Import Legacy History to Child Profile
+router.post('/:userId/profiles/:profileId/import', async (req, res) => {
+  try {
+    const { userId, profileId } = req.params;
+    console.log(`[API] Importing history for user ${userId} to profile ${profileId}`);
+
+    const count = await databaseService.transferLegacyHistory(userId, profileId);
+    res.json({ success: true, count });
+  } catch (error: any) {
+    console.error('Import failed:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to import history',
+      details: error.toString()
+    });
+  }
+});
+
 // Upload Avatar
 router.post('/:userId/avatar', upload.single('avatar'), async (req, res) => {
   try {

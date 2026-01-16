@@ -16,7 +16,7 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 import { VIPCover } from '../components/ui/VIPCover';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 
 const backgroundUrl = '/bg_cartoon_new.jpg';
 
@@ -30,14 +30,14 @@ const VOICES = [
 
 // UPDATED VISUAL STYLES
 const VISUAL_STYLES = [
-    { id: 'movie_magic', label: 'Movie Magic', iconImage: '/assets/styles/style_movie_magic.jpg', prompt: '3D Pixar Animation Style, Movie Magic, high detail, vibrant, character focused' },
+    { id: 'movie_magic', label: 'Movie Magic', iconImage: '/assets/styles/style_movie_magic.jpg', prompt: '3D Animation Style, Movie Magic, high detail, vibrant, character focused' },
     { id: 'toy_kingdom', label: 'Toy Kingdom', iconImage: '/assets/styles/style_toy_kingdom.jpg', prompt: 'Toy Kingdom style, plastic textures, miniature world, constructed like toys' },
     { id: 'fluffy_friends', label: 'Fluffy Friends', iconImage: '/assets/styles/style_fluffy_friends.jpg', prompt: 'Fluffy Friends style, soft fur textures, felt art, warm lighting, cozy' },
     { id: 'neon_glow', label: 'Neon Glow', iconImage: '/assets/styles/style_neon_glow.jpg', prompt: 'Neon Glow style, cyberpunk colors, glowing lines, dark background, vivid' },
     { id: 'candy_land', label: 'Candy Land', iconImage: '/assets/styles/style_candy_land.jpg', prompt: 'Candy Land style, gummy textures, translucent surfaces, sugary colors, sweet' },
-    { id: 'clay_world', label: 'Clay World', iconImage: '/assets/styles/style_clay_world.jpg', prompt: 'Clay World style, Stop-motion animation look, fingerprint textures, soft shadows, Aardman animations style' },
+    { id: 'clay_world', label: 'Clay World', iconImage: '/assets/styles/style_clay_world.jpg', prompt: 'Clay World style, Stop-motion animation look, fingerprint textures, soft shadows, clay animations style' },
     { id: 'paper_craft', label: 'Paper Craft', iconImage: '/assets/styles/style_paper_craft.jpg', prompt: 'Paper Craft style, cut paper layers, origami, depth and shadow, textured paper' },
-    { id: 'pixel_land', label: 'Pixel Land', iconImage: '/assets/styles/style_pixel_land.jpg', prompt: 'Pixel Land style, Minecraft/Roblox aesthetic, blocky characters, 8-bit voxel art, bright colors' },
+    { id: 'pixel_land', label: 'Pixel Land', iconImage: '/assets/styles/style_pixel_land.jpg', prompt: 'Pixel Land style, Voxel aesthetic, blocky characters, 8-bit voxel art, bright colors' },
     { id: 'sparkle_jewel', label: 'Sparkle Jewel', iconImage: '/assets/styles/style_sparkle_jewel.jpg', prompt: 'Sparkle Jewel style, crystal textures, glitter, refractive light, magical gems, shiny' },
     { id: 'doodle_magic', label: 'Doodle Magic', iconImage: '/assets/styles/style_doodle_magic.jpg', prompt: 'Doodle Magic style, Chalkboard drawing, glowing chalk lines, hand-drawn magic' },
 ];
@@ -348,6 +348,7 @@ export const MakeCartoonPage: React.FC = () => {
                 action: builderData.action,                     // NEW: simplified params
                 style: builderData.style,                       // NEW
                 effect: builderData.effect,                     // NEW
+                scene: builderData.scene,                       // NEW: Custom scene/music prompt
                 userId: user?.uid || 'demo',
                 duration: builderData.duration || 5,
                 generateAudio: builderData.generateAudio !== false
@@ -686,7 +687,7 @@ export const MakeCartoonPage: React.FC = () => {
                     aspectRatio={1}
                 />
             )}
-            <BottomNav />
+            <MagicNavBar />
             {videoData && (
                 <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
                     <div className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">

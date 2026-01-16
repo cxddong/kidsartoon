@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { BottomNav } from '../components/BottomNav';
 import { UniversalVideoPlayer } from '../components/ui/UniversalVideoPlayer';
 import { BouncyButton } from '../components/ui/BouncyButton';
-import twoCatsBg from '../assets/2cats.mp4';
+import greetingCardBg from '../assets/greetingcard.mp4';
 
 // --- Assets & Constants ---
 const ART_STYLES = [
@@ -664,6 +664,7 @@ export const GreetingCardPage = () => {
             formData.append('prompt', prompt + " IMPORTANT: The final output image and any text inside it MUST be in ENGLISH only. Do NOT generate any Chinese characters.");
             formData.append('imageStrength', imageStrength.toString());
             formData.append('userId', user?.uid || 'anonymous');
+            formData.append('type', 'cards');
 
             // 3. API Call
             const loadingMessages = [
@@ -748,7 +749,7 @@ export const GreetingCardPage = () => {
 
     // --- Render ---
     return (
-        <div className="min-h-screen w-full bg-[#F8FAFC] font-sans pb-24 pt-safe relative custom-scrollbar flex flex-col">
+        <div className="min-h-screen w-full bg-black font-sans pb-24 pt-safe relative custom-scrollbar flex flex-col">
             {/* Background Image - Fixed */}
             {/* ... */}
 
@@ -760,13 +761,12 @@ export const GreetingCardPage = () => {
                     onCancel={() => setCropImage(null)}
                     aspectRatio={1} // Square for greeting card slots usually? Let's check. 
                 // Actually, photos can be any ratio. If we force square it might be annoying.
-                // But our 'crop' tool is really just a viewer window.
                 // Let's default to Square for now as most slots are square/circle.
                 />
             )}
             <div className="fixed inset-0 z-0 h-full w-full">
                 <video
-                    src={twoCatsBg}
+                    src={greetingCardBg}
                     autoPlay
                     loop
                     muted
@@ -776,6 +776,7 @@ export const GreetingCardPage = () => {
                     onContextMenu={(e) => e.preventDefault()}
                     className="w-full h-full object-cover"
                 />
+                <div className="absolute inset-0 bg-black/20" />
             </div>
 
             {/* Header */}

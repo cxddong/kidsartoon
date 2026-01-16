@@ -32,7 +32,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true
 }));
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.disable('x-powered-by'); // Security
 
@@ -91,7 +91,12 @@ import { router as videoRouter } from './routes/video.js';
 import { router as checkinRouter } from './routes/checkin.js';
 import mentorRouter from './routes/mentor.js';
 import referralRouter from './routes/referral.js'; // New Import
-import graphicNovelRouter from './routes/graphicNovel.js'; // Graphic Novel
+import cartoonBookRouter from './routes/cartoonBook.js'; // Cartoon Book
+import jumpIntoArtRouter from './routes/jumpIntoArt.js'; // Jump Into Art
+import profileRouter from './routes/profile.js'; // Profile/Studio
+import parentCodeRouter from './routes/parentCode.js';
+
+// Story Services/Studio
 import { optionalApiKeyAuth } from './middleware/auth.js';
 
 // --- Health Check (Highest Priority for load balancers) ---
@@ -114,7 +119,16 @@ app.use('/api/picturebook', pictureBookRouter);
 // Removed: /api/masterpiece (duplicated by /api/mentor)
 app.use('/api/mentor', mentorRouter);
 app.use('/api/referral', referralRouter); // New Referral Router
-app.use('/api/graphic-novel', graphicNovelRouter); // Graphic Novel Routes
+import { magicRouter } from './routes/magic.js'; // Magic Mirror
+import reportsRouter from './routes/reports.js'; // Parent Reports
+
+// ... (API Routes)
+app.use('/api/cartoon-book', cartoonBookRouter); // Cartoon Book Routes
+app.use('/api/magic', magicRouter); // Magic Mirror Routes
+app.use('/api/reports', reportsRouter); // Reports Routes
+app.use('/api/jump-into-art', jumpIntoArtRouter); // Jump Into Art Routes
+app.use('/api/profile', profileRouter); // Profile/Studio Routes
+app.use('/api/parent-code', parentCodeRouter);
 
 // AI Related
 const aiRouter = express.Router();

@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Check, RotateCw, ZoomIn, ZoomOut, Move, RotateCcw, Maximize } from 'lucide-react';
 import { cn } from '../lib/utils';
+import adjustBgImage from '../assets/adjust-image-bg.png';
 
 interface ImageCropperModalProps {
     imageUrl: string;
@@ -88,18 +89,10 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
         // Transformation Matrix
         ctx.save();
-        // 1. Move to center of canvas + applied Pan offset (Screen Space Panning)
         ctx.translate(width / 2 + position.x, height / 2 + position.y);
-
-        // 2. Rotate
         ctx.rotate((rotation * Math.PI) / 180);
-
-        // 3. Scale
         ctx.scale(scale, scale);
-
-        // 4. Draw Image Centered
         ctx.drawImage(image, -image.width / 2, -image.height / 2);
-
         ctx.restore();
 
         // Overlay for Circular Crop (if enabled)
@@ -130,45 +123,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isDragging) return;
-        // Adjust for rotation? No, user moves image relative to screen
-        // But our context is rotated... wait.
-        // If I drag RIGHT, I want image to move RIGHT on screen.
-        // If context is rotated 90deg, "x" axis is Down.
-
-        // Let's keep position in "Screen Space" relative to center, but we apply it Inside the rotation?
-        // No, if I apply translation AFTER rotation in the matrix:
-        // ctx.rotate(R); ctx.translate(X, Y); -> X is along rotated axis.
-        // If I drag right, and R=90, image moves DOWN. Bad.
-
-        // Correct Order:
-        // ctx.translate(Center)
-        // ctx.translate(ScreenPanX, ScreenPanY)  <-- Apply Pan BEFORE Rotate? No, Pan is "World Space".
-        // ctx.rotate(R)
-        // ctx.scale(S)
-        // ctx.drawImage(...)
-
-        // Wait, 'position' in my code above was applied AFTER rotation: 
-        // ctx.translate(width/2, height/2); ctx.rotate(...); ctx.scale(...); ctx.translate(position.x...);
-        // This means 'position' is in Image Local Space.
-
-        // Logic for intuitive panning (Screen Space Panning):
-        // We need to map MouseDelta (Screen) to PanDelta (Image Local).
-        // If Rot=0:   dx=dx, dy=dy
-        // If Rot=90:  dx=dy, dy=-dx (approx)
-
-        // To avoid complex math, let's just Apply Pan BEFORE Rotate in the drawing stack?
-        // ctx.translate(width/2 + position.x, height/2 + position.y);
-        // ctx.rotate(...);
-        // ...
-        // Yes! That way 'position' aligns with screen axes.
-
-        // Updating handleMouseMove to just track screen delta.
-        // But wait, my code above had `setDragStart` based on `position`.
-        // Let's refactor the draw function logic to separate screen pan vs image transform.
-
-        // Let's defer that fix to the logic update below.
-
-        // For now, simple implementation assuming 0 rotation, will fix in a sec.
         setPosition({
             x: e.clientX - dragStart.x,
             y: e.clientY - dragStart.y
@@ -188,85 +142,106 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
         if (!canvasRef.current) return;
         const canvas = canvasRef.current;
 
-        // We render exactly what's seen. 
-        // Note: The canvas resolution is currently 'display size'. 
-        // For high-res output, we might want to render to a larger off-screen canvas?
-        // For now, 500px is decent for UI display.
-
         canvas.toBlob((blob) => {
             if (blob) onCrop(blob);
         }, 'image/jpeg', 0.95);
     };
 
-    // Need to update the Matrix Logic for 'Screen Space Panning'
-    // I will rewrite the useEffect content slightly in the same file write.
-
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                    <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                        <Move className="w-5 h-5 text-indigo-500" /> Adjust Image
-                    </h3>
-                    <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                        <X className="w-5 h-5 text-slate-400" />
-                    </button>
-                </div>
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            style={{
+                backgroundImage: `url(${adjustBgImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+            }}
+        >
+            {/* Central Content Box - Matches the gradient box in the image */}
+            <div className="relative w-full max-w-4xl aspect-[16/10] flex items-center justify-center">
+                {/* Gradient Box Content Area - Shifted right to match background */}
+                <div className="bg-gradient-to-br from-blue-100/40 via-purple-100/40 to-pink-100/40 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-white/50 p-8 w-[70%] h-[70%] flex flex-col ml-16">
 
-                {/* Canvas Area */}
-                <div
-                    className="flex-1 bg-slate-900 relative overflow-hidden flex items-center justify-center cursor-move"
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    onWheel={handleWheel}
-                >
-                    <canvas ref={canvasRef} className="max-w-full max-h-full shadow-2xl" />
-
-                    {/* Floating Zoom Controls */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-md p-2 rounded-full text-white">
-                        <button onClick={handleFit} className="p-1 hover:text-indigo-400" title="Fit to Screen"><Maximize className="w-4 h-4" /></button>
-                        <div className="w-px h-4 bg-white/20 mx-1" />
-                        <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-1 hover:text-indigo-400"><ZoomOut className="w-4 h-4" /></button>
-                        <span className="text-xs font-mono w-12 text-center">{Math.round(scale * 100)}%</span>
-                        <button onClick={() => setScale(s => Math.min(5, s + 0.1))} className="p-1 hover:text-indigo-400"><ZoomIn className="w-4 h-4" /></button>
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-black text-slate-800 text-2xl flex items-center gap-2">
+                            <Move className="w-6 h-6 text-indigo-500" /> Adjust Image
+                        </h3>
+                        <button
+                            onClick={onCancel}
+                            className="p-2 hover:bg-white/50 rounded-full transition-colors"
+                        >
+                            <X className="w-6 h-6 text-slate-600" />
+                        </button>
                     </div>
-                </div>
 
-                {/* Toolbar */}
-                <div className="p-4 bg-white border-t border-slate-100 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setRotation(r => (r - 90 + 360) % 360)} className="flex flex-col items-center gap-1 p-2 hover:bg-slate-50 rounded-lg group">
-                                <RotateCcw className="w-5 h-5 text-slate-600 group-hover:text-indigo-600" />
-                                <span className="text-[10px] font-bold text-slate-400">Rotate L</span>
+                    {/* Canvas Area */}
+                    <div
+                        className="flex-1 bg-slate-900 rounded-2xl relative overflow-hidden flex items-center justify-center cursor-move shadow-xl"
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                        onWheel={handleWheel}
+                    >
+                        <canvas ref={canvasRef} className="max-w-full max-h-full" />
+
+                        {/* Floating Zoom Controls */}
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/70 backdrop-blur-md p-2 rounded-full text-white">
+                            <button onClick={handleFit} className="p-1.5 hover:text-indigo-400 transition" title="Fit to Screen">
+                                <Maximize className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setRotation(r => (r + 90) % 360)} className="flex flex-col items-center gap-1 p-2 hover:bg-slate-50 rounded-lg group">
+                            <div className="w-px h-4 bg-white/30 mx-1" />
+                            <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-1.5 hover:text-indigo-400 transition">
+                                <ZoomOut className="w-4 h-4" />
+                            </button>
+                            <span className="text-xs font-mono w-12 text-center">{Math.round(scale * 100)}%</span>
+                            <button onClick={() => setScale(s => Math.min(5, s + 0.1))} className="p-1.5 hover:text-indigo-400 transition">
+                                <ZoomIn className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Toolbar */}
+                    <div className="mt-4 flex items-center justify-between">
+                        {/* Rotation Controls */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setRotation(r => (r - 90 + 360) % 360)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white/70 hover:bg-white rounded-lg transition group shadow-sm"
+                            >
+                                <RotateCcw className="w-5 h-5 text-slate-600 group-hover:text-indigo-600" />
+                                <span className="text-sm font-bold text-slate-700">Rotate L</span>
+                            </button>
+                            <button
+                                onClick={() => setRotation(r => (r + 90) % 360)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white/70 hover:bg-white rounded-lg transition group shadow-sm"
+                            >
                                 <RotateCw className="w-5 h-5 text-slate-600 group-hover:text-indigo-600" />
-                                <span className="text-[10px] font-bold text-slate-400">Rotate R</span>
+                                <span className="text-sm font-bold text-slate-700">Rotate R</span>
                             </button>
                         </div>
 
+                        {/* Action Buttons */}
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={onCancel}
-                                className="px-6 py-3 font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                                className="px-6 py-3 font-bold text-slate-600 hover:text-slate-800 bg-white/70 hover:bg-white rounded-xl transition shadow-sm"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
+                                className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl font-black shadow-lg transition-all active:scale-95 flex items-center gap-2"
                             >
                                 <Check className="w-5 h-5" />
                                 Done
                             </button>
                         </div>
                     </div>
-                    <p className="text-center text-xs text-slate-400 font-medium">
-                        Drag to move • Scroll to zoom • Use buttons to rotate
+
+                    {/* Hint Text */}
+                    <p className="text-center text-xs text-slate-600 font-medium mt-3">
+                        🖱️ Drag to move • 🖱️ Scroll to zoom • 🔄 Use buttons to rotate
                     </p>
                 </div>
             </div>

@@ -56,14 +56,14 @@ export const ComicBubble: React.FC<ComicBubbleProps> = ({
             : 'rounded-2xl bg-white';
 
     const showTail = type !== 'narration';
-    const displayText = text.length > 150 ? text.substring(0, 147) + '...' : text;
+    const displayText = text; // User requested full text display, removing artificial truncation
 
     return (
         <motion.div
             drag
             dragMomentum={false}
             whileDrag={{ scale: 1.1, zIndex: 100 }}
-            className={`relative flex-shrink-0 ${bubbleShapeClass} px-3 py-2 border-[3px] border-slate-900 shadow-[3px_3px_0px_rgba(0,0,0,0.3)] pointer-events-auto text-center cursor-grab active:cursor-grabbing hover:shadow-[4px_4px_0px_rgba(0,0,0,0.4)] max-w-[75%] ${showTail ? `before:content-[''] before:absolute ${tailBorderClasses[position]} after:content-[''] after:absolute ${tailClasses[position]}` : ''}`}
+            className={`relative flex-shrink-0 ${bubbleShapeClass} px-3 py-2 border-[3px] border-slate-900 shadow-[3px_3px_0px_rgba(0,0,0,0.3)] pointer-events-auto text-center cursor-grab active:cursor-grabbing hover:shadow-[4px_4px_0px_rgba(0,0,0,0.4)] max-w-[90%] z-20 ${showTail ? `before:content-[''] before:absolute ${tailBorderClasses[position]} after:content-[''] after:absolute ${tailClasses[position]}` : ''}`}
             onClick={onClick}
             title={text}
         >
@@ -76,7 +76,7 @@ export const ComicBubble: React.FC<ComicBubbleProps> = ({
             )}
 
             <div
-                className="w-full bg-transparent border-none text-[10px] md:text-[12px] lg:text-[14px] font-bold text-slate-900 text-center leading-snug line-clamp-3 select-none pointer-events-none"
+                className="w-full bg-transparent border-none text-[10px] md:text-[12px] lg:text-[14px] font-bold text-slate-900 text-center leading-snug select-none pointer-events-none"
                 style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", "Marker Felt", sans-serif' }}
             >
                 {displayText}

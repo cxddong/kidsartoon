@@ -103,6 +103,30 @@ class ReferralService {
             return { success: false, message: e.message || "Redemption Failed" };
         }
     }
+    /**
+     * Check if a code is valid without redeeming it
+     */
+    async checkCode(code: string): Promise<{ valid: boolean; value?: number; message?: string }> {
+        try {
+            const doc = await this.collection.doc(code).get();
+
+            if (!doc.exists) {
+                return { valid: false, message: "Invalid Code" };
+            }
+
+            const data = doc.data() as ReferralCode;
+
+            if (data.status !== 'active') {
+                return { valid: false, message: "Code has already been used" };
+            }
+
+            return { valid: true, value: data.value, message: `Valid Code! Worth ${data.value} Points` };
+
+        } catch (error: any) {
+            console.error("Check Code Error:", error);
+            return { valid: false, message: "Error checking code" };
+        }
+    }
 }
 
 export const referralService = new ReferralService();

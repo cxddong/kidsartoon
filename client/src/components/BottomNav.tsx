@@ -1,155 +1,106 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Home, Sparkles, User } from 'lucide-react';
 
 import genBtnVideo from '../assets/genbtn.mp4';
 import homeVideo from '../assets/home.mp4';
 import profileVideo from '../assets/profile.mp4';
-import { SparkleVoiceFab } from './sparkle/SparkleVoiceFab';
 
 export const BottomNav: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuth();
-    const isVisual = user?.uiMode === 'visual';
     const currentPath = location.pathname;
 
-    // Default to collapsed unless user explicitly expands? 
-    // Or maybe expand on first load/interaction? Let's start collapsed or small.
-    // User asked for "expand when needed, collapse when not".
-    const [isExpanded, setIsExpanded] = useState(false);
+    const navItems = [
+        {
+            path: '/community',
+            video: homeVideo,
+            icon: Home,
+            label: 'Explore',
+            color: 'blue'
+        },
+        {
+            path: '/home',
+            video: genBtnVideo,
+            icon: Sparkles,
+            label: 'Home',
+            color: 'purple',
+            isMain: true
+        },
+        {
+            path: '/profile',
+            video: profileVideo,
+            icon: User,
+            label: 'My Stuff',
+            color: 'rose'
+        }
+    ];
 
-    const isActive = (path: string) => currentPath === path || (path === '/community' && currentPath === '/');
-
-    // Toggle handler
-    const toggleNav = () => setIsExpanded(!isExpanded);
+    const isActive = (path: string) => {
+        if (path === '/community' && currentPath === '/community') return true;
+        if (path === '/home' && (currentPath === '/home' || currentPath === '/')) return true;
+        return currentPath.startsWith(path);
+    };
 
     return (
-        <motion.nav
-            layout
-            initial={false}
-            animate={{
-                width: isExpanded ? "auto" : "60px",
-                padding: isExpanded ? (isVisual ? "0 24px" : "0 16px") : "0",
-                gap: isExpanded ? (isVisual ? "24px" : "16px") : "0"
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className={cn(
-                "fixed bottom-4 right-4 bg-white/70 backdrop-blur-xl border border-white/60 rounded-full flex justify-center items-center z-[60] shadow-2xl overflow-hidden",
-                isVisual ? "h-20" : "h-14 py-2" // Height container
-            )}
-        >
-            <AnimatePresence mode="wait">
-                {!isExpanded ? (
-                    <motion.button
-                        key="collapsed"
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        onClick={toggleNav}
-                        className="w-full h-full flex items-center justify-center text-slate-600 hover:text-slate-900 group cursor-pointer pointer-events-auto"
-                    >
-                        {/* More visible collapsed icon */}
-                        <div className="bg-white p-3 rounded-full shadow-md group-hover:scale-110 transition-transform">
-                            <Menu size={24} className="text-slate-800" />
-                        </div>
-                    </motion.button>
-                ) : (
-                    <motion.div
-                        key="expanded"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center"
-                        style={{ gap: isVisual ? '1.5rem' : '1rem' }}
-                    >
-                        {/* More visible Close Button */}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-auto">
+            <motion.nav
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="bg-white/90 backdrop-blur-2xl border border-white/50 rounded-full px-4 py-2 shadow-2xl shadow-purple-500/10 flex items-center gap-2 md:gap-4"
+            >
+                {navItems.map((item) => {
+                    const active = isActive(item.path);
+                    return (
                         <button
-                            onClick={toggleNav}
-                            className="bg-slate-100/80 hover:bg-slate-200 p-2 rounded-full text-slate-600 shadow-sm transition-colors absolute left-2 z-10 cursor-pointer pointer-events-auto"
+                            key={item.path}
+                            onClick={() => navigate(item.path)}
+                            className={cn(
+                                "relative group flex items-center justify-center transition-all duration-300 rounded-full",
+                                item.isMain ? "w-16 h-16 md:w-20 md:h-20 -mt-8" : "w-12 h-12 md:w-14 md:h-14"
+                            )}
                         >
-                            <ChevronRight size={20} />
-                        </button>
+                            {/* Background Glow for Active State */}
+                            {active && (
+                                <motion.div
+                                    layoutId="nav-glow"
+                                    className={cn(
+                                        "absolute inset-0 rounded-full blur-md opacity-60",
+                                        item.color === 'blue' && "bg-blue-400",
+                                        item.color === 'purple' && "bg-purple-400",
+                                        item.color === 'rose' && "bg-rose-400"
+                                    )}
+                                />
+                            )}
 
-                        {/* Spacer for the absolute close button */}
-                        <div className="w-8" />
-
-                        <button
-                            onClick={() => navigate('/community')}
-                            className="transition-transform duration-300 hover:scale-110 relative -top-0.5 cursor-pointer pointer-events-auto"
-                        >
+                            {/* Icon Container */}
                             <div className={cn(
-                                "rounded-full overflow-hidden shadow-md transition-all",
-                                isVisual ? "w-14 h-14" : "w-10 h-10",
-                                isActive('/community') ? "scale-110 ring-2 ring-blue-400 ring-offset-2" : "opacity-80 hover:opacity-100"
+                                "relative w-full h-full rounded-full overflow-hidden border-2 transition-all shadow-sm",
+                                active ? "border-white transform scale-105" : "border-transparent opacity-80 hover:opacity-100 hover:scale-105",
+                                item.isMain && "border-4 border-white shadow-lg shadow-purple-500/20"
                             )}>
                                 <video
-                                    src={homeVideo}
+                                    src={item.video}
                                     className="w-full h-full object-cover"
                                     autoPlay
                                     loop
                                     muted
                                     playsInline
                                     disablePictureInPicture
-                                    controlsList="nodownload noremoteplayback noplaybackrate"
                                 />
+                                {/* Overlay for accessibility/icon fallback if video fails (optional, but good for polish) */}
                             </div>
+
+                            {/* Label Tooltip (Optional, maybe for desktop) */}
+                            <span className="absolute -bottom-6 text-[10px] font-bold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-white/80 px-2 py-0.5 rounded-full md:block hidden">
+                                {item.label}
+                            </span>
                         </button>
-
-                        {/* Main Action Button - Made Standard Size */}
-                        <div className="relative transition-all">
-                            <button
-                                onClick={() => navigate('/generate')}
-                                className="transition-transform duration-300 hover:scale-110 hover:rotate-3 cursor-pointer pointer-events-auto"
-                            >
-                                <div className={cn(
-                                    "rounded-full overflow-hidden shadow-xl relative transition-all",
-                                    isVisual ? "w-14 h-14" : "w-10 h-10", // SAME SIZE AS OTHERS
-                                    isActive('/generate') || currentPath.startsWith('/generate') ? "scale-110 ring-2 ring-yellow-400 ring-offset-2" : ""
-                                )}>
-                                    <video
-                                        src={genBtnVideo}
-                                        className="w-full h-full object-cover absolute inset-0"
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        disablePictureInPicture
-                                        controlsList="nodownload noremoteplayback noplaybackrate"
-                                    />
-                                </div>
-                            </button>
-                        </div>
-
-
-
-                        <button
-                            onClick={() => navigate('/profile')}
-                            className="transition-transform duration-300 hover:scale-110 relative -top-0.5 cursor-pointer pointer-events-auto"
-                        >
-                            <div className={cn(
-                                "rounded-full overflow-hidden shadow-md transition-all",
-                                isVisual ? "w-14 h-14" : "w-10 h-10",
-                                isActive('/profile') ? "scale-110 ring-2 ring-rose-400 ring-offset-2" : "opacity-80 hover:opacity-100"
-                            )}>
-                                <video
-                                    src={profileVideo}
-                                    className="w-full h-full object-cover"
-                                    autoPlay
-                                    loop
-                                    muted
-                                    playsInline
-                                    disablePictureInPicture
-                                    controlsList="nodownload noremoteplayback"
-                                />
-                            </div>
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.nav >
+                    );
+                })}
+            </motion.nav>
+        </div>
     );
 };

@@ -8,7 +8,7 @@ export class DoubaoService {
 
     constructor() {
         // 1. Try standard environment variables (best practice)
-        this.apiKey = 'f2db86db-ab95-44a9-bc48-6e7df67e55ec'; // Hardcoded for immediate fix
+        this.apiKey = process.env.DOUBAO_API_KEY || process.env.Doubao_API_KEY || process.env.ARK_API_KEY || '';
 
         // 2. Fallback: Manual .env parse (Robustness for local dev issues)
         if (!this.apiKey) {
@@ -55,6 +55,17 @@ export class DoubaoService {
         }
     }
 
+    /**
+     * Normalize image input to clean base64 string or original URL
+     */
+    private normalizeBase64(imageInput: string): string {
+        if (!imageInput) return '';
+        if (imageInput.includes('base64,')) {
+            return imageInput.split('base64,')[1];
+        }
+        return imageInput;
+    }
+
     // Helper for headers
     private get headers() {
         return {
@@ -82,7 +93,7 @@ export class DoubaoService {
                     model: model,
                     prompt,
                     size: sizeParam,
-                    seed,
+                    seed: (seed !== undefined && !isNaN(seed)) ? Math.floor(Math.max(0, seed)) : undefined,
                     response_format: 'url',
                     guidance_scale: 3, // Updated per user request
                     sequential_image_generation: 'disabled',
@@ -114,11 +125,13 @@ export class DoubaoService {
             // Leaving this as safe default for now, or user provided I2I model ID? No.
             // Assuming old model for I2I stability.
             const model = process.env.DOUBAO_IMAGE_MODEL || 'ep-20251209124008-rp9n8';
+            const safeSeed = (seed !== undefined && !isNaN(seed)) ? Math.floor(Math.max(0, seed)) : undefined;
+
             const body: any = {
                 model: model,
                 prompt,
-                size,
-                seed,
+                size: size === '4K' ? "4096x4096" : "1024x1024",
+                seed: safeSeed,
                 image_weight: imageWeight,
                 response_format: 'url',
                 sequential_image_generation: 'disabled',
@@ -126,7 +139,8 @@ export class DoubaoService {
             };
 
             // Volcengine Seedream endpoint ID usually expects 'image' field for single reference
-            body.image = imageUrl;
+            const cleanImage = this.normalizeBase64(imageUrl);
+            body.image = cleanImage.startsWith('http') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`;
 
             const response = await fetch(`${this.baseUrl}/images/generations`, {
                 method: 'POST',
@@ -170,7 +184,8 @@ export class DoubaoService {
             };
 
             if (imageUrl) {
-                body.image = imageUrl;
+                const cleanImage = this.normalizeBase64(imageUrl);
+                body.image = cleanImage.startsWith('http') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`;
             }
 
             console.log('[Doubao] Generating sequential images with prompt length:', prompt.length);
@@ -205,12 +220,20 @@ export class DoubaoService {
             const model = process.env.DOUBAO_VISION_MODEL || 'ep-20251209113004-w6g8p';
             console.log(`[Doubao] Analyzing image with model: ${model}`);
 
+            // Clean base64 prefix if present
+            const cleanImage = this.normalizeBase64(imageInput);
+
             const messages: any[] = [
                 {
                     role: 'user',
                     content: [
                         { type: 'text', text: prompt },
-                        { type: 'image_url', image_url: { url: imageInput } }
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: cleanImage.startsWith('http') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`
+                            }
+                        }
                     ]
                 }
             ];
@@ -798,7 +821,9 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
                 {
                     type: "image_url",
                     image_url: {
-                        url: imageUrl
+                        url: this.normalizeBase64(imageUrl).startsWith('http')
+                            ? this.normalizeBase64(imageUrl)
+                            : `data:image/jpeg;base64,${this.normalizeBase64(imageUrl)}`
                     }
                 }
             ]
@@ -906,7 +931,14 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
             model: model,
             content: [
                 { type: "text", text: promptWithParams },
-                { type: "image_url", image_url: { url: imageUrl } }
+                {
+                    type: "image_url",
+                    image_url: {
+                        url: this.normalizeBase64(imageUrl).startsWith('http')
+                            ? this.normalizeBase64(imageUrl)
+                            : `data:image/jpeg;base64,${this.normalizeBase64(imageUrl)}`
+                    }
+                }
             ]
         };
 
@@ -1013,7 +1045,14 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
             // Output Config
             output: {},
             content: [
-                { type: "image_url", image_url: { url: imageUrl } }
+                {
+                    type: "image_url",
+                    image_url: {
+                        url: this.normalizeBase64(imageUrl).startsWith('http')
+                            ? this.normalizeBase64(imageUrl)
+                            : `data:image/jpeg;base64,${this.normalizeBase64(imageUrl)}`
+                    }
+                }
             ]
         };
 

@@ -6,12 +6,15 @@ export interface ImageRecord {
     id: string; // Firestore ID usually, but we keep our UUID for compatibility
     userId: string;
     imageUrl: string;
-    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards';
+    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards' | 'graphic-novel' | 'cartoon-book';
     createdAt: string;
     prompt?: string;
     meta?: any;
     favorite?: boolean;
+    colorPalette?: string[]; // Hex codes
+    dominantColor?: string;
 }
+
 
 export interface UserRecord {
     uid: string;
@@ -19,6 +22,8 @@ export interface UserRecord {
     age?: number;
     gender?: 'Male' | 'Female' | 'Neutral';
     photoUrl?: string;
+    language?: string;     // Added for parent customization
+    interests?: string[];  // Added for parent customization
     points: number; // Experience points (Legacy)
     credits: number; // Magic Lab Credits (New)
     createdAt: string;
@@ -30,6 +35,17 @@ export interface UserRecord {
     subscriptionPlatform?: string;
     subscriptionId?: string;
     subscriptionDate?: string;
+    profiles?: ChildProfile[];
+    currentProfileId?: string;
+    parentPin?: string; // Hashed or simple 4-digit PIN for Parent Dashboard
+}
+
+export interface ChildProfile {
+    id: string;
+    name: string;
+    avatar: string;
+    age?: number;
+    theme?: string;
 }
 
 export interface PointsHistoryRecord {
@@ -66,10 +82,101 @@ export interface DailyCheckIn {
     updatedAt: string;
 }
 
+
+
+export interface WeeklyReport {
+    id?: string;
+    weekId: string; // e.g. "2024-W10"
+    userId: string;
+    childProfileId?: string; // If specific to a child
+    createdAt: number;
+    stats: {
+        uploadCount: number;
+        videoCount: number;
+        storyCount?: number;
+        comicCount?: number;
+        magicImageCount?: number;
+        bookCount?: number; // Added
+        cardCount?: number; // Added
+        puzzleCount?: number; // Added
+        totalScreenTimeMinutes: number;
+        chatMessages?: number;
+    };
+    artAnalysis: {
+        dominantColors: string[];
+        topSubjects: string[];
+        radarScores: {
+            composition: number;
+            color: number;
+            imagination: number;
+            line: number;
+            story: number;
+        };
+        colorTrend?: string; // New
+        colorPsychologyText?: string; // New
+        careerSuggestion?: string; // New
+        adviceText?: string; // New
+    };
+    aiCommentary: {
+        strength: string;
+        weakness: string; // "Growth Area"
+        potentialCareer: string;
+        careerReason?: string; // Why this career?
+        learningStyle?: string; // e.g. "Visual Learner"
+    };
+    isFinal?: boolean;
+}
+
+export interface UserFeedback {
+    id: string;
+    userId: string;
+    rating: number; // 1-5
+    comment?: string;
+    createdAt: string;
+    meta?: any;
+}
+
 export class DatabaseService {
 
     constructor() {
         console.log('[DatabaseService] Initialized with Firebase Admin SDK');
+    }
+
+    // --- Reports ---
+    public async saveReport(userId: string, report: WeeklyReport): Promise<string> {
+        // Use ID if provided, else auto-gen
+        const reportId = report.id || adminDb.collection('reports').doc().id;
+        await adminDb.collection('reports').doc(reportId).set({ ...report, id: reportId });
+        return reportId;
+    }
+
+    public async getReportByWeek(userId: string, weekId: string, childProfileId?: string): Promise<WeeklyReport | null> {
+        let query = adminDb.collection('reports')
+            .where('userId', '==', userId)
+            .where('weekId', '==', weekId);
+
+        if (childProfileId) {
+            query = query.where('childProfileId', '==', childProfileId);
+        }
+
+        const snap = await query.limit(1).get();
+        if (snap.empty) return null;
+        return snap.docs[0].data() as WeeklyReport;
+    }
+
+    public async getLatestReport(userId: string, childProfileId?: string): Promise<WeeklyReport | null> {
+        let query = adminDb.collection('reports')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .limit(1);
+
+        if (childProfileId) {
+            query = query.where('childProfileId', '==', childProfileId);
+        }
+
+        const snap = await query.get();
+        if (snap.empty) return null;
+        return snap.docs[0].data() as WeeklyReport;
     }
 
     // --- Storage ---
@@ -94,11 +201,12 @@ export class DatabaseService {
     }
 
     // --- Video Tasks (Cost Tracking) ---
-    public async saveVideoTask(taskId: string, userId: string, cost: number, prompt: string = '', meta: any = {}) {
+    public async saveVideoTask(taskId: string, userId: string, cost: number, prompt: string = '', meta: any = {}, profileId?: string) {
         try {
             await adminDb.collection('video_tasks').doc(taskId).set({
                 taskId,
                 userId,
+                profileId, // Save profileId
                 cost,
                 prompt,
                 meta,
@@ -137,9 +245,10 @@ export class DatabaseService {
     public async saveImageRecord(
         userId: string,
         imageUrl: string,
-        type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards',
+        type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards' | 'graphic-novel' | 'cartoon-book',
         prompt?: string,
-        meta?: any
+        meta?: any,
+        profileId?: string // Optional profile ID for child profiles
     ): Promise<ImageRecord> {
         const id = uuidv4();
         const newRecord: ImageRecord = {
@@ -149,7 +258,7 @@ export class DatabaseService {
             type,
             createdAt: new Date().toISOString(),
             prompt,
-            meta: meta || {},
+            meta: { ...meta, profileId }, // Store profileId in meta for now (since root-level schema changes are harder)
             favorite: false
         };
 
@@ -163,7 +272,7 @@ export class DatabaseService {
         return newRecord;
     }
 
-    public async getUserImages(userId: string): Promise<ImageRecord[]> {
+    public async getUserImages(userId: string, profileId?: string): Promise<ImageRecord[]> {
         try {
             const snapshot = await adminDb.collection('images')
                 .where("userId", "==", userId)
@@ -177,6 +286,8 @@ export class DatabaseService {
                 };
             });
             // Sort in memory (descending by createdAt)
+            // Note: We filter by profileId client-side in the calling function if needed, 
+            // but for efficiency we could add a compound index later.
             return results.sort((a, b) => {
                 const timeA = new Date(a.createdAt || 0).getTime();
                 const timeB = new Date(b.createdAt || 0).getTime();
@@ -185,6 +296,54 @@ export class DatabaseService {
         } catch (e) {
             console.error('[Database] Failed to get user images:', e);
             return [];
+        }
+    }
+
+    public async transferLegacyHistory(userId: string, targetProfileId: string): Promise<number> {
+        try {
+            // Find all images for this user that DO NOT have a profileId (Legacy)
+            // OR explicitly match the userId (Parent items)
+            const snapshot = await adminDb.collection('images')
+                .where("userId", "==", userId)
+                .get();
+
+            if (snapshot.empty) return 0;
+
+            if (snapshot.empty) return 0;
+
+            let count = 0;
+            const CHUNK_SIZE = 100; // Reduced from 400 to 100 for maximum safety
+
+            const docsToUpdate = snapshot.docs.filter(doc => {
+                const data = doc.data() as ImageRecord;
+                const currentPid = data.meta?.profileId;
+                return !currentPid || currentPid === userId;
+            });
+
+            // Process chunks
+            for (let i = 0; i < docsToUpdate.length; i += CHUNK_SIZE) {
+                const chunk = docsToUpdate.slice(i, i + CHUNK_SIZE);
+                const batch = adminDb.batch();
+
+                chunk.forEach(doc => {
+                    const data = doc.data() as ImageRecord;
+                    const meta = data.meta || {};
+                    batch.update(doc.ref, {
+                        meta: { ...meta, profileId: targetProfileId }
+                    });
+                });
+
+                await batch.commit();
+                count += chunk.length;
+                console.log(`[Database] Transferred chunk ${i / CHUNK_SIZE + 1}: ${chunk.length} items.`);
+            }
+
+            console.log(`[Database] Transferred total ${count} items to profile ${targetProfileId}`);
+            return count;
+
+        } catch (e) {
+            console.error('[Database] Transfer failed:', e);
+            throw e;
         }
     }
 
@@ -295,6 +454,35 @@ export class DatabaseService {
         }
     }
 
+    public async saveUserFeedback(userId: string, rating: number, comment?: string): Promise<string> {
+        try {
+            const id = uuidv4();
+            const feedback: UserFeedback = {
+                id,
+                userId,
+                rating,
+                comment,
+                createdAt: new Date().toISOString()
+            };
+            await adminDb.collection('user_feedback').doc(id).set(feedback);
+            console.log(`[Database] User feedback saved: ${id} (User: ${userId}, Rating: ${rating})`);
+            return id;
+        } catch (e) {
+            console.error('[Database] Save user feedback failed:', e);
+            throw e;
+        }
+    }
+
+    public async getAllUserFeedback(): Promise<UserFeedback[]> {
+        try {
+            const snap = await adminDb.collection('user_feedback').orderBy('createdAt', 'desc').get();
+            return snap.docs.map(doc => doc.data() as UserFeedback);
+        } catch (e) {
+            console.error('[Database] Get All User Feedback failed:', e);
+            return [];
+        }
+    }
+
     public async saveFeedback(id: string, feedback: string): Promise<boolean> {
         try {
             const snapshot = await adminDb.collection('images').where("id", "==", id).get();
@@ -331,6 +519,29 @@ export class DatabaseService {
         } catch (e) {
             console.error('[Database] Public images failed:', e);
             return [];
+        }
+    }
+
+    // --- Rest Reminder: Get Random Story ---
+    public async getRandomCommunityStory(): Promise<ImageRecord | null> {
+        try {
+            // Fetch a pool of recent stories (e.g., last 50) to pick from
+            // We prioritize 'story' (generated audio stories) or 'audio' if any
+            const snapshot = await adminDb.collection('images')
+                .where("type", "in", ["story", "audio"])
+                .orderBy("createdAt", "desc")
+                .limit(50)
+                .get();
+
+            if (snapshot.empty) return null;
+
+            const docs = snapshot.docs;
+            const randomIndex = Math.floor(Math.random() * docs.length);
+            return docs[randomIndex].data() as ImageRecord;
+
+        } catch (e) {
+            console.error('[Database] getRandomCommunityStory failed:', e);
+            return null;
         }
     }
 
@@ -546,14 +757,35 @@ export class DatabaseService {
             const snapshot = await adminDb.collection('creative_series')
                 .where('userId', '==', userId)
                 .where('status', '==', 'active')
-                .limit(1)
+                .limit(10) // Fetch a few to find the latest
                 .get();
 
             if (snapshot.empty) return null;
-            return snapshot.docs[0].data() as CreativeSeries;
+
+            const seriesList = snapshot.docs.map(d => d.data() as CreativeSeries);
+            // Sort to get the most recent one
+            seriesList.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+            return seriesList[0];
         } catch (e) {
             console.error('[Database] getUserActiveSeries failed:', e);
             return null;
+        }
+    }
+
+    public async getUserCreativeHistory(userId: string): Promise<CreativeSeries[]> {
+        try {
+            const snapshot = await adminDb.collection('creative_series')
+                .where('userId', '==', userId)
+                .limit(50) // Increase limit slightly since we filter/sort in memory
+                .get();
+
+            const series = snapshot.docs.map(d => d.data() as CreativeSeries);
+            // Sort in memory: newest first
+            return series.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        } catch (e) {
+            console.error('[Database] getUserCreativeHistory failed:', e);
+            return [];
         }
     }
 
@@ -695,38 +927,38 @@ export class DatabaseService {
         }
     }
 
-    // --- GRAPHIC NOVEL MANAGEMENT ---
+    // --- CARTOON BOOK MANAGEMENT ---
 
-    async saveGraphicNovelTask(task: any): Promise<void> {
+    async saveCartoonBookTask(task: any): Promise<void> {
         try {
             await adminDb.collection('graphic_novel_tasks').doc(task.id).set(task);
-            console.log(`[Database] Saved graphic novel task: ${task.id}`);
+            console.log(`[Database] Saved cartoon book task: ${task.id}`);
         } catch (e) {
-            console.error('[Database] saveGraphicNovelTask failed:', e);
+            console.error('[Database] saveCartoonBookTask failed:', e);
             throw e;
         }
     }
 
-    async updateGraphicNovelTask(taskId: string, updates: any): Promise<void> {
+    async updateCartoonBookTask(taskId: string, updates: any): Promise<void> {
         try {
             await adminDb.collection('graphic_novel_tasks').doc(taskId).update(updates);
         } catch (e) {
-            console.error('[Database] updateGraphicNovelTask failed:', e);
+            console.error('[Database] updateCartoonBookTask failed:', e);
             throw e;
         }
     }
 
-    async getGraphicNovelTask(taskId: string): Promise<any | null> {
+    async getCartoonBookTask(taskId: string): Promise<any | null> {
         try {
             const snap = await adminDb.collection('graphic_novel_tasks').doc(taskId).get();
             return snap.exists ? snap.data() : null;
         } catch (e) {
-            console.error('[Database] getGraphicNovelTask failed:', e);
+            console.error('[Database] getCartoonBookTask failed:', e);
             return null;
         }
     }
 
-    async getGraphicNovel(id: string): Promise<any | null> {
+    async getCartoonBook(id: string): Promise<any | null> {
         try {
             const snap = await adminDb.collection('graphic_novel_tasks').doc(id).get();
             if (snap.exists) {
@@ -738,12 +970,12 @@ export class DatabaseService {
             }
             return null;
         } catch (e) {
-            console.error('[Database] getGraphicNovel failed:', e);
+            console.error('[Database] getCartoonBook failed:', e);
             return null;
         }
     }
 
-    async getUserGraphicNovels(userId: string): Promise<any[]> {
+    async getUserCartoonBooks(userId: string): Promise<any[]> {
         try {
             const snapshot = await adminDb.collection('graphic_novel_tasks')
                 .where('userId', '==', userId)
@@ -753,7 +985,7 @@ export class DatabaseService {
 
             return snapshot.docs.map(d => d.data());
         } catch (e) {
-            console.error('[Database] getUserGraphicNovels failed:', e);
+            console.error('[Database] getUserCartoonBooks failed:', e);
             return [];
         }
     }

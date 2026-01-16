@@ -154,8 +154,8 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                                     <span className="text-3xl mb-1">{item.icon}</span>
                                 )}
                                 {/* Overlay Label */}
-                                <div className="absolute inset-x-0 bottom-0 bg-black/40 backdrop-blur-[2px] py-0.5">
-                                    <span className="text-[9px] font-black text-white uppercase tracking-wider block text-center shadow-sm">{item.name}</span>
+                                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
+                                    <span className="text-[10px] sm:text-xs font-bold text-white uppercase tracking-wider block text-center shadow-sm">{item.name}</span>
                                 </div>
                             </button>
                         ))}
@@ -209,8 +209,8 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                                 )}
 
                                 {/* Overlay Label */}
-                                <div className="absolute inset-x-0 bottom-0 bg-black/40 backdrop-blur-[2px] py-0.5">
-                                    <span className="text-[9px] font-black text-white uppercase tracking-wider block text-center shadow-sm">{item.label}</span>
+                                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
+                                    <span className="text-[10px] sm:text-xs font-bold text-white uppercase tracking-wider block text-center shadow-sm">{item.label}</span>
                                 </div>
                             </button>
                         ))}
@@ -327,8 +327,8 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                                     <span className="text-3xl mb-1">{item.icon}</span>
                                 )}
                                 {/* Overlay Label */}
-                                <div className="absolute inset-x-0 bottom-0 bg-black/40 backdrop-blur-[2px] py-0.5">
-                                    <span className="text-[9px] font-black text-white uppercase tracking-wider block text-center shadow-sm">{item.label.split(' ')[0]}</span>
+                                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
+                                    <span className="text-[10px] sm:text-xs font-bold text-white uppercase tracking-wider block text-center shadow-sm">{item.label.split(' ')[0]}</span>
                                 </div>
                             </button>
                         ))}

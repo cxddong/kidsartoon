@@ -319,9 +319,10 @@ ${userProvidedPrompt}
             await databaseService.saveImageRecord(
                 userId,
                 storedImageUrl,
-                'story',
+                'audio-story', // STRICT TYPE: Audio Story
                 summary,
-                analysisObj
+                analysisObj,
+                req.body.profileId // Pass profileId
             );
 
             // Deduct Points ONLY if not cached (which we already handled by returning early, so if we are here, it's a new gen)

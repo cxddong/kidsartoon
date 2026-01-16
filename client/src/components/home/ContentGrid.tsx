@@ -16,6 +16,20 @@ const ContentCard = ({ item, onItemClick, user }: { item: ImageRecord, onItemCli
     const [isLiked, setIsLiked] = useState(false); // Optimistic UI
     const [showShare, setShowShare] = useState(false);
 
+    // Auto-Switch Logic
+    const [showOriginal, setShowOriginal] = useState(false);
+    const optionalSrc = item.meta?.originalImageUrl || item.meta?.inputImageUrl;
+
+    React.useEffect(() => {
+        if (!optionalSrc) return;
+
+        const interval = setInterval(() => {
+            setShowOriginal(prev => !prev);
+        }, 3000); // Switch every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [optionalSrc]);
+
     const getTypeIcon = (type: string) => {
         const t = (type || '').toLowerCase();
         if (t.includes('anim') || t.includes('video')) return <Play size={12} className="fill-current" />;
@@ -92,19 +106,51 @@ const ContentCard = ({ item, onItemClick, user }: { item: ImageRecord, onItemCli
                 </div>
             </div>
 
-            {/* 2. Image */}
+            {/* 2. Image (Auto-Switching) */}
             <div
-                className="aspect-square bg-slate-100 relative cursor-pointer group"
+                className="aspect-square bg-slate-100 relative cursor-pointer group overflow-hidden"
                 onClick={() => onItemClick(item)}
             >
-                <img
-                    src={item.imageUrl}
-                    alt="Creation"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    loading="lazy"
-                />
+                <AnimatePresence mode="popLayout">
+                    {showOriginal && optionalSrc ? (
+                        <motion.div
+                            key="original"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.8 }} // Silky smooth
+                            className="absolute inset-0 w-full h-full"
+                        >
+                            <img
+                                src={optionalSrc}
+                                alt="Original"
+                                className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/50 backdrop-blur-md rounded text-[10px] font-bold text-white border border-white/20">
+                                Original
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="generated"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.8 }}
+                            className="absolute inset-0 w-full h-full"
+                        >
+                            <img
+                                src={item.imageUrl}
+                                alt="Creation"
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                loading="lazy"
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* Type Badge */}
-                <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-[10px] font-bold uppercase tracking-wider text-white flex items-center gap-1 shadow-sm border border-white/20">
+                <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-[10px] font-bold uppercase tracking-wider text-white flex items-center gap-1 shadow-sm border border-white/20 z-10">
                     {getTypeIcon(item.type)}
                     {getBadgeLabel(item.type)}
                 </div>

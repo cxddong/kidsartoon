@@ -76,30 +76,30 @@ export const MAGIC_EFFECTS = [
 export const VIDEO_DURATION_OPTIONS = [
     {
         duration: 5 as const,
-        label: 'Short',
+        label: 'Quick',
         emoji: '⚡',
         image: '/assets/duration/5s.jpg',
-        baseCredits: 50,
-        audioCredits: 30,
-        description: '5 sec'
+        baseCredits: 30, // Updated cost from screenshot
+        audioCredits: 0,
+        description: '4s' // Screenshot says 4s, but let's keep 5s logic or map it. 
     },
     {
         duration: 8 as const,
-        label: 'Medium',
-        emoji: '🎬',
+        label: 'Story',
+        emoji: '📖',
         image: '/assets/duration/8s.jpg',
-        baseCredits: 80,
-        audioCredits: 50,
-        description: '8 sec'
+        baseCredits: 50,
+        audioCredits: 0,
+        description: '8s'
     },
     {
         duration: 10 as const,
-        label: 'Long',
-        emoji: '🎞️',
+        label: 'Cinema',
+        emoji: '🎬',
         image: '/assets/duration/10s.jpg',
-        baseCredits: 100,
-        audioCredits: 60,
-        description: '10 sec'
+        baseCredits: 80,
+        audioCredits: 0,
+        description: 'HD 720p'
     }
 ];
 
@@ -109,6 +109,7 @@ export interface AnimationBuilderData {
     effect?: string;          // Optional: selected effect ID (sparkle, bubbles, etc.)
     generateAudio: boolean;   // Audio generation toggle
     duration: 5 | 8 | 10;     // Video duration options
+    scene?: string;           // Optional: custom scene description
 }
 
 interface Props {
@@ -126,6 +127,25 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
     const [effect, setEffect] = useState<string | undefined>(undefined);
     const [generateAudio, setGenerateAudio] = useState(true);
     const [duration, setDuration] = useState<5 | 8 | 10>(5);
+
+    // Audio/Scene State
+    const [audioMode, setAudioMode] = useState<'talk' | 'scene'>('scene');
+    const [sceneMood, setSceneMood] = useState('Happy');
+
+    // Mapped Moods
+    const MOODS = [
+        { id: 'Happy', emoji: '☀️', color: 'text-amber-500', bg: 'bg-amber-100', border: 'border-amber-400' },
+        { id: 'Mystery', emoji: '🌙', color: 'text-purple-500', bg: 'bg-purple-100', border: 'border-purple-400' },
+        { id: 'Action', emoji: '⚡', color: 'text-red-500', bg: 'bg-red-100', border: 'border-red-400' },
+        { id: 'Calm', emoji: '🍃', color: 'text-emerald-500', bg: 'bg-emerald-100', border: 'border-emerald-400' },
+    ];
+
+    // Construct the scene string dynamically
+    const getSceneDescription = () => {
+        if (!generateAudio) return '';
+        if (audioMode === 'talk') return `character speaking, ${sceneMood.toLowerCase()} atmosphere`;
+        return `background music, ${sceneMood.toLowerCase()} atmosphere, cinematic score`;
+    };
 
     const calculateCredits = (): number => {
         const option = VIDEO_DURATION_OPTIONS.find(o => o.duration === duration);
@@ -159,6 +179,8 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
 
     return (
         <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto pb-12">
+
+
             {/* Action Selection */}
             <div className="space-y-3">
                 <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest flex items-center gap-2">
@@ -266,94 +288,129 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
                 </div>
             </div>
 
+
+
+
             {/* Bottom Controls Row: Length & Audio */}
-            <div className="flex flex-col md:flex-row gap-6">
-                {/* Length */}
-                <div className="flex-1 space-y-3">
-                    <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest">⏱️ Duration</h4>
-                    <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col gap-6">
+                {/* Duration (Choose Spell) */}
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest flex items-center gap-2">
+                            🪄 Choose Spell
+                        </h4>
+                        <span className="text-amber-500 font-bold text-sm bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                            {calculateCredits()} Credits
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
                         {VIDEO_DURATION_OPTIONS.map(opt => (
                             <button
                                 key={opt.duration}
                                 onClick={() => setDuration(opt.duration)}
                                 className={cn(
-                                    "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                    "relative py-4 px-2 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all",
                                     duration === opt.duration
-                                        ? "bg-purple-500/20 border-purple-500 ring-4 ring-purple-500/30 scale-105"
-                                        : "bg-white border-slate-200 hover:border-slate-300"
+                                        ? "bg-slate-800 border-slate-800 text-white shadow-xl scale-105 z-10"
+                                        : "bg-white border-slate-200 text-slate-400 hover:border-purple-300"
                                 )}
                             >
-                                {opt.image ? (
-                                    <>
-                                        <img src={opt.image} className="w-full h-full object-cover" alt={opt.description} />
-                                        <div className={cn(
-                                            "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-1 px-2 transition-opacity",
-                                            duration === opt.duration ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                                        )}>
-                                            <span className="text-white text-[10px] font-black uppercase block text-center">{opt.description}</span>
-                                            <span className="text-amber-400 text-[9px] font-bold block text-center">-{opt.baseCredits} pt</span>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="text-2xl">{opt.emoji}</span>
-                                        <span className="text-slate-700 text-[10px] font-black">{opt.description}</span>
-                                        <span className="text-amber-500 text-[9px] font-bold">-{opt.baseCredits} pt</span>
-                                    </>
+                                {duration === opt.duration && (
+                                    <div className="absolute -top-3 bg-purple-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                        Best
+                                    </div>
                                 )}
+                                <span className={cn("text-2xl", duration === opt.duration ? "text-white" : "grayscale opacity-70")}>
+                                    {opt.emoji}
+                                </span>
+                                <span className="font-bold text-sm">{opt.label}</span>
+                                <span className={cn("text-[10px]", duration === opt.duration ? "text-slate-400" : "text-slate-300")}>
+                                    {opt.description}
+                                </span>
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* Audio Toggle */}
-                <div className="flex-1 space-y-3">
-                    <h4 className="text-slate-800 text-lg font-black uppercase tracking-widest">🔊 Sound</h4>
-                    <div className="grid grid-cols-2 gap-3">
+                {/* Audio & Scene Control */}
+                <div className="space-y-4 bg-slate-900/5 p-4 rounded-3xl border border-white/50">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-slate-700 text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                            🎙️ Audio Mode
+                        </h4>
                         <button
-                            onClick={() => setGenerateAudio(false)}
+                            onClick={() => setGenerateAudio(!generateAudio)}
                             className={cn(
-                                "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-2 transition-all overflow-hidden relative group",
-                                !generateAudio
-                                    ? "bg-pink-500/20 border-pink-500 ring-4 ring-pink-500/30 scale-105"
-                                    : "bg-white border-slate-200 hover:border-slate-300"
+                                "text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-all",
+                                generateAudio ? "bg-emerald-500 text-white" : "bg-slate-300 text-slate-500"
+                            )}>
+                            {generateAudio ? "🔊 Sound ON" : "🔇 Sound OFF"}
+                        </button>
+                    </div>
+
+                    {/* Audio Mode Toggles */}
+                    <div className="grid grid-cols-2 gap-3 opacity-100 transition-opacity" style={{ opacity: generateAudio ? 1 : 0.5, pointerEvents: generateAudio ? 'auto' : 'none' }}>
+                        <button
+                            onClick={() => setAudioMode('talk')}
+                            className={cn(
+                                "p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all",
+                                audioMode === 'talk'
+                                    ? "bg-slate-800 border-slate-800 text-white shadow-lg"
+                                    : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                             )}
                         >
-                            <img src="/assets/audio/silent.jpg" className="w-full h-full object-cover" alt="Silent" />
-                            <div className={cn(
-                                "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-1 px-2 transition-opacity",
-                                !generateAudio ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                            )}>
-                                <span className="text-white text-[10px] font-black uppercase block text-center">Silent</span>
+                            <span className="text-2xl">🗣️</span>
+                            <div className="flex flex-col items-center leading-none gap-1">
+                                <span className="font-bold text-sm">Talk</span>
+                                <span className={cn("text-[9px]", audioMode === 'talk' ? "text-slate-400" : "text-slate-400")}>Character speaks</span>
                             </div>
                         </button>
+
                         <button
-                            onClick={() => setGenerateAudio(true)}
+                            onClick={() => setAudioMode('scene')}
                             className={cn(
-                                "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-2 transition-all overflow-hidden relative group",
-                                generateAudio
-                                    ? "bg-pink-500/20 border-pink-500 ring-4 ring-pink-500/30 scale-105"
-                                    : "bg-white border-slate-200 hover:border-slate-300"
+                                "p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all",
+                                audioMode === 'scene'
+                                    ? "bg-blue-600 border-blue-600 text-white shadow-lg"
+                                    : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                             )}
                         >
-                            <img src="/assets/audio/magic_sound.jpg" className="w-full h-full object-cover" alt="Magic Sound" />
-                            <div className={cn(
-                                "absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm py-1 px-2 transition-opacity",
-                                generateAudio ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                            )}>
-                                <div className="flex flex-col items-center leading-none">
-                                    <span className="text-white text-[10px] font-black uppercase block text-center">Magic Sound</span>
-                                    <span className="text-amber-400 text-[9px] font-bold mt-1">+{VIDEO_DURATION_OPTIONS.find(o => o.duration === duration)?.audioCredits} pt</span>
-                                </div>
+                            <span className="text-2xl">🎵</span>
+                            <div className="flex flex-col items-center leading-none gap-1">
+                                <span className="font-bold text-sm">Scene</span>
+                                <span className={cn("text-[9px]", audioMode === 'scene' ? "text-blue-200" : "text-slate-400")}>Background music</span>
                             </div>
                         </button>
+                    </div>
+
+                    {/* Scene Moods (Visible if Scene or Talk) */}
+                    <div className="space-y-2 pt-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Scene Mood</label>
+                        <div className="grid grid-cols-4 gap-2">
+                            {MOODS.map(m => (
+                                <button
+                                    key={m.id}
+                                    onClick={() => setSceneMood(m.id)}
+                                    className={cn(
+                                        "py-2 rounded-xl border flex flex-col items-center justify-center transition-all gap-1",
+                                        sceneMood === m.id
+                                            ? `${m.bg} ${m.border} ${m.color} ring-2 ring-offset-1 ring-offset-slate-50 ${m.color.replace('text', 'ring')}`
+                                            : "bg-white border-slate-200 text-slate-400 hover:scale-105"
+                                    )}
+                                >
+                                    <span className="text-lg">{m.emoji}</span>
+                                    <span className="text-[9px] font-bold">{m.id}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Generate Button */}
             <button
-                onClick={() => onGenerate({ action, style, effect, generateAudio, duration })}
+                onClick={() => onGenerate({ action, style, effect, generateAudio, duration, scene: getSceneDescription() })}
                 disabled={!imageUploaded || isGenerating}
                 className="w-full py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white rounded-3xl font-black text-xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale mb-8 flex flex-col items-center justify-center"
             >

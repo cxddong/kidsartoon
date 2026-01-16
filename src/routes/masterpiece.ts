@@ -133,7 +133,8 @@ OUTPUT FORMAT (JSON only):
                         kidScript: matchResult.matches[0]?.audio_script_for_kids,
                         parentAnalysis: matchResult.matches[0]?.analysis_for_parents,
                         suggestion: matchResult.matches[0]?.suggestion
-                    }
+                    },
+                    req.body.profileId // Pass profileId
                 );
             }
 

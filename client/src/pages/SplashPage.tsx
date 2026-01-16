@@ -39,9 +39,9 @@ export const SplashPage: React.FC = () => {
                 loop
                 muted
                 playsInline
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-contain md:object-cover brightness-110"
             />
-            <div className="absolute inset-0 w-full h-full bg-black/40" />
+
 
             {/* Enter Button */}
             <AnimatePresence>

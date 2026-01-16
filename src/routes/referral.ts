@@ -44,4 +44,17 @@ router.post('/redeem', async (req, res) => {
     }
 });
 
+// Check Code (Validation Only)
+router.post('/check', async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ valid: false, message: "Code required" });
+
+        const result = await referralService.checkCode(code.trim().toUpperCase());
+        res.json(result);
+    } catch (error: any) {
+        res.status(500).json({ valid: false, message: error.message });
+    }
+});
+
 export default router;

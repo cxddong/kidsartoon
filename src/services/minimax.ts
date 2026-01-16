@@ -1,11 +1,15 @@
 
+
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
-const MINIMAX_API_URL = 'https://api.minimaxi.chat/v1/t2a_v2';
-const MINIMAX_API_KEY = 'sk-api-hxrDKQNn9Tj002ch-QnaLzocOkBZvVVTW0Wuf6AyuBi62POOoBWm1F-q8xFFUozNP5wEV73kDPQdXPoFx6We3zK9blgi6zXes5KbjRjHlXIyrJEbzP0RJNE';
-const GROUP_ID = '2002035045556035835'; // Extracted from JWT
+// Use environment variables for security
+const MINIMAX_API_URL = process.env.MINIMAX_API_URL || 'https://api.minimaxi.chat/v1/t2a_v2';
+const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || '';
+const MINIMAX_GROUP_ID = process.env.MINIMAX_GROUP_ID || '';
+
+
 
 // Voice Mappings
 // Voice Mappings
@@ -46,7 +50,7 @@ export class MinimaxService {
                 }
             };
 
-            const response = await axios.post(`${MINIMAX_API_URL}?GroupId=${GROUP_ID}`, payload, {
+            const response = await axios.post(`${MINIMAX_API_URL}?GroupId=${MINIMAX_GROUP_ID}`, payload, {
                 headers: {
                     'Authorization': `Bearer ${MINIMAX_API_KEY}`,
                     'Content-Type': 'application/json'

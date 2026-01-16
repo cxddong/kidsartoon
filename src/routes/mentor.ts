@@ -60,6 +60,21 @@ router.get('/active/:userId', async (req, res) => {
 });
 
 /**
+ * GET /api/mentor/history/:userId
+ * Get all creative series for a user
+ */
+router.get('/history/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const history = await databaseService.getUserCreativeHistory(userId);
+        res.json({ success: true, history });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+/**
  * POST /api/mentor/analyze-improvement
  * Masterpiece Match V2: Compare two images (V1 vs V2) and analyze improvement
  */

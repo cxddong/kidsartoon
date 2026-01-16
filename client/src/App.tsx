@@ -6,20 +6,21 @@ import { Layout } from './components/layout/Layout';
 
 // Existing Pages
 import { SplashPage } from './pages/SplashPage';
-import { HomePage } from './pages/HomePage';
-import { GeneratePage } from './pages/GeneratePage';
+import { CommunityPage } from './pages/CommunityPage'; // Was HomePage
+import { HomePage } from './pages/HomePage'; // Was GeneratePage
 import { PictureBookPage } from './pages/PictureBookPage';
 import { ComicPage } from './pages/ComicPage';
 import { CameraPage } from './pages/CameraPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AudioStoryPage } from './pages/AudioStoryPage';
-import { AnimationPage } from './pages/AnimationPage';
+import { MagicMoviePage } from './pages/MagicMoviePage';
 import { GreetingCardPage } from './pages/GreetingCardPage';
 
 // New Pages
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import { MagicLabPage } from './pages/MagicLabPage'; // SUSPECT 2
 import StartupPage from './pages/StartupPage';
 import HistoryPage from './pages/HistoryPage';
@@ -31,9 +32,19 @@ import OnboardingPage3 from './pages/onboarding/OnboardingPage3';
 import OnboardingStartPage from './pages/onboarding/OnboardingStartPage';
 import { MakeCartoonPage } from './pages/MakeCartoonPage';
 // Removed: MasterpieceMatchPage (duplicated by CreativeJourneyPage)
-import CreativeJourneyPage from './pages/CreativeJourneyPage';
-import { GraphicNovelBuilderPage } from './pages/GraphicNovelBuilderPage';
-import { GraphicNovelReaderPage } from './pages/GraphicNovelReaderPage';
+import ArtCoachPage from './pages/ArtCoachPage';
+import { CartoonBookBuilderPage } from './pages/CartoonBookBuilderPage';
+import { CartoonBookReaderPage } from './pages/CartoonBookReaderPage';
+import { MagicMirrorPage } from './pages/MagicMirrorPage';
+import { ParentDashboardPage } from './pages/ParentDashboardPage';
+import { ParentReportPage } from './pages/ParentReportPage';
+import MagicPressPage from './pages/MagicPressPage';
+import PublicShowcasePage from './pages/PublicShowcasePage';
+import { MagicArtStudioPage } from './pages/MagicArtStudioPage';
+import { ScreenTimeManager } from './components/ScreenTimeManager';
+import { ImageAdjustDebugPage } from './pages/ImageAdjustDebugPage';
+import { JumpIntoArtPage } from './pages/JumpIntoArtPage';
+
 
 
 // Protected Route Wrapper
@@ -56,6 +67,7 @@ const AppRoutes = () => {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/onboarding/page1" element={<OnboardingPage1 />} />
       <Route path="/onboarding/page2" element={<OnboardingPage2 />} />
       <Route path="/onboarding/page3" element={<OnboardingPage3 />} />
@@ -63,9 +75,15 @@ const AppRoutes = () => {
 
       {/* Public Pages */}
       <Route path="/" element={<SplashPage />} />
-      <Route path="/home" element={<GeneratePage />} />
-      <Route path="/community" element={<HomePage />} />
       <Route path="/splash" element={<SplashPage />} />
+      <Route path="/view/:shareId" element={<PublicShowcasePage />} />
+
+      {/* New Routing Structure */}
+      <Route path="/home" element={<HomePage />} /> {/* Formerly GeneratePage */}
+      <Route path="/community" element={<CommunityPage />} /> {/* Formerly HomePage */}
+
+      {/* Legacy Redirects or Aliases */}
+      <Route path="/generate" element={<Navigate to="/home" replace />} />
 
       {/* Protected Routes */}
       <Route element={<RequireAuth />}>
@@ -83,7 +101,7 @@ const AppRoutes = () => {
         <Route element={<Layout />}>
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/camera" element={<CameraPage />} />
-          <Route path="/generate" element={<GeneratePage />} />
+          {/* <Route path="/generate" element={<GeneratePage />} /> Replaced by /home */}
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/profile/history" element={<HistoryPage />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
@@ -91,16 +109,26 @@ const AppRoutes = () => {
 
         {/* Standalone Protected Routes (Custom Layouts) */}
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/generate/video" element={<AnimationPage />} />
-        <Route path="/animation" element={<AnimationPage />} />
+        <Route path="/generate/video" element={<MagicMoviePage />} />
+        <Route path="/animation" element={<MagicMoviePage />} />
         <Route path="/generate/audio" element={<AudioStoryPage />} />
         <Route path="/audio" element={<AudioStoryPage />} />
         <Route path="/magic-lab" element={<MagicLabPage />} />
         <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
+        <Route path="/jump-into-art" element={<JumpIntoArtPage />} />
+        <Route path="/magic-art" element={<MagicArtStudioPage />} />
+
+        {/* Debug Routes */}
+        <Route path="/debug/image-adjust" element={<ImageAdjustDebugPage />} />
         {/* Removed: masterpiece-match route (duplicated by creative-journey) */}
-        <Route path="/creative-journey" element={<CreativeJourneyPage />} />
-        <Route path="/graphic-novel/builder" element={<GraphicNovelBuilderPage />} />
-        <Route path="/graphic-novel/reader/:id" element={<GraphicNovelReaderPage />} />
+        <Route path="/creative-journey" element={<ArtCoachPage />} />
+        <Route path="/cartoon-book/builder" element={<CartoonBookBuilderPage />} />
+        <Route path="/cartoon-book/reader/:id" element={<CartoonBookReaderPage />} />
+        <Route path="/magic-discovery" element={<MagicMirrorPage />} />
+        <Route path="/parent" element={<ParentDashboardPage />} />
+        <Route path="/parent/report" element={<ParentReportPage />} />
+        <Route path="/press" element={<MagicPressPage />} />
+
 
       </Route>
 
@@ -114,8 +142,10 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* <SoundManager /> */}
-        <AppRoutes />
+        <ScreenTimeManager>
+          {/* <SoundManager /> */}
+          <AppRoutes />
+        </ScreenTimeManager>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -346,6 +346,84 @@ You must respond in JSON format. Always return a valid JSON object:
             throw e;
         }
     }
+
+    /**
+     * 🔍 Analyze Image for Magic Mirror
+     * Detects sketches, art styles, and content connections.
+     */
+    async analyzeImageContext(base64Image: string): Promise<any> {
+        if (!API_KEY) throw new Error("OpenAI API Key missing");
+
+        const SYSTEM_PROMPT = `
+        You are an expert art critic and children's content guide. 
+        Analyze the uploaded image and return a JSON object with the following:
+        
+        1. **isSketch**: (boolean) Is this a black and white sketch / line art / doodle?
+        2. **coloringSuggestion**: (string) If it is a sketch, suggest a creative color palette (e.g. "Try warm sunset colors like orange and purple!"). If not a sketch, return null.
+        3. **artisticStyle**: (object)
+           - "artist": Name of a famous artist OR a creative style name. 
+             * AVOID "Generic Cartoon". 
+             * TRY: "Tim Burton Style", "Studio Ghibli Vibes", "Picasso Abstract", "Whimsical Doodle", "Royal Sketch", "Action Manga".
+           - "reason": "Why it matches" (e.g. "The big eyes and flowy lines look like anime!").
+        4. **contentKeywords**: (string[]) A list of 8 specific keywords describing the SUBJECT MATTER (e.g. "mermaid", "princess", "crown", "braid", "fish", "tail", "ocean", "star").
+        5. **magicConnections**: (object[]) Identify specific Movies, Books, or Cartoons that this image reminds you of.
+           Format: [{ "title": "Title", "type": "Movie/Book", "reason": "Why it connects" }]
+           Example: Drawing of a fish -> Finding Nemo. Drawing of a toy -> Toy Story.
+        
+        Return STRICT JSON format.
+        `;
+
+        const messages = [
+            {
+                role: 'system',
+                content: SYSTEM_PROMPT
+            },
+            {
+                role: 'user',
+                content: [
+                    { type: "text", text: "Analyze this image for the Magic Mirror!" },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`,
+                            detail: "low"
+                        }
+                    }
+                ]
+            }
+        ];
+
+        try {
+            const response = await fetch(OPENAI_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o',
+                    messages: messages,
+                    response_format: { type: "json_object" },
+                    temperature: 0.7,
+                    max_tokens: 600
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error(`OpenAI Analysis Error: ${response.status} ${err}`);
+            }
+
+            const data: any = await response.json();
+            const content = data.choices[0].message.content;
+            console.log("[OpenAI] Magic Mirror Analysis:", content);
+            return JSON.parse(content);
+
+        } catch (e: any) {
+            console.error("[OpenAI] Analysis Failed:", e.message);
+            throw e;
+        }
+    }
 }
 
 export const openAIService = new OpenAIService();

@@ -10,6 +10,20 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, googleProvider, appleProvider } from '../firebase';
 
+// Child Profile Interface
+export interface ChildProfile {
+    id: string;
+    name: string;
+    avatar: string;
+    age?: number;
+    theme?: string;
+    gender?: string;
+    interests?: string[];
+    language?: string;
+    points?: number;
+    profileCompleted?: boolean;
+}
+
 // Extended User type including Firestore data
 export interface User {
     uid: string;
@@ -25,10 +39,16 @@ export interface User {
     uiMode?: 'visual' | 'standard';
     plan?: 'free' | 'basic' | 'pro' | 'yearly_pro' | 'admin';
     lastPointsReset?: string;
+
+    // Child Profile Support
+    profiles?: ChildProfile[];
+    currentProfileId?: string; // ID of the currently active child profile (or undefined for main parent)
+    parentPin?: string;
 }
 
 interface AuthContextType {
     user: User | null;
+    activeProfile: ChildProfile | null; // Derived helper
     loading: boolean;
     loginWithGoogle: () => Promise<boolean>; // Returns true if new user
     loginWithApple: () => Promise<boolean>;
@@ -36,6 +56,9 @@ interface AuthContextType {
     signup: (email: string, password: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
     updateProfile: (data: Partial<User>) => Promise<void>;
+    addChildProfile: (name: string, avatar: string, age?: number) => Promise<void>;
+    deleteChildProfile: (profileId: string) => Promise<void>; // Added
+    switchProfile: (profileId: string | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -104,7 +127,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             language: userData.language || 'English',
                             interests: userData.interests || [],
                             profileCompleted: userData.profileCompleted || false,
-                            uiMode: userData.uiMode || 'standard'
+                            uiMode: userData.uiMode || 'standard',
+                            profiles: userData.profiles || [],
+                            currentProfileId: userData.currentProfileId
                         });
                     } else {
                         // Auto-Heal: Create missing user document
@@ -279,6 +304,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updateProfile = async (data: Partial<User>) => {
         if (!auth.currentUser) return;
 
+        // --- CHILD PROFILE INTERCEPT ---
+        // If we are in "Child Mode" (activeProfile exists) AND we are NOT explicitly moving/switching profiles
+        // then rewrite the data to target the child profile inside the 'profiles' array instead.
+        if (user?.currentProfileId && data.profiles === undefined && data.currentProfileId === undefined) {
+            const profileIdx = user.profiles?.findIndex(p => p.id === user.currentProfileId);
+            if (profileIdx !== undefined && profileIdx !== -1 && user.profiles) {
+                console.log("👶 Updating Active Child Profile:", user.currentProfileId);
+
+                const updatedChild = { ...user.profiles[profileIdx] };
+
+                // Map User fields to ChildProfile fields
+                if (data.name !== undefined) updatedChild.name = data.name;
+                if (data.photoURL !== undefined) updatedChild.avatar = data.photoURL || updatedChild.avatar; // Map photoURL -> avatar
+                if (data.age !== undefined) updatedChild.age = data.age;
+                if (data.gender !== undefined) updatedChild.gender = data.gender;
+                if (data.interests !== undefined) updatedChild.interests = data.interests;
+                if (data.language !== undefined) updatedChild.language = data.language;
+                if (data.points !== undefined) updatedChild.points = data.points;
+                if (data.profileCompleted !== undefined) updatedChild.profileCompleted = data.profileCompleted;
+
+                // Create new profiles array
+                const newProfiles = [...user.profiles];
+                newProfiles[profileIdx] = updatedChild;
+
+                // Save via standard flow (recursively call with 'profiles' set, so passes this check)
+                await updateProfile({ profiles: newProfiles });
+                return;
+            }
+        }
+        // -------------------------------
+
         // Filter valid fields
         const firestoreData: any = {};
         if (data.name !== undefined) firestoreData.name = data.name;
@@ -291,9 +347,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.plan !== undefined) firestoreData.plan = data.plan; // Allow plan update
         if (data.profileCompleted !== undefined) firestoreData.profileCompleted = data.profileCompleted;
         if (data.uiMode !== undefined) firestoreData.uiMode = data.uiMode;
+        if (data.profiles !== undefined) firestoreData.profiles = data.profiles;
+        if (data.currentProfileId !== undefined) firestoreData.currentProfileId = data.currentProfileId;
 
         await setDoc(doc(db, 'users', auth.currentUser.uid), firestoreData, { merge: true });
     };
+
+    // 7. Add Child Profile
+    const addChildProfile = async (name: string, avatar: string, age?: number) => {
+        if (!auth.currentUser || !user) return;
+
+        const newProfile: ChildProfile = {
+            id: crypto.randomUUID(),
+            name,
+            avatar,
+            age
+        };
+
+        const updatedProfiles = [...(user.profiles || []), newProfile];
+
+        await updateProfile({
+            profiles: updatedProfiles,
+            currentProfileId: newProfile.id // Auto-switch to new profile
+        });
+    };
+
+    // 9. Delete Child Profile (New)
+    const deleteChildProfile = async (profileId: string) => {
+        if (!auth.currentUser || !user || !user.profiles) return;
+
+        // Filter out target profile
+        const updatedProfiles = user.profiles.filter(p => p.id !== profileId);
+
+        let newActiveId = user.currentProfileId;
+        // If we are deleting the CURRENTLY active profile, switch back to parent (undefined)
+        if (user.currentProfileId === profileId) {
+            newActiveId = undefined;
+        }
+
+        await updateProfile({
+            profiles: updatedProfiles,
+            currentProfileId: newActiveId
+        });
+    };
+
+    // 8. Switch Profile
+    const switchProfile = async (profileId: string | null) => {
+        if (!auth.currentUser) return;
+        // Currently just updating local state/firestore preference
+        // Depending on app logic, this might just be local state if we don't need persistence across devices for "last active"
+        // But persisting is better UX.
+        await updateProfile({ currentProfileId: profileId || undefined });
+    };
+
+    const activeProfile = user?.profiles?.find(p => p.id === user.currentProfileId) || null;
 
     return (
         <AuthContext.Provider value={{
@@ -304,7 +411,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             login,
             signup,
             logout,
-            updateProfile
+            updateProfile,
+            addChildProfile,
+            deleteChildProfile,
+            switchProfile,
+            activeProfile
         }}>
             {children}
         </AuthContext.Provider>

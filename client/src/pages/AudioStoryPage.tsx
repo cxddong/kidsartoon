@@ -9,8 +9,9 @@ import { BottomNav } from '../components/BottomNav';
 import { playAudioWithPitchShift } from '../lib/audioUtils';
 import { VIPCover } from '../components/ui/VIPCover';
 import mic3Video from '../assets/mic3.mp4';
+import audioStoryBg from '../assets/audio.mp4';
 
-const backgroundUrl = '/bg_cartoon_new.jpg';
+// const backgroundUrl = '/bg_cartoon_new.jpg';
 
 import { StoryBuilderPanel, type StoryBuilderData, STORY_STYLES, MOODS } from '../components/builder/StoryBuilderPanel';
 import { ImageCropperModal } from '../components/ImageCropperModal';
@@ -273,15 +274,22 @@ export const AudioStoryPage: React.FC = () => {
             <div className="flex-1 relative w-full h-full flex overflow-hidden">
 
                 {/* Background (Fixed) */}
-                <div className="fixed inset-0 z-0 opacity-20 pointer-events-none">
-                    <img src={backgroundUrl} className="w-full h-full object-cover" />
+                <div className="fixed inset-0 z-0 pointer-events-none">
+                    <video
+                        src={audioStoryBg}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                    />
                 </div>
 
                 {/* Left Sidebar Removed for Cleaner Layout */}
 
                 {/* Main Center Column */}
-                <div ref={scrollRef} className="flex-1 h-full overflow-y-auto relative custom-scrollbar pb-24">
-                    <div className="relative z-10 p-6 pt-6 max-w-lg mx-auto min-h-full flex flex-col">
+                <div ref={scrollRef} className="flex-1 h-full overflow-y-auto relative pb-24">
+                    <div className="relative z-10 p-6 pt-24 max-w-lg mx-auto min-h-full flex flex-col">
 
                         {/* Progress Indicatior (Simpler for 2 Steps) */}
                         <div className="flex items-center justify-center gap-4 mb-8">
@@ -311,25 +319,15 @@ export const AudioStoryPage: React.FC = () => {
 
                             {/* STEP 1: Upload */}
                             {step === 1 && (
-                                <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
+                                <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-row items-center justify-center gap-8">
                                     <div className={cn(
-                                        "bg-white rounded-[130px] shadow-xl flex flex-col items-center justify-center hover:shadow-2xl transition-all group cursor-pointer overflow-hidden mx-auto relative transform hover:scale-95 duration-500",
-                                        !imagePreview ? "w-[85%] aspect-square rotate-3 hover:rotate-0" : "w-fit h-auto"
+                                        "rounded-[130px] flex flex-col items-center justify-center transition-all group cursor-pointer overflow-hidden relative transform hover:scale-95 duration-500 shrink-0",
+                                        !imagePreview ? "w-64 h-64 rotate-3 hover:rotate-0" : "w-64 h-auto"
                                     )}
                                         onClick={() => document.getElementById('step1-upload')?.click()}>
 
                                         {/* Background Video (mic3.mp4) - Only show when no image */}
-                                        {!imagePreview && (
-                                            <video
-                                                src={mic3Video}
-                                                autoPlay
-                                                loop
-                                                muted
-                                                playsInline
-                                                className="absolute inset-0 w-full h-full object-cover -rotate-3 group-hover:rotate-0 transition-transform duration-500 scale-110"
-                                                disablePictureInPicture
-                                            />
-                                        )}
+
 
                                         <input type="file" id="step1-upload" className="hidden" accept="image/*" onChange={handleUpload} />
                                         {imagePreview ? (
@@ -347,12 +345,13 @@ export const AudioStoryPage: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
+
                                     <button
                                         disabled={!imageFile && !imagePreview}
                                         onClick={() => setStep(2)}
-                                        className="mt-6 w-full py-4 bg-purple-600 text-white rounded-2xl font-black text-lg disabled:opacity-50 disabled:grayscale transition-all shadow-lg hover:bg-purple-700"
+                                        className="w-24 h-24 rounded-full bg-purple-600 text-white font-black text-sm disabled:opacity-50 disabled:grayscale transition-all shadow-lg hover:bg-purple-700 flex items-center justify-center hover:scale-110 active:scale-95 shrink-0"
                                     >
-                                        Next Step ➡️
+                                        Next ➡️
                                     </button>
                                 </motion.div>
                             )}

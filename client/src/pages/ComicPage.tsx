@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, Star, Download, Share2 } from 'lucide-react';
+import { ImagePlus, Wand2, ArrowLeft, ArrowRight, Save, Trash2, Sparkles, Layout, Type, Palette, Download, Share2, Music, Mic, Play, Pause, Square, Star, Loader2 } from 'lucide-react';
+import { incrementUsage } from '../components/FeedbackWidget';
 import { useNavigate } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { cn } from '../lib/utils';
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
+
 import { AuthButton } from '../components/auth/AuthButton';
 import ImageModal, { type ImageRecord } from '../components/history/ImageModal';
 import { ImageCropperModal } from '../components/ImageCropperModal';
@@ -14,7 +16,7 @@ import jsPDF from 'jspdf';
 
 import { ComicBuilderPanel, type ComicBuilderData } from '../components/builder/ComicBuilderPanel';
 import { ComicBubbleGrid } from '../components/ComicBubble';
-import comicVideo from '../assets/comic.mp4';
+import comicVideo from '../assets/comic (2).mp4';
 import magicBookVideo from '../assets/magicbook.mp4';
 
 export const ComicPage: React.FC = () => {
@@ -128,6 +130,7 @@ export const ComicPage: React.FC = () => {
 
     // Gallery rotation during generation
     useEffect(() => {
+        incrementUsage();
         let interval: any;
         if (step === 'generating' && publicGallery.length > 0) {
             interval = setInterval(() => {
@@ -482,9 +485,9 @@ export const ComicPage: React.FC = () => {
                 loop
                 muted
                 playsInline
-                className="fixed inset-0 w-full h-full object-cover opacity-60 z-0"
+                className="fixed inset-0 w-full h-full object-cover z-0"
             />
-            <div className="fixed inset-0 z-0 bg-gradient-to-b from-slate-900/40 to-indigo-950/60" />
+            {/* Removed gradient overlay to show original video */}
 
             {/* Header */}
             <header className="absolute top-0 left-0 right-0 z-50 flex items-center gap-4 p-4 pointer-events-none sticky top-0">
@@ -559,7 +562,7 @@ export const ComicPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 mt-6 pointer-events-auto flex-wrap justify-center">
+                            <div className="grid grid-cols-2 lg:flex gap-3 mt-6 pointer-events-auto w-full max-w-lg lg:max-w-none justify-center">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -569,23 +572,23 @@ export const ComicPage: React.FC = () => {
                                         sessionStorage.removeItem('comic-result');
                                         sessionStorage.removeItem('comic-review');
                                     }}
-                                    className="bg-white text-slate-800 px-6 py-3 rounded-full font-bold shadow-lg hover:bg-slate-50 transition-colors"
+                                    className="col-span-1 bg-white text-slate-800 px-4 py-3 rounded-2xl font-bold shadow-lg hover:bg-slate-50 transition-colors text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2"
                                 >
-                                    Make Another
+                                    <span>🔄</span> Make Another
                                 </button>
                                 <button
                                     onClick={handleExportPDF}
-                                    className="bg-green-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                                    className="col-span-1 bg-green-600 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:bg-green-700 transition-colors text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2"
                                 >
                                     <Download className="w-5 h-5" />
-                                    Save as PDF
+                                    <span>Save PDF</span>
                                 </button>
                                 <button
                                     onClick={() => setShowShareDialog(true)}
-                                    className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                    className="col-span-1 bg-blue-600 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2"
                                 >
                                     <Share2 className="w-5 h-5" />
-                                    Share
+                                    <span>Share</span>
                                 </button>
                                 <button
                                     onClick={(e) => {
@@ -596,16 +599,17 @@ export const ComicPage: React.FC = () => {
                                             navigate('/generate/video', { state: { remixImage: remixUrl } });
                                         }
                                     }}
-                                    className="bg-purple-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                                    className="col-span-1 bg-purple-600 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:bg-purple-700 transition-colors text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2"
                                 >
-                                    Make Animation 🎬
+                                    <span>🎬</span>
+                                    <span>Animate</span>
                                 </button>
                                 <button
                                     onClick={handlePlayPuzzle}
-                                    className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 hover:bg-orange-600 transition-colors"
+                                    className="col-span-1 bg-orange-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2 hover:bg-orange-600 transition-colors"
                                 >
                                     <span>🧩</span>
-                                    Play Puzzle
+                                    <span>Puzzle</span>
                                 </button>
                                 <button
                                     onClick={() => {
@@ -614,10 +618,10 @@ export const ComicPage: React.FC = () => {
                                             navigate('/creative-journey', { state: { uploadedImage: imagePreview } });
                                         }
                                     }}
-                                    className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 hover:brightness-110 transition-colors"
+                                    className="col-span-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2 hover:brightness-110 transition-colors"
                                 >
-                                    <Star className="w-5 h-5 fill-current" />
-                                    Ask Art Teacher
+                                    <Star className="w-4 h-4 fill-current" />
+                                    <span>Art Teacher</span>
                                 </button>
                             </div>
 
@@ -797,7 +801,7 @@ export const ComicPage: React.FC = () => {
                 title="Magic Comic"
             />
 
-            <BottomNav />
+            <MagicNavBar />
         </div >
     );
 };

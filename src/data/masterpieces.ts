@@ -188,5 +188,95 @@ export const MASTERPIECES: Masterpiece[] = [
         imagePath: "/assets/masterpieces/haring_figures.jpg",
         kidFriendlyFact: "He drew simple stick figures full of energy and dance!",
         biography: "Keith Haring (1958-1990) was an American artist known for his bold, simple figures full of energy! He started by drawing in New York City subways with chalk. His art features dancing people, barking dogs, and radiating hearts - all bursting with movement and joy!"
+    },
+    {
+        id: "kahlo_thorns",
+        artist: "Frida Kahlo",
+        title: "Self-Portrait with Thorn Necklace and Hummingbird",
+        tags: ["portrait", "bright", "flowers", "self-portrait", "colorful", "mexican", "nature"],
+        imagePath: "/assets/masterpieces/kahlo_thorns.jpg",
+        kidFriendlyFact: "She painted herself 55 times with flowers and animals!",
+        biography: "Frida Kahlo (1907-1954) was a Mexican artist famous for her colorful self-portraits! She loved wearing flowers in her hair and traditional Mexican clothing. She painted her feelings, her dreams, and her life experiences with bright, bold colors inspired by Mexican folk art."
+    },
+    {
+        id: "basquiat_untitled",
+        artist: "Jean-Michel Basquiat",
+        title: "Untitled",
+        tags: ["graffiti", "bold", "street art", "expressive", "colorful", "text", "crowns"],
+        imagePath: "/assets/masterpieces/basquiat_untitled.jpg",
+        kidFriendlyFact: "He started as a street artist and became world-famous!",
+        biography: "Jean-Michel Basquiat (1960-1988) was an American artist who started creating graffiti art on the streets of New York! His paintings are full of bold colors, words, symbols, and crowns. He mixed street art with fine art, creating a unique style that expressed his thoughts about the world."
+    },
+    {
+        id: "kusama_dots",
+        artist: "Yayoi Kusama",
+        title: "Infinity Dots",
+        tags: ["dots", "patterns", "repetitive", "colorful", "polka dots", "abstract"],
+        imagePath: "/assets/masterpieces/kusama_dots.jpg",
+        kidFriendlyFact: "She covers entire rooms with colorful polka dots!",
+        biography: "Yayoi Kusama (born 1929) is a Japanese artist obsessed with polka dots! She creates entire rooms, pumpkins, and paintings covered in endless dots. She calls them 'infinity nets.' She also creates magical mirror rooms that make you feel like you're floating in space with lights!"
+    },
+    {
+        id: "caravaggio_matthew",
+        artist: "Caravaggio",
+        title: "The Calling of Saint Matthew",
+        tags: ["dramatic", "light", "shadow", "realistic", "dark", "baroque"],
+        imagePath: "/assets/masterpieces/caravaggio_matthew.jpg",
+        kidFriendlyFact: "He used dramatic spotlights in his paintings like theater!",
+        biography: "Caravaggio (1571-1610) was an Italian master who revolutionized painting! He used a technique called 'chiaroscuro' - dramatic contrasts between light and dark. His paintings look like theatrical scenes with a spotlight shining on the important parts, making them super dramatic!"
+    },
+    {
+        id: "vermeer_pearl",
+        artist: "Johannes Vermeer",
+        title: "Girl with a Pearl Earring",
+        tags: ["soft", "portrait", "blue", "yellow", "delicate", "realistic", "quiet"],
+        imagePath: "/assets/masterpieces/vermeer_pearl.jpg",
+        kidFriendlyFact: "He painted light so realistically it looks like a photograph!",
+        biography: "Johannes Vermeer (1632-1675) was a Dutch painter who captured light like magic! He painted quiet, peaceful scenes of everyday life with soft, glowing light. His paintings are so realistic and detailed that they look almost like photographs, even though cameras didn't exist yet!"
+    },
+    {
+        id: "turner_temeraire",
+        artist: "J.M.W. Turner",
+        title: "The Fighting Temeraire",
+        tags: ["sunset", "ships", "atmospheric", "orange", "water", "romantic", "sky"],
+        imagePath: "/assets/masterpieces/turner_temeraire.jpg",
+        kidFriendlyFact: "He loved painting storms, sunsets, and the power of nature!",
+        biography: "J.M.W. Turner (1775-1851) was an English painter known as the 'painter of light!' He created breathtaking landscapes with glowing sunsets, dramatic storms, and misty atmospheres. His paintings of the sea and sky look like they're made of pure light and color!"
+    },
+    {
+        id: "botticelli_venus",
+        artist: "Sandro Botticelli",
+        title: "The Birth of Venus",
+        tags: ["classical", "beautiful", "flowing", "renaissance", "mythological", "soft"],
+        imagePath: "/assets/masterpieces/botticelli_venus.jpg",
+        kidFriendlyFact: "He painted a goddess floating on a giant seashell!",
+        biography: "Sandro Botticelli (1445-1510) was an Italian Renaissance painter who created graceful, flowing artworks! His paintings look like beautiful dreams with soft colors and elegant figures. He loved painting mythological stories and made them look magical and otherworldly."
+    },
+    {
+        id: "rembrandt_nightwatch",
+        artist: "Rembrandt van Rijn",
+        title: "The Night Watch",
+        tags: ["group", "dark", "dramatic", "detailed", "realistic", "dutch", "golden"],
+        imagePath: "/assets/masterpieces/rembrandt_nightwatch.jpg",
+        kidFriendlyFact: "He was a master of painting with light and shadow!",
+        biography: "Rembrandt van Rijn (1606-1669) was a Dutch master painter famous for his dramatic use of light! He painted detailed portraits and group scenes where light seems to glow from within. He was also an incredible storyteller, making every painting feel alive with emotion and drama."
+    },
+    {
+        id: "whistler_mother",
+        artist: "James McNeill Whistler",
+        title: "Arrangement in Grey and Black",
+        tags: ["simple", "portrait", "elegant", "minimal", "calm", "monochrome"],
+        imagePath: "/assets/masterpieces/whistler_mother.jpg",
+        kidFriendlyFact: "He believed art should be like music - beautiful arrangements of color!",
+        biography: "James McNeill Whistler (1834-1903) was an American artist who believed paintings were like music! He gave his paintings musical titles like 'Symphony' and 'Arrangement.' He loved simple, elegant compositions with harmonious colors, creating calm and beautiful scenes."
+    },
+    {
+        id: "degas_dancers",
+        artist: "Edgar Degas",
+        title: "The Dance Class",
+        tags: ["ballet", "movement", "dancers", "impressionist", "graceful", "pink", "blue"],
+        imagePath: "/assets/masterpieces/degas_dancers.jpg",
+        kidFriendlyFact: "He loved painting ballerinas practicing and dancing!",
+        biography: "Edgar Degas (1834-1917) was a French artist who captured movement and grace! He painted over half of his artworks featuring ballet dancers. He showed them not just performing, but practicing, stretching, and resting - capturing the beauty of movement in every pose!"
     }
 ];

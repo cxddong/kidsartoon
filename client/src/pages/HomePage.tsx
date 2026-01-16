@@ -1,328 +1,348 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { HeaderBar } from '../components/home/HeaderBar';
-import { LogoArea } from '../components/home/LogoArea';
-import { FeatureButtonsRow } from '../components/home/FeatureButtonsRow';
-import { ContentGrid } from '../components/home/ContentGrid';
-import { DetailModal } from '../components/home/DetailModal';
-import { BottomNav } from '../components/BottomNav';
-import type { ImageRecord } from '../components/history/ImageModal';
-import { Sparkles } from 'lucide-react';
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { magicFloatVariants } from '../lib/animations';
-import { DailyTreasureMap } from '../components/dashboard/DailyTreasureMap';
+import { cn } from '../lib/utils';
+import { Globe, User, Home, Video, BookOpen, MessageCircle, Heart, Music, Sparkles, Palette, Film, Maximize, Minimize } from 'lucide-react';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
+import { FeedbackWidget } from '../components/FeedbackWidget';
 
-const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
-    { id: '1', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: false, prompt: 'Space Adventure' },
-    { id: '2', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1577083288073-40892c0860a4?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: true, prompt: 'Funny Cat' },
-    { id: '3', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=600', type: 'generated', createdAt: new Date().toISOString(), favorite: false, prompt: 'Dragon Tale' },
-    { id: '4', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1629812456605-4a044aa1d632?q=80&w=600', type: 'animation', createdAt: new Date().toISOString(), favorite: false, prompt: 'Under the Sea' },
-    { id: '5', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1615184697985-c9bde1b07da7?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Magical Forest' },
-];
+// Assets
+import homepageBg from '../assets/home (2).mp4';
+import mentorVideo from '../assets/mentor journey.mp4';
+import graphicNovelVideo from '../assets/graphicnovel.mp4';
+import bookVideo from '../assets/picturebook.mp4';
+import greetingCardVideo from '../assets/greeting_card1.mp4';
+import comicVideo from '../assets/comic.mp4';
+import audioVideo from '../assets/mic3.mp4';
+import cartoonVideo from '../assets/video.mp4';
+import magicVideo from '../assets/startmagic.mp4';
+import artStudioVideo from '../assets/art studio.mp4';
+import animationVideo from '../assets/cartoon.mp4';
 
-const PROMO_SLIDES = [
-    {
-        id: 0,
-        title: "SUPER COMIC BOOK 📚",
-        subtitle: 'Build Your World! Create graphic novels!',
-        gradient: "from-purple-600 via-pink-600 to-orange-600",
-        link: '/graphic-novel/builder',
-        decor: (
-            <>
-                <div className="absolute inset-0 opacity-30">
-                    <img src="/assets/graphic_novel_icon.png" alt="Graphic Novel" className="w-full h-full object-contain animate-pulse" />
-                </div>
-                <div className="absolute top-4 left-4 w-16 h-16 bg-yellow-400 rounded-full blur-xl animate-ping opacity-50" />
-                <div className="absolute bottom-4 right-4 w-20 h-20 bg-pink-400 rounded-full blur-2xl animate-pulse opacity-50" />
-            </>
-        )
-    },
-    {
-        id: 99,
-        title: "MAGIC LAB ✨",
-        subtitle: 'Cast spells with your apprentice!',
-        gradient: "from-purple-600 to-indigo-600",
-        link: '/magic-lab',
-        decor: (
-            <>
-                <div className="absolute top-0 right-0 w-full h-full bg-[url('https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM0YjM/3o7aD2saalBwwftBIY/giphy.gif')] opacity-20 bg-cover grayscale mix-blend-overlay" />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <Sparkles className="w-32 h-32 text-yellow-300 animate-pulse drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]" />
-                </div>
-            </>
-        )
-    },
-    {
-        id: 1,
-        title: "",
-        subtitle: '',
-        gradient: "",
-        decor: (
-            <img src="/promo_banner_v3.png" alt="Promo" className="w-full h-full object-contain" />
-        )
-    },
-    {
-        id: 2,
-        title: "Send a Magic Card! 💌",
-        subtitle: 'Turn photos into voice greetings!',
-        gradient: "from-pink-400 to-purple-300",
-        link: '/generate/greeting-card',
-        decor: (
-            <>
-                <div className="absolute top-10 right-10 w-20 h-20 bg-white/30 rounded-full blur-xl animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/10 to-transparent" />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                    <Sparkles className="w-32 h-32 text-white" />
-                </div>
-            </>
-        )
-    },
-    {
-        id: 3,
-        title: "Premium Membership",
-        subtitle: 'Unlock unlimited generations! 🚀',
-        gradient: "from-orange-400 to-red-400",
-        link: '/subscription',
-        decor: (
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30" />
-        )
-    }
-];
-
-const PromoBanner: React.FC = () => {
-    const [currentSlide, setCurrentSlide] = useState(0);
+// Component for Floating Feature Islands
+const FloatingBubble = ({ to, icon, videoSrc, label, className, delay }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; className?: string; delay: number }) => {
     const navigate = useNavigate();
+    return (
+        <motion.div
+            className={cn("flex flex-col items-center gap-2 md:gap-2.5 cursor-pointer z-30 group", className)}
+            initial={{ y: 0 }}
+            animate={{ y: [0, -10, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: delay }}
+            whileHover={{ scale: 1.1 }}
+            onClick={() => navigate(to)}
+        >
+            <div className="w-20 h-20 md:w-24 md:h-24 bg-white/80 backdrop-blur-md rounded-full shadow-xl border-4 border-white/50 flex items-center justify-center text-3xl md:text-4xl overflow-hidden relative group-hover:border-white transition-all">
+                {videoSrc ? (
+                    <video src={videoSrc} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-90" />
+                ) : (
+                    icon
+                )}
+            </div>
+            {/* Text Label Below Bubble */}
+            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-tight truncate block text-center w-full drop-shadow-md group-hover:text-indigo-200 transition-colors">
+                {label}
+            </span>
+        </motion.div>
+    );
+};
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % PROMO_SLIDES.length);
-        }, 5000);
-        return () => clearInterval(timer);
-    }, []);
+// Feature Preview Data
+const FEATURE_PREVIEWS: Record<string, { title: string; desc: string; video?: string; icon?: string }> = {
+    '/generate/audio': {
+        title: 'Magic Audio',
+        desc: 'Turn your drawing into a talking character with a magical voice!',
+        video: audioVideo
+    },
+    '/generate/comic': {
+        title: 'Comic Book',
+        desc: 'Step inside a superhero story! See how your photo becomes a comic.',
+        video: comicVideo
+    },
+    '/generate/picture': {
+        title: 'Picture Book',
+        desc: 'Write and illustrate your very own magical story book!',
+        video: bookVideo
+    },
+    '/generate/video': {
+        title: 'Animation',
+        desc: 'Bring your art to life! Watch your drawings move and groove.',
+        video: cartoonVideo
+    },
+    '/generate/greeting-card': {
+        title: 'Magic Card',
+        desc: 'Create a sparkling greeting card to send to someone special!',
+        video: greetingCardVideo
+    },
+    '/magic-art': {
+        title: 'Art Studio',
+        desc: 'Paint like a master! Use AI to turn your sketches into masterpieces.',
+        video: artStudioVideo
+    }
+};
 
-    const handleBannerClick = () => {
-        const link = (PROMO_SLIDES[currentSlide] as any).link;
-        if (link) navigate(link);
-    };
+// Component for Feature Preview Box
+const FeaturePreviewBox = ({ to, onClose }: { to: string; onClose: () => void }) => {
+    const navigate = useNavigate();
+    const preview = FEATURE_PREVIEWS[to];
+    if (!preview) return null;
 
     return (
-        <div className="px-4 mb-8 w-full max-w-4xl mx-auto flex-shrink-0 flex flex-col items-center">
-            {/* Slide Area - Taller */}
-            <div
-                onClick={handleBannerClick}
-                className="w-full h-[200px] relative overflow-hidden rounded-3xl shadow-xl group cursor-pointer border-4 border-white transition-all duration-500 bg-white hover:scale-[1.02]"
-            >
-                {PROMO_SLIDES.map((slide, index) => (
-                    <div
-                        key={slide.id}
-                        className={`absolute inset-0 bg-gradient-to-r ${slide.gradient} flex items-center justify-center transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                            }`}
-                    >
-                        {slide.decor}
-                        {slide.title && (
-                            <div className="text-center z-20 text-white transform group-hover:scale-105 transition-transform duration-500">
-                                <h2 className="text-4xl font-black drop-shadow-md mb-2">{slide.title}</h2>
-                                <p className="text-xl font-bold opacity-90">{slide.subtitle}</p>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleBannerClick();
-                                    }}
-                                    className="mt-6 px-8 py-3 bg-white text-slate-800 rounded-full font-black shadow-lg hover:bg-yellow-100 transition-colors cursor-pointer"
-                                >
-                                    Explore Now
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ))}
+        <motion.div
+            initial={{ opacity: 0, x: 20, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 20, scale: 0.9 }}
+            className="absolute right-[110%] top-0 w-64 md:w-72 bg-white rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden z-50 pointer-events-auto"
+        >
+            <div className="relative aspect-video w-full bg-slate-100">
+                {preview.video ? (
+                    <video src={preview.video} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl">{preview.icon}</div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             </div>
+            <div className="p-4 space-y-3">
+                <h3 className="text-lg font-black text-slate-800 leading-tight">{preview.title}</h3>
+                <p className="text-xs text-slate-500 font-bold leading-relaxed">{preview.desc}</p>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(to);
+                    }}
+                    className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-black text-sm shadow-lg hover:shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                    Let's Go! <Sparkles size={14} className="fill-white" />
+                </button>
+            </div>
+        </motion.div>
+    );
+};
 
-            {/* Dots Selector - User Choice */}
-            <div className="flex gap-2 mt-4">
-                {PROMO_SLIDES.map((_, index) => (
-                    <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-blue-500 w-8' : 'bg-slate-300 hover:bg-blue-300'
-                            }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                    />
-                ))}
-            </div>
+// Component for Dock Items
+const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; badge?: string; activePreview: string | null; onPreview: (to: string | null) => void }) => {
+    const navigate = useNavigate();
+    const isActive = activePreview === to;
+
+    return (
+        <div
+            className="relative flex items-center justify-end gap-3 group cursor-pointer py-1"
+            onMouseEnter={() => onPreview(to)}
+            onMouseLeave={() => onPreview(null)}
+            onClick={(e) => {
+                e.stopPropagation();
+                onPreview(to);
+            }}
+        >
+            {/* Text Label to the Left of Button */}
+            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block">
+                {label}
+            </span>
+
+            <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={cn(
+                    "w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center transition-all duration-300 border-2 overflow-hidden shadow-xl relative group-hover:border-white/60 shrink-0",
+                    isActive
+                        ? "bg-white border-indigo-400 scale-105 shadow-indigo-500/30"
+                        : "bg-white/20 backdrop-blur-md border-white/30"
+                )}
+            >
+                <div className="absolute inset-0 z-0 overflow-hidden rounded-inherit">
+                    {videoSrc ? (
+                        <video
+                            src={videoSrc}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className={cn("w-full h-full object-cover transition-opacity", isActive ? "opacity-100" : "opacity-80")}
+                        />
+                    ) : (
+                        <div className={cn("w-full h-full flex items-center justify-center transition-colors", isActive ? "text-indigo-600 bg-white" : "text-white")}>
+                            {icon}
+                        </div>
+                    )}
+                </div>
+
+                {badge && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-br from-yellow-400 to-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-bl-lg shadow-sm z-20">
+                        {badge}
+                    </div>
+                )}
+            </motion.div>
+
+
+            <AnimatePresence>
+                {isActive && (
+                    <FeaturePreviewBox to={to} onClose={() => onPreview(null)} />
+                )}
+            </AnimatePresence>
         </div>
     );
 };
 
 export const HomePage: React.FC = () => {
-    const { user } = useAuth();
     const navigate = useNavigate();
-    const [publicItems, setPublicItems] = useState<ImageRecord[]>([]);
-    const [filteredItems, setFilteredItems] = useState<ImageRecord[]>([]);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [activeFilter, setActiveFilter] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [activePreview, setActivePreview] = React.useState<string | null>(null);
+    const [isFullscreen, setIsFullscreen] = React.useState(false);
 
-    useEffect(() => {
-        // Fetch with timeout/mock fallback
-        const fetchPublicGallery = async () => {
-            try {
-                // Short timeout to fallback quickly if API down
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-                const res = await fetch('/api/images/public', { signal: controller.signal });
-                clearTimeout(timeoutId);
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        // Filter out failed items or invalid images
-                        const validData = data.filter((item: any) => item.imageUrl && item.status !== 'failed');
-                        if (validData.length > 0) {
-                            setPublicItems(validData);
-                            setFilteredItems(validData);
-                            setLoading(false);
-                            return;
-                        }
-                    }
-                }
-                // If API returns empty or fails, use mock data
-                throw new Error("API returned empty data");
-            } catch (error) {
-                console.warn("API unavailable or empty, using mock data", error);
-                setPublicItems(MOCK_PUBLIC_ITEMS);
-                setFilteredItems(MOCK_PUBLIC_ITEMS);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchPublicGallery();
-    }, []);
-
-    // Filter Logic
-    useEffect(() => {
-        if (!activeFilter) {
-            setFilteredItems(publicItems);
-        } else {
-            setFilteredItems(publicItems.filter(item => {
-                const t = (item.type || '').toLowerCase();
-
-                if (activeFilter === 'story') {
-                    return t === 'story' || t === 'audio-story';
-                }
-
-                if (activeFilter === 'comic') {
-                    return t === 'comic' || t === 'comic-strip' || t === 'picture-book' || t === 'book';
-                }
-
-                if (activeFilter === 'generated') {
-                    // Greeting Cards
-                    return t === 'greeting-card' || t === 'card' || t === 'generated';
-                }
-
-                if (activeFilter === 'animation') {
-                    return t === 'animation' || t === 'video';
-                }
-
-                return true;
-            }));
-        }
-    }, [activeFilter, publicItems]);
-
-    const handleToggleFavorite = async (id: string) => {
-        if (!user) {
-            alert("Please sign in to collect your favorite artworks!");
-            return;
-        }
-        // Optimistic update
-        setPublicItems(prev => prev.map(item => item.id === id ? { ...item, favorite: !item.favorite } : item));
-        try {
-            await fetch(`/api/images/${id}/toggle-favorite`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.uid })
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch((e) => {
+                console.warn(`Fullscreen error: ${e.message}`);
             });
-        } catch (error) { console.error(error); } // Revert if wanted, but simpler to ignore for prototype
+            setIsFullscreen(true);
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                setIsFullscreen(false);
+            }
+        }
     };
 
+    React.useEffect(() => {
+        const handle = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', handle);
+        return () => document.removeEventListener('fullscreenchange', handle);
+    }, []);
+
     return (
-        <div className="h-screen w-full flex flex-col relative overflow-hidden bg-[#FAFAFA]">
-            {/* 1. Global Background (Fixed) */}
-            <div
-                className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: "url('/main_bg.jpg')" }}
-            >
-                <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px]" />
+        <div
+            className="relative min-h-screen overflow-hidden bg-black pb-24 font-sans selection:bg-indigo-500/30"
+            onClick={() => setActivePreview(null)}
+        >
+            {/* 1. Background Layer */}
+            <div className="absolute inset-0 z-0 text-white flex items-center justify-center">
+                <video
+                    src={homepageBg}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                />
             </div>
 
-            {/* 2. Header (Relative) */}
-            <div className="z-20 relative">
-                <HeaderBar />
-            </div>
-
-            {/* 3. Main Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto z-10 relative w-full scrollbar-hide">
-                <div className="pb-24 pt-20">
-                    {/* Dev Links - Only visible in development */}
-                    {import.meta.env.DEV && (
-                        <div className="flex justify-center gap-4 mb-2 opacity-50 hover:opacity-100 transition-opacity">
-                            <button onClick={() => navigate('/splash')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Splash</button>
-                            <button onClick={() => navigate('/startup')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Startup</button>
-                        </div>
-                    )}
-
-                    {/* Logo Area (Scrolls) */}
-                    <motion.div variants={magicFloatVariants} initial="initial" animate="animate">
-                        <LogoArea />
-                    </motion.div>
-
-                    <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.1 }}>
-                        <PromoBanner />
-                    </motion.div>
-
-                    {/* Daily Check-in Map */}
-                    <div className="mb-8 px-4">
-                        <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.15 }}>
-                            <DailyTreasureMap />
+            {/* Fullscreen Toggle - Bottom Left */}
+            <div className="absolute bottom-6 left-6 z-50 flex flex-col items-start gap-3">
+                <AnimatePresence>
+                    {!isFullscreen && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                            animate={{ opacity: 1, y: [0, -8, 0], scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{
+                                y: { repeat: Infinity, duration: 2, ease: "easeInOut" },
+                                opacity: { duration: 0.3 }
+                            }}
+                            className="bg-indigo-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg shadow-indigo-500/20 whitespace-nowrap relative after:content-[''] after:absolute after:top-full after:left-4 after:border-8 after:border-transparent after:border-t-indigo-500"
+                        >
+                            Fullscreen for better magic! ✨
                         </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFullscreen();
+                    }}
+                    className="p-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl text-white hover:bg-white/30 transition-all shadow-xl group"
+                >
+                    {isFullscreen ? <Minimize size={24} className="group-hover:scale-110 transition-transform" /> : <Maximize size={24} className="group-hover:scale-110 transition-transform" />}
+                </button>
+            </div>
+
+            {/* 2. Center Stage (Magic Kat) */}
+            <div className="relative h-[80vh] flex flex-col items-center justify-start pt-[10vh] md:pt-[5vh]">
+
+                {/* Magic Kat (Apprentice) */}
+                <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="z-20 cursor-pointer relative"
+                    onClick={() => navigate('/magic-lab')}
+                >
+                    {/* The Cat Avatar */}
+                    <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/80 backdrop-blur-md rounded-full shadow-2xl border-4 border-white/50 flex items-center justify-center overflow-hidden">
+                        <video
+                            src={mentorVideo}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover opacity-90"
+                        />
                     </div>
 
-                    {/* Filter & Gallery Area - TRANSPARENT */}
-                    <div className="relative min-h-screen">
-
-                        {/* Sticky Filter Bar - TRANSPARENT */}
-                        <div className="sticky top-0 z-30 pt-2 pb-2 px-4">
-                            <FeatureButtonsRow activeFilter={activeFilter} onFilterChange={setActiveFilter} />
-                        </div>
-
-                        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
-
-
-                            {loading ? (
-                                <div className="flex justify-center py-20">
-                                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                </div>
-                            ) : (
-                                <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.2 }}>
-                                    <ContentGrid items={filteredItems} onItemClick={(item) => setSelectedId(item.id)} />
-                                </motion.div>
-                            )}
-                        </div>
+                    {/* Text Label Below Bubble - Matching FloatingBubble Style */}
+                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 group-hover:scale-105 transition-transform">
+                        <span className="text-[11px] md:text-[13px] text-white font-black uppercase tracking-[0.1em] whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                            Ask Magic Kat
+                        </span>
                     </div>
+                </motion.div>
+
+                {/* Feature Islands (Orbiting bubbles) */}
+                <div className="absolute inset-0 pointer-events-none max-w-6xl mx-auto w-full h-full">
+                    <FloatingBubble
+                        to="/creative-journey"
+                        icon="🎨"
+                        videoSrc={mentorVideo}
+                        label="Art Coach"
+                        className="pointer-events-auto absolute top-[15%] left-[5%] md:left-[20%]"
+                        delay={0}
+                    />
+                    <FloatingBubble
+                        to="/cartoon-book/builder"
+                        icon="📚"
+                        videoSrc={graphicNovelVideo}
+                        label="Cartoon Book"
+                        className="pointer-events-auto absolute top-[18%] right-[5%] md:right-[20%]"
+                        delay={1.5}
+                    />
+                    <FloatingBubble
+                        to="/magic-discovery"
+                        icon="🪞"
+                        videoSrc={magicVideo}
+                        label="Mirror"
+                        className="pointer-events-auto absolute top-[50%] right-[2%] md:right-[15%]"
+                        delay={0.5}
+                    />
+                    <FloatingBubble
+                        to="/make-cartoon"
+                        icon={<Film />}
+                        videoSrc={animationVideo}
+                        label="Animation"
+                        className="pointer-events-auto absolute top-[75%] right-[2%] md:right-[15%]"
+                        delay={1.0}
+                    />
+                    <FloatingBubble
+                        to="/jump-into-art"
+                        icon="🚪"
+                        videoSrc={magicVideo}
+                        label="Jump Into Art"
+                        className="pointer-events-auto absolute top-[60%] left-[5%] md:left-[20%]"
+                        delay={2.0}
+                    />
                 </div>
             </div>
 
-            <DetailModal
-                item={publicItems.find(i => i.id === selectedId) || null}
-                onClose={() => setSelectedId(null)}
-                onToggleFavorite={handleToggleFavorite}
-            />
+            {/* 3. Magic Dock (Vertical Right Side) */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 max-h-[90vh] flex items-center">
+                <div className="flex flex-col justify-center items-end gap-2 md:gap-3 overflow-visible scrollbar-hide py-6 px-3">
+                    <DockItem to="/generate/audio" icon={<Music size={24} />} videoSrc={audioVideo} label="Audio" badge="FREE" activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/generate/comic" icon={<MessageCircle size={24} />} videoSrc={comicVideo} label="Comic" activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/generate/picture" icon={<BookOpen size={24} />} videoSrc={bookVideo} label="Book" activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/generate/video" icon={<Video size={24} />} videoSrc={cartoonVideo} label="Video" activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/generate/greeting-card" icon={<Heart size={24} />} videoSrc={greetingCardVideo} label="Card" activePreview={activePreview} onPreview={setActivePreview} />
+                    <DockItem to="/magic-art" icon={<Palette size={24} />} videoSrc={artStudioVideo} label="Art Studio" activePreview={activePreview} onPreview={setActivePreview} />
+                </div>
+            </div>
 
-            {/* 4. Bottom Nav (Explicitly added since we are outside Layout) */}
-            <BottomNav />
-        </div >
+            <MagicNavBar />
+            <FeedbackWidget />
+        </div>
     );
 };

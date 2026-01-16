@@ -278,7 +278,7 @@ OUTPUT: STRICT JSON ONLY.
         // Use Doubao for reliable vision analysis
         const matchPrompt = `Analyze this child's drawing and find the 3 most similar famous artworks from this list:
 
-${MASTERPIECES.slice(0, 10).map(m => `- ${m.id}: "${m.title}" by ${m.artist} (${m.tags.join(', ')})`).join('\n')}
+${MASTERPIECES.slice(0, 30).map(m => `- ${m.id}: "${m.title}" by ${m.artist} (${m.tags.join(', ')})`).join('\n')}
 
 Return JSON array with exactly 3 matches:
 [

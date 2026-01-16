@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Upload, User as UserIcon, ChevronRight, Check, Sparkles, Baby, Palette } from 'lucide-react';
@@ -24,8 +24,9 @@ const INTERESTS_LIST = [
 ];
 
 const StartupPage: React.FC = () => {
-    const { user, updateProfile } = useAuth();
+    const { user, updateProfile, activeProfile } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Wizard State
     const [step, setStep] = useState(1);
@@ -52,18 +53,50 @@ const StartupPage: React.FC = () => {
     const femaleVidRef = useRef<HTMLVideoElement>(null);
 
     // Initial Data Load
+    // Initial Data Load & Auto-Skip Logic
     useEffect(() => {
-        if (user?.profileCompleted && step < 5) {
-            // navigate('/home'); 
-        }
+        const targetProfile = activeProfile || user;
 
-        if (step === 2 && user?.name && user.name !== 'New Artist' && user.name !== 'Apple User') {
-            setName(user.name);
+        if (targetProfile) {
+            // 1. Pre-fill State
+            if (targetProfile.name && targetProfile.name !== 'New Artist') {
+                setName(targetProfile.name);
+            }
+            // Use avatar/photoURL logic
+            const avatar = activeProfile ? activeProfile.avatar : user?.photoURL;
+            if (avatar && !photo) setPhoto(avatar);
+
+            if (targetProfile.age) setAge(targetProfile.age);
+            if (targetProfile.gender) setGender(targetProfile.gender as any);
+            if (targetProfile.interests) setInterests(targetProfile.interests);
+            if (targetProfile.language) setLanguage(targetProfile.language);
+
+            // 2. Intelligent Skipping
+            // Only skip if we are at step 1 (initial load) to avoid jumping around if user goes 'Back'
+            const isReset = new URLSearchParams(location.search).get('reset') === 'true';
+
+            if (step === 1 && !isReset) {
+                let nextStep = 1;
+
+                if (targetProfile.name) {
+                    nextStep = 2; // Have Name -> Go to Demographics
+
+                    if (targetProfile.age && targetProfile.gender) {
+                        nextStep = 3; // Have Demographics -> Go to Interests
+
+                        if (targetProfile.interests && targetProfile.interests.length > 0) {
+                            nextStep = 4; // Have Interests -> Go to Welcome
+                        }
+                    }
+                }
+
+                if (nextStep > 1) {
+                    console.log(`🚀 Startup Auto-Skip: Jumping to step ${nextStep}`);
+                    setStep(nextStep);
+                }
+            }
         }
-        if (step === 2 && user?.photoURL && !photo) {
-            setPhoto(user.photoURL);
-        }
-    }, [user, navigate, step]);
+    }, [user, activeProfile]); // Removed 'step' dependency to prevent loop, runs on profile load
 
     // Countdown Logic
     useEffect(() => {
@@ -249,7 +282,7 @@ const StartupPage: React.FC = () => {
                 interests,
                 profileCompleted: true,
                 uiMode: 'standard', // Defaulting to standard as UI picker is removed
-                points: (user.points || 0) + 100
+                points: (activeProfile ? (activeProfile.points || 0) : (user.points || 0)) + 100
             });
 
             // Redeem Invitation Code if provided
@@ -350,13 +383,45 @@ const StartupPage: React.FC = () => {
 
             <div className="mb-4">
                 <label className="text-[10px] font-bold text-slate-400 ml-2 mb-1 block">INVITATION CODE (OPTIONAL)</label>
-                <input
-                    type="text"
-                    value={invitationCode}
-                    onChange={e => setInvitationCode(e.target.value.toUpperCase())}
-                    className="w-full bg-white border-2 border-emerald-100 rounded-xl p-3 font-bold text-base outline-none focus:border-emerald-400 text-emerald-600"
-                    placeholder="Enter code for bonus points"
-                />
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={invitationCode}
+                        onChange={e => {
+                            setInvitationCode(e.target.value.toUpperCase());
+                            setError(null); // Clear error on type
+                        }}
+                        className="flex-1 bg-white border-2 border-emerald-100 rounded-xl p-3 font-bold text-base outline-none focus:border-emerald-400 text-emerald-600"
+                        placeholder="CODE"
+                    />
+                    <button
+                        onClick={async () => {
+                            if (!invitationCode) return;
+                            try {
+                                const res = await fetch('/api/referral/check', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ code: invitationCode })
+                                });
+                                const data = await res.json();
+
+                                if (data.valid) {
+                                    // Success
+                                    alert(data.message);
+                                    // Optional: Lock the input or show a green checkmark
+                                } else {
+                                    setError(data.message || "Invalid Code");
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                setError("Validation Error");
+                            }
+                        }}
+                        className="px-4 py-2 bg-emerald-50 text-emerald-600 font-bold rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors text-xs"
+                    >
+                        Apply
+                    </button>
+                </div>
             </div>
         </motion.div>
     );
@@ -372,7 +437,7 @@ const StartupPage: React.FC = () => {
                             onClick={() => setGender('Boy')}
                             className={`relative w-36 h-36 rounded-2xl overflow-hidden border-4 transition-all shadow-lg ${gender === 'Boy'
                                 ? 'border-indigo-500 scale-105 ring-4 ring-indigo-200'
-                                : 'border-white/50 opacity-80 hover:opacity-100 hover:scale-105'
+                                : 'border-white/50 opacity-80'
                                 }`}
                         >
                             <video
@@ -396,7 +461,7 @@ const StartupPage: React.FC = () => {
                             onClick={() => setGender('Girl')}
                             className={`relative w-36 h-36 rounded-2xl overflow-hidden border-4 transition-all shadow-lg ${gender === 'Girl'
                                 ? 'border-pink-500 scale-105 ring-4 ring-pink-200'
-                                : 'border-white/50 opacity-80 hover:opacity-100 hover:scale-105'
+                                : 'border-white/50 opacity-80'
                                 }`}
                         >
                             <video

@@ -69,7 +69,7 @@ router.post('/create', async (req, res) => {
         // Save Task to DB (to track costs/refunds if needed)
         // Note: provider might change, but we store the ID it gave us
         if (userId) {
-            await databaseService.saveVideoTask(result.taskId, userId, 80, prompt, { originalImageUrl: imageUrl, provider: result.provider });
+            await databaseService.saveVideoTask(result.taskId, userId, 80, prompt, { originalImageUrl: imageUrl, provider: result.provider }, req.body.profileId);
         }
 
         res.json({ id: result.taskId });
