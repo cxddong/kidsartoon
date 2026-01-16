@@ -1,0 +1,1 @@
+﻿src/routes/media.ts(2429,44): error TS2339: Property 'generateMagicArt' does not exist on type 'DoubaoService'.

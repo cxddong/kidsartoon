@@ -1,4 +1,4 @@
-import { ImageRecord } from "../../client/src/components/history/ImageModal";
+import { ImageRecord } from "./database.js";
 
 export interface NudgeResult {
     type: 'upsell' | 'milestone' | null;

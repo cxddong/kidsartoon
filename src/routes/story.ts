@@ -319,7 +319,7 @@ ${userProvidedPrompt}
             await databaseService.saveImageRecord(
                 userId,
                 storedImageUrl,
-                'audio-story', // STRICT TYPE: Audio Story
+                'story', // Content type for audio story
                 summary,
                 analysisObj,
                 req.body.profileId // Pass profileId
