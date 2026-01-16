@@ -18,18 +18,31 @@ import cartoonVideo from '../assets/video.mp4';
 import magicVideo from '../assets/startmagic.mp4';
 import artStudioVideo from '../assets/art studio.mp4';
 import animationVideo from '../assets/cartoon.mp4';
+import mirrorVideo from '../assets/mirror.mp4';
+import jumpIntoArtVideo from '../assets/jump into art.mp4';
 
 // Component for Floating Feature Islands
-const FloatingBubble = ({ to, icon, videoSrc, label, className, delay }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; className?: string; delay: number }) => {
+const FloatingBubble = ({ to, icon, videoSrc, label, className, delay, activePreview, onPreview, alignBottom }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; className?: string; delay: number; activePreview: string | null; onPreview: (to: string | null) => void; alignBottom?: boolean }) => {
     const navigate = useNavigate();
+    const isActive = activePreview === to;
+
     return (
         <motion.div
-            className={cn("flex flex-col items-center gap-2 md:gap-2.5 cursor-pointer z-30 group", className)}
+            className={cn(
+                "relative cursor-pointer group",
+                isActive ? "z-[60]" : "z-30",
+                className
+            )}
             initial={{ y: 0 }}
             animate={{ y: [0, -10, 0] }}
             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: delay }}
             whileHover={{ scale: 1.1 }}
-            onClick={() => navigate(to)}
+            onClick={(e) => {
+                e.stopPropagation();
+                navigate(to);
+            }}
+            onMouseEnter={() => onPreview(to)}
+            onMouseLeave={() => onPreview(null)}
         >
             <div className="w-20 h-20 md:w-24 md:h-24 bg-white/80 backdrop-blur-md rounded-full shadow-xl border-4 border-white/50 flex items-center justify-center text-3xl md:text-4xl overflow-hidden relative group-hover:border-white transition-all">
                 {videoSrc ? (
@@ -38,8 +51,16 @@ const FloatingBubble = ({ to, icon, videoSrc, label, className, delay }: { to: s
                     icon
                 )}
             </div>
-            {/* Text Label Below Bubble */}
-            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-tight truncate block text-center w-full drop-shadow-md group-hover:text-indigo-200 transition-colors">
+
+            {/* Preview Box */}
+            <AnimatePresence>
+                {isActive && (
+                    <FeaturePreviewBox to={to} onClose={() => onPreview(null)} showRight={true} alignBottom={alignBottom} />
+                )}
+            </AnimatePresence>
+
+            {/* Text Label Below Bubble - Mobile only */}
+            <span className="md:hidden text-[10px] text-white font-black uppercase tracking-tight truncate block text-center w-full drop-shadow-md group-hover:text-indigo-200 transition-colors mt-1">
                 {label}
             </span>
         </motion.div>
@@ -77,21 +98,50 @@ const FEATURE_PREVIEWS: Record<string, { title: string; desc: string; video?: st
         title: 'Art Studio',
         desc: 'Paint like a master! Use AI to turn your sketches into masterpieces.',
         video: artStudioVideo
+    },
+    '/creative-journey': {
+        title: 'Art Coach',
+        desc: 'Get personalized AI coaching to improve your art skills and discover your style!',
+        video: mentorVideo
+    },
+    '/cartoon-book/builder': {
+        title: 'Cartoon Book',
+        desc: 'Create your own cartoon graphic novel with amazing characters and stories!',
+        video: graphicNovelVideo
+    },
+    '/magic-discovery': {
+        title: 'Magic Mirror',
+        desc: 'Transform your photos with magical AI effects and filters!',
+        video: mirrorVideo
+    },
+    '/make-cartoon': {
+        title: 'Animation Studio',
+        desc: 'Turn your art into animated cartoons that move and dance!',
+        video: animationVideo
+    },
+    '/jump-into-art': {
+        title: 'Jump Into Art',
+        desc: 'Step into your artwork and become part of the masterpiece!',
+        video: jumpIntoArtVideo
     }
 };
 
 // Component for Feature Preview Box
-const FeaturePreviewBox = ({ to, onClose }: { to: string; onClose: () => void }) => {
+const FeaturePreviewBox = ({ to, onClose, alignBottom, showRight }: { to: string; onClose: () => void; alignBottom?: boolean; showRight?: boolean }) => {
     const navigate = useNavigate();
     const preview = FEATURE_PREVIEWS[to];
     if (!preview) return null;
 
     return (
         <motion.div
-            initial={{ opacity: 0, x: 20, scale: 0.9 }}
+            initial={{ opacity: 0, x: showRight ? -20 : 20, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 20, scale: 0.9 }}
-            className="absolute right-[110%] top-0 w-64 md:w-72 bg-white rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden z-50 pointer-events-auto"
+            exit={{ opacity: 0, x: showRight ? -20 : 20, scale: 0.9 }}
+            className={cn(
+                "absolute w-64 md:w-72 bg-white rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden z-50 pointer-events-auto",
+                showRight ? "left-[110%]" : "right-[110%]",
+                alignBottom ? "bottom-0" : "top-0"
+            )}
         >
             <div className="relative aspect-video w-full bg-slate-100">
                 {preview.video ? (
@@ -126,7 +176,7 @@ const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, 
     return (
         <div
             className={cn(
-                "relative flex justify-end gap-3 group cursor-pointer py-1",
+                "relative flex justify-end gap-3 group cursor-pointer",
                 alignBottom ? "items-end" : "items-start"
             )}
             onMouseEnter={() => onPreview(to)}
@@ -137,7 +187,7 @@ const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, 
             }}
         >
             {/* Text Label to the Left of Button */}
-            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block">
+            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block absolute right-[4.5rem] md:right-20 top-1/2 -translate-y-1/2">
                 {label}
             </span>
 
@@ -145,7 +195,7 @@ const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className={cn(
-                    "w-14 h-14 md:w-16 md:h-16 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center transition-all duration-300 border-2 overflow-hidden shadow-xl relative group-hover:border-white/60 shrink-0",
+                    "w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center transition-all duration-300 border-2 overflow-hidden shadow-xl relative group-hover:border-white/60 shrink-0",
                     isActive
                         ? "bg-white border-indigo-400 scale-105 shadow-indigo-500/30"
                         : "bg-white/20 backdrop-blur-md border-white/30"
@@ -178,7 +228,7 @@ const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, 
 
             <AnimatePresence>
                 {isActive && (
-                    <FeaturePreviewBox to={to} onClose={() => onPreview(null)} />
+                    <FeaturePreviewBox to={to} onClose={() => onPreview(null)} alignBottom={alignBottom} />
                 )}
             </AnimatePresence>
         </div>
@@ -260,13 +310,13 @@ export const HomePage: React.FC = () => {
                 </button>
             </div>
 
-            {/* 2. Center Stage (Magic Kat) */}
-            <div className="relative h-[80vh] flex flex-col items-center justify-start pt-[10vh] md:pt-[5vh]">
+            {/* 2. Center Stage (Magic Kat) - Hidden on mobile and desktop */}
+            <div className="relative h-[80vh] flex flex-col items-start md:items-center justify-start pt-[10vh] md:pt-[5vh] pl-6 md:pl-0">
 
-                {/* Magic Kat (Apprentice) */}
+                {/* Magic Kat (Apprentice) - Hidden */}
                 <motion.div
                     whileHover={{ scale: 1.05 }}
-                    className="z-20 cursor-pointer relative"
+                    className="hidden z-20 cursor-pointer relative"
                     onClick={() => navigate('/magic-lab')}
                 >
                     {/* The Cat Avatar */}
@@ -290,54 +340,67 @@ export const HomePage: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Feature Islands (Orbiting bubbles) */}
+                {/* Feature Islands (All on left side, staggered) */}
                 <div className="absolute inset-0 pointer-events-none max-w-6xl mx-auto w-full h-full">
+                    {/* All 5 bubbles on left side - staggered vertically */}
                     <FloatingBubble
                         to="/creative-journey"
                         icon="🎨"
                         videoSrc={mentorVideo}
                         label="Art Coach"
-                        className="pointer-events-auto absolute top-[15%] left-[5%] md:left-[20%]"
+                        className="pointer-events-auto absolute top-[8%] left-[5%] md:top-[12%] md:left-[20%]"
                         delay={0}
+                        activePreview={activePreview}
+                        onPreview={setActivePreview}
                     />
                     <FloatingBubble
                         to="/cartoon-book/builder"
                         icon="📚"
                         videoSrc={graphicNovelVideo}
                         label="Cartoon Book"
-                        className="pointer-events-auto absolute top-[18%] right-[5%] md:right-[20%]"
+                        className="pointer-events-auto absolute top-[26%] left-[5%] md:top-[35%] md:left-[15%]"
                         delay={1.5}
+                        activePreview={activePreview}
+                        onPreview={setActivePreview}
                     />
                     <FloatingBubble
                         to="/magic-discovery"
                         icon="🪞"
-                        videoSrc={magicVideo}
+                        videoSrc={mirrorVideo}
                         label="Mirror"
-                        className="pointer-events-auto absolute top-[50%] right-[2%] md:right-[15%]"
+                        className="pointer-events-auto absolute top-[44%] left-[5%] md:top-[55%] md:left-[10%]"
                         delay={0.5}
+                        activePreview={activePreview}
+                        onPreview={setActivePreview}
                     />
                     <FloatingBubble
                         to="/make-cartoon"
                         icon={<Film />}
                         videoSrc={animationVideo}
                         label="Animation"
-                        className="pointer-events-auto absolute top-[75%] right-[2%] md:right-[15%]"
+                        className="pointer-events-auto absolute top-[62%] left-[5%] md:top-[72%] md:left-[18%]"
                         delay={1.0}
+                        activePreview={activePreview}
+                        onPreview={setActivePreview}
+                        alignBottom
                     />
                     <FloatingBubble
                         to="/jump-into-art"
                         icon="🚪"
-                        videoSrc={magicVideo}
+                        videoSrc={jumpIntoArtVideo}
                         label="Jump Into Art"
-                        className="pointer-events-auto absolute top-[60%] left-[5%] md:left-[20%]"
+                        className="pointer-events-auto absolute top-[80%] left-[5%] md:top-[88%] md:left-[25%]"
                         delay={2.0}
+                        activePreview={activePreview}
+                        onPreview={setActivePreview}
+                        alignBottom
                     />
                 </div>
             </div>
 
             {/* 3. Magic Dock (Vertical Right Side) */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 max-h-[90vh] flex items-center">
-                <div className="flex flex-col justify-center items-end gap-2 md:gap-3 overflow-visible scrollbar-hide py-6 px-3">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 h-[80vh] max-h-[600px] flex items-center">
+                <div className="flex flex-col justify-evenly items-end h-full overflow-visible scrollbar-hide py-6 px-3">
                     <DockItem to="/generate/audio" icon={<Music size={24} />} videoSrc={audioVideo} label="Audio" badge="FREE" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/comic" icon={<MessageCircle size={24} />} videoSrc={comicVideo} label="Comic" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/picture" icon={<BookOpen size={24} />} videoSrc={bookVideo} label="Book" activePreview={activePreview} onPreview={setActivePreview} />
