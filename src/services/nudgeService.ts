@@ -1,4 +1,13 @@
-import { ImageRecord } from "./database.js";
+// Local type definition to avoid importing from client-side code
+interface ImageRecord {
+    id: string;
+    userId: string;
+    imageUrl: string;
+    type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards' | 'graphic-novel' | 'cartoon-book';
+    createdAt: string;
+    prompt?: string;
+    meta?: any;
+}
 
 export interface NudgeResult {
     type: 'upsell' | 'milestone' | null;
