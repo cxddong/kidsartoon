@@ -163,19 +163,33 @@ export const FeedbackWidget: React.FC = () => {
 
             {/* Floating Trigger Button */}
             {!isOpen && (
-                <motion.button
-                    layoutId="feedback-trigger"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setIsOpen(true)}
-                    className="group relative flex items-center gap-2 bg-white/90 backdrop-blur-md p-3 px-5 rounded-full shadow-xl border border-indigo-100 text-indigo-600 font-bold transition-all hover:bg-indigo-600 hover:text-white"
-                >
-                    <MessageCircle className="w-5 h-5" />
-                    <span>Feedback</span>
+                <div className="relative">
+                    <motion.button
+                        layoutId="feedback-trigger"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setIsOpen(true)}
+                        className="group relative flex items-center gap-2 bg-white/90 backdrop-blur-md p-3 px-5 rounded-full shadow-xl border border-indigo-100 text-indigo-600 font-bold transition-all hover:bg-indigo-600 hover:text-white"
+                    >
+                        <MessageCircle className="w-5 h-5" />
+                        <span>Feedback</span>
 
-                    {/* Pulsing indicator */}
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full border-2 border-white animate-bounce" />
-                </motion.button>
+                        {/* Pulsing indicator */}
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full border-2 border-white animate-bounce" />
+                    </motion.button>
+
+                    {/* Close button for the floating trigger */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsVisible(false);
+                        }}
+                        className="absolute -top-2 -left-2 w-6 h-6 bg-gray-600 hover:bg-gray-800 rounded-full flex items-center justify-center text-white shadow-lg transition-colors z-10"
+                        title="关闭反馈"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                </div>
             )}
         </div>
     );

@@ -125,7 +125,10 @@ const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, 
 
     return (
         <div
-            className="relative flex items-center justify-end gap-3 group cursor-pointer py-1"
+            className={cn(
+                "relative flex justify-end gap-3 group cursor-pointer py-1",
+                alignBottom ? "items-end" : "items-start"
+            )}
             onMouseEnter={() => onPreview(to)}
             onMouseLeave={() => onPreview(null)}
             onClick={(e) => {
@@ -134,10 +137,7 @@ const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, 
             }}
         >
             {/* Text Label to the Left of Button */}
-            <span className={cn(
-                "text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block",
-                alignBottom && "self-end"
-            )}>
+            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block">
                 {label}
             </span>
 
@@ -190,17 +190,20 @@ export const HomePage: React.FC = () => {
     const [activePreview, setActivePreview] = React.useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = React.useState(false);
 
-    const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch((e) => {
-                console.warn(`Fullscreen error: ${e.message}`);
-            });
-            setIsFullscreen(true);
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-                setIsFullscreen(false);
+    const toggleFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+                setIsFullscreen(true);
+            } else {
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                    setIsFullscreen(false);
+                }
             }
+        } catch (error: any) {
+            console.error('Fullscreen error:', error);
+            alert(`无法进入全屏模式: ${error.message}\n\n请尝试按 F11 键进入全屏。`);
         }
     };
 
