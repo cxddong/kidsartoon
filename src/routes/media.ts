@@ -2407,7 +2407,9 @@ router.get('/random-story', async (req, res) => {
 
 /**
  * Magic Art Studio Generation Endpoint
+ * TODO: Implement generateMagicArt method in DoubaoService
  */
+/*
 router.post('/magic-art', async (req, res) => {
   try {
     const { userId, image, mode, stylePreset, colorVibe, targetStyle, prompt } = req.body;
@@ -2463,6 +2465,7 @@ router.post('/magic-art', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+*/
 
 /**
  * Save Graphic Novel to User History
