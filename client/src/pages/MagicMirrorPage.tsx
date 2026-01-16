@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, Sparkles, Upload, ScanLine, Smartphone, Loader2, Paintbrush, ArrowLeft } from 'lucide-react';
 import { incrementUsage } from '../components/FeedbackWidget';
 import { cn } from '../lib/utils';
-import mirrorVideo from '../assets/mirror.mp4';
+import mirrorVideo from '../assets/mirror1.mp4';
 
 interface AnalysisResult {
     isSketch: boolean;
@@ -159,7 +159,7 @@ export const MagicMirrorPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0f0c29] text-white p-4 relative overflow-x-hidden">
+        <div className="min-h-screen bg-[#0f0c29] text-white p-4 relative overflow-hidden">
             {/* --- BACKGROUND LAYER --- */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
                 <video
@@ -196,7 +196,7 @@ export const MagicMirrorPage: React.FC = () => {
             <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                 {/* Left Column: Upload & Image */}
                 <div className="space-y-6">
-                    <div className="relative aspect-square backdrop-blur-sm bg-black/20 rounded-3xl overflow-hidden border-4 border-purple-500/30 shadow-2xl">
+                    <div className="relative w-full h-[450px] backdrop-blur-sm bg-black/20 rounded-3xl overflow-hidden border-4 border-purple-500/30 shadow-2xl">
                         {selectedImage ? (
                             <>
                                 <img src={selectedImage} alt="Uploaded" className="w-full h-full object-contain" />

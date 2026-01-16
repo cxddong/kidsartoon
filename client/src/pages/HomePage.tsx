@@ -19,6 +19,7 @@ import magicVideo from '../assets/startmagic.mp4';
 import artStudioVideo from '../assets/art studio.mp4';
 import animationVideo from '../assets/cartoon.mp4';
 import mirrorVideo from '../assets/mirror.mp4';
+import mirrorBtnVideo from '../assets/mirrorbtn.mp4';
 import jumpIntoArtVideo from '../assets/jump into art.mp4';
 
 // Component for Floating Feature Islands
@@ -112,7 +113,7 @@ const FEATURE_PREVIEWS: Record<string, { title: string; desc: string; video?: st
     '/magic-discovery': {
         title: 'Magic Mirror',
         desc: 'Transform your photos with magical AI effects and filters!',
-        video: mirrorVideo
+        video: mirrorBtnVideo
     },
     '/make-cartoon': {
         title: 'Animation Studio',
@@ -366,7 +367,7 @@ export const HomePage: React.FC = () => {
                     <FloatingBubble
                         to="/magic-discovery"
                         icon="🪞"
-                        videoSrc={mirrorVideo}
+                        videoSrc={mirrorBtnVideo}
                         label="Mirror"
                         className="pointer-events-auto absolute top-[44%] left-[5%] md:top-[55%] md:left-[10%]"
                         delay={0.5}
