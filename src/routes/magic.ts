@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { openAIService } from '../services/openai.js';
-import { contentService } from '../services/contentService';
-import { pointsService } from '../services/points';
-import { databaseService } from '../services/database';
-import { doubaoService } from '../services/doubao';
+import { contentService } from '../services/contentService.js';
+import { pointsService } from '../services/points.js';
+import { databaseService } from '../services/database.js';
+import { doubaoService } from '../services/doubao.js';
 
 
 export const magicRouter = Router();
