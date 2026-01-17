@@ -83,6 +83,7 @@ export const MagicMoviePage: React.FC = () => {
     const [isSoundOn, setIsSoundOn] = useState(true); // New: Sound Toggle
     const [videoPrompt, setVideoPrompt] = useState(''); // Additional Prompt / Scene Description
     const [isListening, setIsListening] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const recognitionRef = useRef<any>(null);
 
 
@@ -338,7 +339,9 @@ export const MagicMoviePage: React.FC = () => {
     };
 
     const handleDownload = async () => {
-        if (!resultData?.videoUrl) return;
+        if (!resultData?.videoUrl || isDownloading) return;
+
+        setIsDownloading(true);
 
         try {
             const response = await fetch(resultData.videoUrl);
@@ -357,6 +360,8 @@ export const MagicMoviePage: React.FC = () => {
             // Fallback: Use Backend Proxy for reliable download
             const filename = `magic-video-${Date.now()}.mp4`;
             window.location.href = `/api/media/download?url=${encodeURIComponent(resultData.videoUrl)}&filename=${filename}`;
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -957,13 +962,41 @@ export const MagicMoviePage: React.FC = () => {
                                         )}
 
                                         <div className="rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl flex justify-center bg-black/50 backdrop-blur-sm">
-                                            <PureVideoPlayer src={resultData?.videoUrl} className="w-full max-h-[70vh] aspect-square md:aspect-video" />
+                                            <video
+                                                src={resultData?.videoUrl}
+                                                controls
+                                                autoPlay
+                                                loop
+                                                playsInline
+                                                preload="auto"
+                                                className="w-full max-h-[70vh] aspect-square md:aspect-video bg-black"
+                                            >
+                                                <source src={resultData?.videoUrl} type="video/mp4" />
+                                                Your browser doesn't support video playback.
+                                            </video>
                                         </div>
                                         <div className="space-y-4">
                                             {/* Action Buttons */}
                                             <div className="flex flex-wrap gap-4 justify-center">
-                                                <button onClick={handleDownload} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-full hover:scale-105 transition-all flex items-center gap-2 shadow-lg">
-                                                    <Download className="w-5 h-5" /> Download
+                                                <button
+                                                    onClick={handleDownload}
+                                                    disabled={isDownloading}
+                                                    className={cn(
+                                                        "px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-full transition-all flex items-center gap-2 shadow-lg",
+                                                        isDownloading ? "opacity-70 cursor-wait" : "hover:scale-105"
+                                                    )}
+                                                >
+                                                    {isDownloading ? (
+                                                        <>
+                                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                                            Downloading...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Download className="w-5 h-5" />
+                                                            Download
+                                                        </>
+                                                    )}
                                                 </button>
                                                 <button onClick={handleRemix} className="px-6 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20 hover:scale-105 transition-all flex items-center gap-2">
                                                     <RefreshCw className="w-5 h-5" /> Try Again
