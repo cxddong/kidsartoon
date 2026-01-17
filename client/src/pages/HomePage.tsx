@@ -318,14 +318,14 @@ export const HomePage: React.FC = () => {
             {/* 2. Center Stage (Magic Kat) - Hidden on mobile and desktop */}
             <div className="relative h-[80vh] flex flex-col items-start md:items-center justify-start pt-[10vh] md:pt-[5vh] pl-6 md:pl-0">
 
-                {/* Ask Magic Kat Button - Hidden */}
+                {/* Ask Magic Kat Button - Visible */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.8, duration: 0.8 }}
                     whileHover={{ scale: 1.15 }}
                     whileTap={{ scale: 0.95 }}
-                    className="hidden absolute top-4 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
+                    className="block absolute top-4 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
                     onClick={() => navigate('/magic-lab')}
                 >
                     {/* The Cat Avatar */}
