@@ -22,7 +22,7 @@ export const MagicLabPage: React.FC = () => {
     const navigate = useNavigate();
     const [messages, setMessages] = useState<Message[]>([{
         role: 'assistant',
-        content: "Hi! I'm Magic Kat, your creative guide! 🐱✨ What would you like to make today?"
+        content: "Heyyy! *stretches and yawns* I'm Magic Kat, your SUPER creative guide! 🐱✨ I was just chasing a laser pointer but NOW I'm here to help YOU make something AMAZING! What do you wanna create??"
     }]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -128,7 +128,7 @@ export const MagicLabPage: React.FC = () => {
         }
 
         const recognition = new SpeechRecognition();
-        recognition.lang = 'zh-CN'; // Chinese, can auto-detect or set to 'en-US'
+        recognition.lang = 'en-US'; // English (US)
         recognition.continuous = false;
         recognition.interimResults = false;
 
@@ -289,7 +289,7 @@ export const MagicLabPage: React.FC = () => {
                             className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl flex items-center gap-2 hover:from-purple-700 hover:to-indigo-700"
                         >
                             <Sparkles className="w-5 h-5" />
-                            确认前往 ✓
+                            Let's Go! ✓
                         </motion.button>
                         <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -297,7 +297,7 @@ export const MagicLabPage: React.FC = () => {
                             onClick={cancelNavigation}
                             className="bg-white/20 backdrop-blur-md border-2 border-white/40 text-white px-6 py-4 rounded-full font-bold text-lg shadow-xl hover:bg-white/30"
                         >
-                            取消 ✗
+                            Not Now ✗
                         </motion.button>
                     </div>
                 </motion.div>
