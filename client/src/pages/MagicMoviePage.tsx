@@ -890,6 +890,7 @@ export const MagicMoviePage: React.FC = () => {
                                                     <p className="text-[10px] text-pink-400/70 mt-2">✨ Tap a suggestion or type your own!</p>
                                                 </div>
                                             </div>
+                                        )}
                                     </div>
                                 </div>
 
