@@ -29,6 +29,7 @@ export const MagicLabPage: React.FC = () => {
     const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
     const [isListening, setIsListening] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [pendingNavigation, setPendingNavigation] = useState<{ route: string } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const bgVideoRef = useVideoAutoplay<HTMLVideoElement>();
     const recognitionRef = useRef<any>(null);
@@ -80,11 +81,9 @@ export const MagicLabPage: React.FC = () => {
                 };
             }
 
-            // Handle navigation action
+            // Handle navigation action - don't navigate automatically, wait for confirmation
             if (data.action?.type === 'navigate') {
-                setTimeout(() => {
-                    navigate(data.action.route);
-                }, 1500); // Small delay so user can read the message
+                setPendingNavigation({ route: data.action.route });
             }
 
         } catch (error) {
@@ -157,6 +156,17 @@ export const MagicLabPage: React.FC = () => {
 
     const handleQuickAction = (prompt: string) => {
         sendMessage(prompt);
+    };
+
+    const confirmNavigation = () => {
+        if (pendingNavigation) {
+            navigate(pendingNavigation.route);
+            setPendingNavigation(null);
+        }
+    };
+
+    const cancelNavigation = () => {
+        setPendingNavigation(null);
     };
 
     return (
@@ -261,6 +271,36 @@ export const MagicLabPage: React.FC = () => {
                         ))}
                     </div>
                 </div>
+            )}
+
+            {/* Navigation Confirmation (show when AI suggests a page) */}
+            {pendingNavigation && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="fixed bottom-36 left-0 right-0 z-30 px-4"
+                >
+                    <div className="max-w-3xl mx-auto flex gap-3 justify-center">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={confirmNavigation}
+                            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl flex items-center gap-2 hover:from-purple-700 hover:to-indigo-700"
+                        >
+                            <Sparkles className="w-5 h-5" />
+                            确认前往 ✓
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={cancelNavigation}
+                            className="bg-white/20 backdrop-blur-md border-2 border-white/40 text-white px-6 py-4 rounded-full font-bold text-lg shadow-xl hover:bg-white/30"
+                        >
+                            取消 ✗
+                        </motion.button>
+                    </div>
+                </motion.div>
             )}
 
             {/* Input Bar */}
