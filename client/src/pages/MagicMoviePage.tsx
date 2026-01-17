@@ -826,9 +826,22 @@ export const MagicMoviePage: React.FC = () => {
                                                                 setTextInput(e.target.value.slice(0, maxChars));
                                                             }}
                                                             placeholder='e.g., "Hello everyone! I love you!"'
-                                                            className="w-full h-24 bg-slate-900/50 border-2 border-pink-500/30 rounded-xl p-3 pr-12 text-white placeholder-slate-500 resize-none focus:outline-none focus:border-pink-500/70 transition-colors text-sm"
+                                                            className="w-full h-24 bg-slate-900/50 border-2 border-pink-500/30 rounded-xl p-3 pr-24 pl-10 text-white placeholder-slate-500 resize-none focus:outline-none focus:border-pink-500/70 transition-colors text-sm"
                                                             maxLength={selectedSpell === 'cinema' ? 180 : selectedSpell === 'story' ? 100 : 40}
                                                         />
+
+                                                        {/* Clear Button */}
+                                                        {textInput && (
+                                                            <button
+                                                                onClick={() => setTextInput('')}
+                                                                className="absolute left-2 top-2 p-2 rounded-lg hover:bg-slate-700/50 transition-all group"
+                                                                title="Clear text"
+                                                            >
+                                                                <div className="text-lg text-slate-400 group-hover:text-white transition-colors">
+                                                                    ✕
+                                                                </div>
+                                                            </button>
+                                                        )}
 
                                                         {/* Mic Button */}
                                                         <button
