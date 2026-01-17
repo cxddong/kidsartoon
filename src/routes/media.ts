@@ -1945,7 +1945,43 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
       }
     }
 
-    // 3. Generate Script (4 Panels)
+    // 3. Extract Character Description (Vision Analysis for Consistency)
+    let charDesc = 'cute cartoon character';
+    let extractedStyle = 'comic book style';
+
+    if (base64Reference) {
+      try {
+        const analysisPrompt = `Identify and describe the main character and art style in this image. 
+        Return ONLY valid JSON: { 
+          "char_desc": "detailed character appearance including hair color, eye color, clothing, age, distinctive features",
+          "art_style": "illustration style (e.g., 3D render, cartoon, anime, realistic)" 
+        }`;
+
+        const visionResult = await geminiService.analyzeImage(base64Reference, analysisPrompt);
+        console.log(`[MagicComic-CharLock] Vision Raw Response: ${visionResult.substring(0, 200)}`);
+
+        // Extract JSON from response
+        let jsonStr = visionResult;
+        const jsonMatch = visionResult.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[0];
+        } else {
+          jsonStr = visionResult.replace(/```json|```/g, '').trim();
+        }
+
+        const parsed = JSON.parse(jsonStr);
+        charDesc = parsed.char_desc || charDesc;
+        extractedStyle = parsed.art_style || extractedStyle;
+
+        console.log(`[MagicComic-CharLock] Extracted Character: ${charDesc.substring(0, 50)}...`);
+        console.log(`[MagicComic-CharLock] Extracted Style: ${extractedStyle}`);
+      } catch (e) {
+        console.error('[MagicComic-CharLock] Vision analysis failed:', e);
+        console.log('[MagicComic-CharLock] Will proceed with default character description');
+      }
+    }
+
+    // 4. Generate Script (4 Panels)
     let panels = [];
     try {
       // Use Doubao to summarize/create 4 panels directly
@@ -1961,13 +1997,28 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
       ];
     }
 
-    // 4. Generate ONE Single Grid Image
+    // 4. Generate ONE Single Grid Image with Character Lock
     const panelDescriptions = panels.map((p, i) => `Panel ${i + 1}: ${p.sceneDescription}`).join(' | ');
-    // Important: Ask for "grid layout" explicitly
-    const gridPrompt = `A 4-panel comic strip (2x2 grid layout). ${userPrompt}.
-    Panels: ${panelDescriptions}.
-    Style: High quality comic book illustration, colorful, clear panel borders, consistent character design.
-    --no text bubbles, --no words`;
+
+    // Enhanced prompt with character consistency enforcement
+    const gridPrompt = `A 4-panel comic strip (2x2 grid layout) featuring THE SAME CHARACTER in ALL panels.
+
+    CRITICAL CHARACTER CONSISTENCY RULE:
+    Main Character (MUST be IDENTICAL in all 4 panels): ${charDesc}
+    The character's face, hair, clothing, and all features MUST look exactly the same in panel 1, 2, 3, and 4.
+    
+    Story: ${userPrompt}
+    Panel Scenes: ${panelDescriptions}
+    
+    Art Style: ${extractedStyle}, high quality comic book illustration, colorful, clear panel borders, professional comic layout
+    
+    CONSISTENCY REQUIREMENTS:
+    - Same character appearance in all panels
+    - Same clothing and accessories in all panels  
+    - Same facial features, hairstyle, and body proportions in all panels
+    - Only the background, pose, and action should change between panels
+    
+    --no text bubbles, --no words in the image`;
 
     console.log('[MagicComic] Generating Single Grid Image...');
     let gridImageUrl = '';
@@ -1995,7 +2046,9 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
     const tags = {
       storyType: req.body.storyType || 'Comic',
       visualStyle: req.body.visualStyle || 'Classic',
-      characters: ['Original'] // simplified
+      characters: ['Original'], // simplified
+      characterLock: charDesc, // Character consistency descriptor
+      artStyle: extractedStyle // Extracted art style
     };
 
     console.log(`[MagicComic] Saving Record. URL: ${gridImageUrl}`);
