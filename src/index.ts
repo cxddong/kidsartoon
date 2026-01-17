@@ -120,11 +120,13 @@ app.use('/api/picturebook', pictureBookRouter);
 app.use('/api/mentor', mentorRouter);
 app.use('/api/referral', referralRouter); // New Referral Router
 import { magicRouter } from './routes/magic.js'; // Magic Mirror
+import { magicLabRouter } from './routes/magicLab.js'; // Magic Lab AI Chat
 import reportsRouter from './routes/reports.js'; // Parent Reports
 
 // ... (API Routes)
 app.use('/api/cartoon-book', cartoonBookRouter); // Cartoon Book Routes
 app.use('/api/magic', magicRouter); // Magic Mirror Routes
+app.use('/api/magic-lab', magicLabRouter); // Magic Lab AI Chat Routes
 app.use('/api/reports', reportsRouter); // Reports Routes
 app.use('/api/jump-into-art', jumpIntoArtRouter); // Jump Into Art Routes
 app.use('/api/profile', profileRouter); // Profile/Studio Routes
