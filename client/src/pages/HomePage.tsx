@@ -266,7 +266,7 @@ export const HomePage: React.FC = () => {
 
     return (
         <div
-            className="relative min-h-screen overflow-hidden bg-black pb-24 font-sans selection:bg-indigo-500/30"
+            className="relative min-h-screen overflow-hidden bg-black pb-20 lg:pb-24 font-sans selection:bg-indigo-500/30"
             onClick={() => setActivePreview(null)}
         >
             {/* 1. Background Layer */}
@@ -314,10 +314,14 @@ export const HomePage: React.FC = () => {
             {/* 2. Center Stage (Magic Kat) - Hidden on mobile and desktop */}
             <div className="relative h-[80vh] flex flex-col items-start md:items-center justify-start pt-[10vh] md:pt-[5vh] pl-6 md:pl-0">
 
-                {/* Magic Kat (Apprentice) - Hidden */}
+                {/* Ask Magic Kat Button - Top on Mobile, Centered on Desktop */}
                 <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    className="hidden z-20 cursor-pointer relative"
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.8, duration: 0.8 }}
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="block lg:hidden absolute top-4 left-1/2 -translate-x-1/2  z-20 cursor-pointer"
                     onClick={() => navigate('/magic-lab')}
                 >
                     {/* The Cat Avatar */}
@@ -341,67 +345,69 @@ export const HomePage: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Feature Islands (All on left side, staggered) */}
-                <div className="absolute inset-0 pointer-events-none max-w-6xl mx-auto w-full h-full">
-                    {/* All 5 bubbles on left side - staggered vertically */}
-                    <FloatingBubble
-                        to="/creative-journey"
-                        icon="🎨"
-                        videoSrc={mentorVideo}
-                        label="Art Coach"
-                        className="pointer-events-auto absolute top-[8%] left-[5%] md:top-[12%] md:left-[20%]"
-                        delay={0}
-                        activePreview={activePreview}
-                        onPreview={setActivePreview}
-                    />
-                    <FloatingBubble
-                        to="/cartoon-book/builder"
-                        icon="📚"
-                        videoSrc={graphicNovelVideo}
-                        label="Cartoon Book"
-                        className="pointer-events-auto absolute top-[26%] left-[5%] md:top-[35%] md:left-[15%]"
-                        delay={1.5}
-                        activePreview={activePreview}
-                        onPreview={setActivePreview}
-                    />
-                    <FloatingBubble
-                        to="/magic-discovery"
-                        icon="🪞"
-                        videoSrc={mirrorBtnVideo}
-                        label="Mirror"
-                        className="pointer-events-auto absolute top-[44%] left-[5%] md:top-[55%] md:left-[10%]"
-                        delay={0.5}
-                        activePreview={activePreview}
-                        onPreview={setActivePreview}
-                    />
-                    <FloatingBubble
-                        to="/make-cartoon"
-                        icon={<Film />}
-                        videoSrc={animationVideo}
-                        label="Animation"
-                        className="pointer-events-auto absolute top-[62%] left-[5%] md:top-[72%] md:left-[18%]"
-                        delay={1.0}
-                        activePreview={activePreview}
-                        onPreview={setActivePreview}
-                        alignBottom
-                    />
-                    <FloatingBubble
-                        to="/jump-into-art"
-                        icon="🚪"
-                        videoSrc={jumpIntoArtVideo}
-                        label="Jump Into Art"
-                        className="pointer-events-auto absolute top-[80%] left-[5%] md:top-[88%] md:left-[25%]"
-                        delay={2.0}
-                        activePreview={activePreview}
-                        onPreview={setActivePreview}
-                        alignBottom
-                    />
+                {/* Feature Islands - Grid on Mobile, Absolute on Desktop */}
+                <div className="flex flex-col gap-4 p-4 pt-28 lg:pt-0 lg:absolute lg:inset-0 lg:pointer-events-none max-w-6xl mx-auto w-full lg:h-full">
+                    {/* Responsive Grid: 2x3 on mobile, absolute positioning on desktop */}
+                    <div className="grid grid-cols-2 gap-4 lg:contents">
+                        <FloatingBubble
+                            to="/creative-journey"
+                            icon="🎨"
+                            videoSrc={mentorVideo}
+                            label="Art Coach"
+                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[8%] lg:left-[5%] lg:md:top-[15%] lg:md:left-[10%]"
+                            delay={0}
+                            activePreview={activePreview}
+                            onPreview={setActivePreview}
+                        />
+                        <FloatingBubble
+                            to="/cartoon-book/builder"
+                            icon="📚"
+                            videoSrc={graphicNovelVideo}
+                            label="Cartoon Book"
+                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[26%] lg:left-[5%] lg:md:top-[35%] lg:md:left-[15%]"
+                            delay={1.5}
+                            activePreview={activePreview}
+                            onPreview={setActivePreview}
+                        />
+                        <FloatingBubble
+                            to="/magic-discovery"
+                            icon="🪞"
+                            videoSrc={mirrorBtnVideo}
+                            label="Mirror"
+                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[44%] lg:left-[5%] lg:md:top-[55%] lg:md:left-[10%]"
+                            delay={0.5}
+                            activePreview={activePreview}
+                            onPreview={setActivePreview}
+                        />
+                        <FloatingBubble
+                            to="/make-cartoon"
+                            icon={<Film />}
+                            videoSrc={animationVideo}
+                            label="Animation"
+                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[62%] lg:left-[5%] lg:md:top-[75%] lg:md:left-[15%]"
+                            delay={1}
+                            activePreview={activePreview}
+                            onPreview={setActivePreview}
+                            alignBottom={true}
+                        />
+                        <FloatingBubble
+                            to="/jump-into-art"
+                            icon="🖼️"
+                            videoSrc={jumpIntoArtVideo}
+                            label="Jump Into Art"
+                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[80%] lg:left-[5%] lg:md:top-[95%] lg:md:left-[10%]"
+                            delay={2}
+                            activePreview={activePreview}
+                            onPreview={setActivePreview}
+                            alignBottom={true}
+                        />
+                    </div>
                 </div>
             </div>
 
-            {/* 3. Magic Dock (Vertical Right Side) */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-40 h-[80vh] max-h-[600px] flex items-center">
-                <div className="flex flex-col justify-evenly items-end h-full overflow-visible scrollbar-hide py-6 px-3">
+            {/* Right-Side Dock - Horizontal on Mobile, Vertical on Desktop */}
+            <div className="fixed bottom-20 left-0 right-0 lg:right-4 lg:left-auto lg:top-1/2 lg:-translate-y-1/2 z-20 flex flex-row lg:flex-col justify-center lg:justify-evenly gap-3 overflow-x-auto lg:overflow-visible px-4 lg:px-0 pb-2 lg:pb-0">
+                <div className="flex flex-row lg:flex-col justify-evenly items-center lg:items-end h-full overflow-visible scrollbar-hide py-6 px-3">
                     <DockItem to="/generate/audio" icon={<Music size={24} />} videoSrc={audioVideo} label="Audio" badge="FREE" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/comic" icon={<MessageCircle size={24} />} videoSrc={comicVideo} label="Comic" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/picture" icon={<BookOpen size={24} />} videoSrc={bookVideo} label="Book" activePreview={activePreview} onPreview={setActivePreview} />
