@@ -890,46 +890,6 @@ export const MagicMoviePage: React.FC = () => {
                                                     <p className="text-[10px] text-pink-400/70 mt-2">✨ Tap a suggestion or type your own!</p>
                                                 </div>
                                             </div>
-                                        )}
-
-                                        {/* Scene Mood - Only show in Scene mode */}
-                                        {audioMode === 'scene' && (
-                                            <div className="mt-4">
-                                                <h4 className="text-white/70 text-xs font-bold uppercase tracking-wider mb-2">Scene Mood</h4>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    <button
-                                                        onClick={() => setSceneMood('happy')}
-                                                        className={cn(
-                                                            "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
-                                                            sceneMood === 'happy' ? "ring-2 ring-yellow-300 bg-yellow-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                        )}
-                                                    >
-                                                        <div className="text-xl">☀️</div>
-                                                        <div className="text-[10px] font-bold text-white mt-1">Happy</div>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setSceneMood('mysterious')}
-                                                        className={cn(
-                                                            "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
-                                                            sceneMood === 'mysterious' ? "ring-2 ring-purple-300 bg-purple-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                        )}
-                                                    >
-                                                        <div className="text-xl">🌙</div>
-                                                        <div className="text-[10px] font-bold text-white mt-1">Mystery</div>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setSceneMood('action')}
-                                                        className={cn(
-                                                            "flex flex-col items-center justify-center p-2 rounded-lg border transition-all",
-                                                            sceneMood === 'action' ? "ring-2 ring-red-300 bg-red-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                        )}
-                                                    >
-                                                        <div className="text-xl">⚡</div>
-                                                        <div className="text-[10px] font-bold text-white mt-1">Action</div>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
 
