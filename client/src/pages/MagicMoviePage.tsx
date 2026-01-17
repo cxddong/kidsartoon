@@ -252,8 +252,18 @@ export const MagicMoviePage: React.FC = () => {
                         clearInterval(pollInterval);
                         clearInterval(progressInterval);
                         setProgress(100);
+
+                        // FIX: Ensure videoUrl is a string, not an object
+                        let videoUrlString = statusData.videoUrl;
+                        if (typeof videoUrlString === 'object' && videoUrlString !== null) {
+                            // If it's an object, try to extract the URL string
+                            videoUrlString = videoUrlString.url || videoUrlString.videoUrl || String(videoUrlString);
+                            console.warn('[Video Fix] videoUrl was an object, extracted:', videoUrlString);
+                        }
+                        console.log('[Video] Final URL:', videoUrlString);
+
                         setResultData({
-                            videoUrl: statusData.videoUrl,
+                            videoUrl: videoUrlString,
                             params: {
                                 action,
                                 style,
@@ -978,6 +988,10 @@ export const MagicMoviePage: React.FC = () => {
                                                 </span>
                                             </div>
                                         )}
+
+                                        {/* Debug: Log resultData */}
+                                        {console.log('[MagicMovie] resultData:', resultData)}
+                                        {console.log('[MagicMovie] videoUrl:', resultData?.videoUrl)}
 
                                         <div className="rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl flex justify-center bg-black/50 backdrop-blur-sm">
                                             <video
