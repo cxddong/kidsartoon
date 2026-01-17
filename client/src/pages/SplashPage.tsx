@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -8,8 +8,16 @@ export const SplashPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [showButton, setShowButton] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
+        // Force video to play on mobile devices
+        if (videoRef.current) {
+            videoRef.current.play().catch(error => {
+                console.log('Autoplay was prevented:', error);
+            });
+        }
+
         // Show button after 3 seconds
         const buttonTimer = setTimeout(() => {
             setShowButton(true);
@@ -34,6 +42,7 @@ export const SplashPage: React.FC = () => {
         <div className="fixed inset-0 w-full h-full bg-black flex flex-col items-center justify-center overflow-hidden z-50">
             {/* Background Video - Restored */}
             <video
+                ref={videoRef}
                 src={splashVideo}
                 autoPlay
                 loop
