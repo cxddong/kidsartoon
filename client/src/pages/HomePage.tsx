@@ -410,8 +410,8 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Right-Side Dock - Horizontal on Mobile, Vertical on Desktop */}
-            <div className="fixed bottom-20 left-0 right-0 lg:right-4 lg:left-auto lg:top-1/2 lg:-translate-y-1/2 z-20 flex flex-row lg:flex-col justify-center lg:justify-evenly gap-3 overflow-x-auto lg:overflow-visible px-4 lg:px-0 pb-2 lg:pb-0">
-                <div className="flex flex-row lg:flex-col justify-evenly items-center lg:items-end h-full overflow-visible scrollbar-hide py-6 px-3">
+            <div className="fixed bottom-20 left-0 right-0 lg:right-6 lg:left-auto lg:top-1/2 lg:-translate-y-1/2 z-20 flex flex-row lg:flex-col justify-center lg:justify-center gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible px-4 lg:px-0 pb-2 lg:pb-0 lg:h-[70vh] lg:max-h-[600px]">
+                <div className="flex flex-row lg:flex-col justify-evenly items-center lg:items-end h-full overflow-visible scrollbar-hide lg:py-0">
                     <DockItem to="/generate/audio" icon={<Music size={24} />} videoSrc={audioVideo} label="Audio" badge="FREE" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/comic" icon={<MessageCircle size={24} />} videoSrc={comicVideo} label="Comic" activePreview={activePreview} onPreview={setActivePreview} />
                     <DockItem to="/generate/picture" icon={<BookOpen size={24} />} videoSrc={bookVideo} label="Book" activePreview={activePreview} onPreview={setActivePreview} />
