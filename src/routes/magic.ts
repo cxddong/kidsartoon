@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { openAIService } from '../services/openai';
+import { openAIService } from '../services/openai.js';
 import { contentService } from '../services/contentService';
 import { pointsService } from '../services/points';
 import { databaseService } from '../services/database';
