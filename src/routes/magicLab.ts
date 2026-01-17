@@ -105,8 +105,19 @@ magicLabRouter.post('/chat', async (req, res) => {
             { role: 'assistant', content: cleanReply }
         ];
 
+        // Generate voice for AI response
+        let audioUrl = null;
+        try {
+            const audioBuffer = await openAIService.generateSpeech(cleanReply);
+            audioUrl = `data:audio/mpeg;base64,${audioBuffer.toString('base64')}`;
+        } catch (error) {
+            console.error('TTS generation failed:', error);
+            // Continue without audio - text-only fallback
+        }
+
         res.json({
             reply: cleanReply,
+            audioUrl,
             action,
             conversationHistory: updatedHistory
         });

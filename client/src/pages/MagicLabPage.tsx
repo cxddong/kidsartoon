@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Mic, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { useVideoAutoplay } from '../hooks/useVideoAutoplay';
@@ -27,8 +27,11 @@ export const MagicLabPage: React.FC = () => {
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
+    const [isListening, setIsListening] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const bgVideoRef = useVideoAutoplay<HTMLVideoElement>();
+    const recognitionRef = useRef<any>(null);
 
     // Auto-scroll to latest message
     useEffect(() => {
@@ -64,6 +67,14 @@ export const MagicLabPage: React.FC = () => {
             setMessages(prev => [...prev, aiMessage]);
             setConversationHistory(data.conversationHistory);
 
+            // Play AI voice response if available
+            if (data.audioUrl) {
+                const audio = new Audio(data.audioUrl);
+                setIsPlaying(true);
+                audio.play().catch(err => console.error('Audio playback failed:', err));
+                audio.onended = () => setIsPlaying(false);
+            }
+
             // Handle navigation action
             if (data.action?.type === 'navigate') {
                 setTimeout(() => {
@@ -86,6 +97,50 @@ export const MagicLabPage: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         sendMessage(inputMessage);
+    };
+
+    const startVoiceInput = () => {
+        // Check browser support
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('语音识别在当前浏览器不支持 🙀');
+            return;
+        }
+
+        if (isListening) {
+            // Stop listening if already active
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-CN'; // Chinese, can auto-detect or set to 'en-US'
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            sendMessage(transcript);
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
     };
 
     const handleQuickAction = (prompt: string) => {
@@ -138,8 +193,8 @@ export const MagicLabPage: React.FC = () => {
                             >
                                 <div
                                     className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user'
-                                            ? 'bg-purple-600 text-white'
-                                            : 'bg-white/90 backdrop-blur-md text-gray-900 border-2 border-purple-200'
+                                        ? 'bg-purple-600 text-white'
+                                        : 'bg-white/90 backdrop-blur-md text-gray-900 border-2 border-purple-200'
                                         }`}
                                 >
                                     {msg.role === 'assistant' && (
@@ -199,26 +254,51 @@ export const MagicLabPage: React.FC = () => {
             {/* Input Bar */}
             <div className="fixed bottom-20 left-0 right-0 z-30 px-4">
                 <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            placeholder="Ask Magic Kat anything..."
-                            className="w-full bg-white/95 backdrop-blur-md border-2 border-purple-300 rounded-full py-4 px-6 pr-14 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-all font-medium shadow-xl"
-                            disabled={isLoading}
-                        />
+                    <div className="relative flex gap-2 items-center">
+                        {/* Microphone Button */}
                         <button
-                            type="submit"
-                            disabled={!inputMessage.trim() || isLoading}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-purple-600 text-white rounded-full hover:bg-purple-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            type="button"
+                            onClick={startVoiceInput}
+                            disabled={isLoading}
+                            className={`p-4 rounded-full transition-all shadow-xl ${isListening
+                                    ? 'bg-red-500 animate-pulse'
+                                    : 'bg-purple-600 hover:bg-purple-700'
+                                } text-white disabled:opacity-50`}
                         >
-                            {isLoading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <Send className="w-5 h-5" />
-                            )}
+                            <Mic className={`w-6 h-6 ${isListening ? 'animate-bounce' : ''}`} />
                         </button>
+
+                        {/* Text Input */}
+                        <div className="relative flex-1">
+                            <input
+                                type="text"
+                                value={inputMessage}
+                                onChange={(e) => setInputMessage(e.target.value)}
+                                placeholder={isListening ? "Listening..." : "Ask Magic Kat anything..."}
+                                className="w-full bg-white/95 backdrop-blur-md border-2 border-purple-300 rounded-full py-4 px-6 pr-14 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-all font-medium shadow-xl"
+                                disabled={isLoading || isListening}
+                            />
+
+                            {/* Send Button */}
+                            <button
+                                type="submit"
+                                disabled={!inputMessage.trim() || isLoading || isListening}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-purple-600 text-white rounded-full hover:bg-purple-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <Send className="w-5 h-5" />
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Speaker Indicator (when AI is speaking) */}
+                        {isPlaying && (
+                            <div className="p-4 bg-green-500 rounded-full shadow-xl">
+                                <Volume2 className="w-6 h-6 text-white animate-pulse" />
+                            </div>
+                        )}
                     </div>
                 </form>
             </div>
