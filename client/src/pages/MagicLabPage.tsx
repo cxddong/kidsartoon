@@ -32,6 +32,7 @@ export const MagicLabPage: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const bgVideoRef = useVideoAutoplay<HTMLVideoElement>();
     const recognitionRef = useRef<any>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // Auto-scroll to latest message
     useEffect(() => {
@@ -70,9 +71,13 @@ export const MagicLabPage: React.FC = () => {
             // Play AI voice response if available
             if (data.audioUrl) {
                 const audio = new Audio(data.audioUrl);
+                audioRef.current = audio; // Store reference
                 setIsPlaying(true);
                 audio.play().catch(err => console.error('Audio playback failed:', err));
-                audio.onended = () => setIsPlaying(false);
+                audio.onended = () => {
+                    setIsPlaying(false);
+                    audioRef.current = null; // Clear reference
+                };
             }
 
             // Handle navigation action
@@ -100,6 +105,13 @@ export const MagicLabPage: React.FC = () => {
     };
 
     const startVoiceInput = () => {
+        // Stop AI audio if playing
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+            setIsPlaying(false);
+        }
+
         // Check browser support
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -261,8 +273,8 @@ export const MagicLabPage: React.FC = () => {
                             onClick={startVoiceInput}
                             disabled={isLoading}
                             className={`p-4 rounded-full transition-all shadow-xl ${isListening
-                                    ? 'bg-red-500 animate-pulse'
-                                    : 'bg-purple-600 hover:bg-purple-700'
+                                ? 'bg-red-500 animate-pulse'
+                                : 'bg-purple-600 hover:bg-purple-700'
                                 } text-white disabled:opacity-50`}
                         >
                             <Mic className={`w-6 h-6 ${isListening ? 'animate-bounce' : ''}`} />
