@@ -968,7 +968,13 @@ router.get('/image-to-video/status/:taskId', async (req, res) => {
 
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error(`[API] /image-to-video/status/${req.params.taskId} error:`, error);
+    console.error('[API] Error stack:', error.stack);
+    console.error('[API] Error details:', { message: error.message, name: error.name });
+    res.status(500).json({
+      error: error.message || 'Status check failed',
+      taskId: req.params.taskId
+    });
   }
 });
 

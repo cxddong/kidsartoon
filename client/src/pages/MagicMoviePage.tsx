@@ -85,6 +85,7 @@ export const MagicMoviePage: React.FC = () => {
     const [isListening, setIsListening] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const recognitionRef = useRef<any>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
 
     const addTag = (tag: string) => { setVideoPrompt(prev => (tag + ' ' + prev).substring(0, (SPELLS as any)[selectedSpell].limit)); };
@@ -107,6 +108,18 @@ export const MagicMoviePage: React.FC = () => {
                 .catch(err => console.error("Failed to load remix image:", err));
         }
     }, [location.state]);
+
+    // Video element cleanup to prevent React errors
+    React.useEffect(() => {
+        return () => {
+            // Cleanup: pause and clear video on unmount to prevent AbortError
+            if (videoRef.current) {
+                videoRef.current.pause();
+                videoRef.current.src = '';
+                videoRef.current.load();
+            }
+        };
+    }, [resultData?.videoUrl]);
 
     // Cropper State
     const [cropImage, setCropImage] = useState<string | null>(null);
@@ -963,16 +976,20 @@ export const MagicMoviePage: React.FC = () => {
 
                                         <div className="rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl flex justify-center bg-black/50 backdrop-blur-sm">
                                             <video
+                                                key={resultData?.videoUrl}
                                                 src={resultData?.videoUrl}
                                                 controls
-                                                autoPlay
                                                 loop
                                                 playsInline
-                                                preload="auto"
+                                                preload="metadata"
                                                 className="w-full max-h-[70vh] aspect-square md:aspect-video bg-black"
+                                                onError={(e) => {
+                                                    console.error('Video load error:', e);
+                                                    // Fallback: user can still download via proxy
+                                                }}
                                             >
                                                 <source src={resultData?.videoUrl} type="video/mp4" />
-                                                Your browser doesn't support video playback.
+                                                Your browser doesn't support video playback. Click Download to view the video.
                                             </video>
                                         </div>
                                         <div className="space-y-4">
