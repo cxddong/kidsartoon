@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Loader2, Play, RefreshCw, Video, Upload, Wand2, Volume2, CloudUpload, Sparkles, MoveLeft, Mic, Pause, X, Download, Share2, Facebook, Twitter, Instagram, Music } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { AuthButton } from '../components/auth/AuthButton';
 import { useAuth } from '../context/AuthContext';
 import { MAGIC_ACTIONS, MAGIC_STYLES, MAGIC_EFFECTS, VIDEO_DURATION_OPTIONS } from '../components/builder/AnimationBuilderPanel';
@@ -1034,7 +1034,7 @@ export const MagicMoviePage: React.FC = () => {
                         />
                     )
                 }
-                <BottomNav />
+                <MagicNavBar />
             </div>
         </div >
     );

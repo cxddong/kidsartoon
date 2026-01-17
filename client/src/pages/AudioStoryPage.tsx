@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { playAudioWithPitchShift } from '../lib/audioUtils';
 import { VIPCover } from '../components/ui/VIPCover';
 import mic3Video from '../assets/mic3.mp4';
@@ -476,7 +476,7 @@ export const AudioStoryPage: React.FC = () => {
                     aspectRatio={1} // Or flexible? Story covers usually square or portrait. Let's start with Square.
                 />
             )}
-            <BottomNav />
+            <MagicNavBar />
         </div>
     );
 };

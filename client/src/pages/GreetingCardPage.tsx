@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import html2canvas from 'html2canvas';
 import { useAuth } from '../context/AuthContext';
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { UniversalVideoPlayer } from '../components/ui/UniversalVideoPlayer';
 import { BouncyButton } from '../components/ui/BouncyButton';
 import greetingCardBg from '../assets/greetingcard.mp4';
@@ -1639,7 +1639,7 @@ export const GreetingCardPage = () => {
                     </div>
                 )}
             </AnimatePresence>
-            <BottomNav />
+            <MagicNavBar />
         </div >
     );
 };

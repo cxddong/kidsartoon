@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Lock, Activity, Palette, Brain, Target, Sparkles, AlertCircle, CheckCircle, Smartphone, Zap, Clock, BookOpen, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { BottomNav } from '../components/BottomNav';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 
 // -- Charts Components (SVG) --
 
@@ -535,7 +535,7 @@ export const ParentDashboardPage: React.FC = () => {
                 </footer>
             </main>
 
-            <BottomNav />
+            <MagicNavBar />
         </div>
     );
 };
