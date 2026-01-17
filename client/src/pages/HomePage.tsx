@@ -141,7 +141,7 @@ const FeaturePreviewBox = ({ to, onClose, alignBottom, showRight }: { to: string
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: showRight ? -20 : 20, scale: 0.9 }}
             className={cn(
-                "absolute w-64 md:w-72 bg-white rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden z-50 pointer-events-auto",
+                "hidden lg:block absolute w-64 md:w-72 bg-white rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden z-50 pointer-events-auto",
                 showRight ? "left-[110%]" : "right-[110%]",
                 alignBottom ? "bottom-0" : "top-0"
             )}
