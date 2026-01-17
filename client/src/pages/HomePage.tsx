@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import { Globe, User, Home, Video, BookOpen, MessageCircle, Heart, Music, Sparkles, Palette, Film, Maximize, Minimize } from 'lucide-react';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { FeedbackWidget } from '../components/FeedbackWidget';
+import { useVideoAutoplay } from '../hooks/useVideoAutoplay';
 
 // Assets
 import homepageBg from '../assets/home (2).mp4';
@@ -26,6 +27,7 @@ import jumpIntoArtVideo from '../assets/jump into art.mp4';
 const FloatingBubble = ({ to, icon, videoSrc, label, className, delay, activePreview, onPreview, alignBottom }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; className?: string; delay: number; activePreview: string | null; onPreview: (to: string | null) => void; alignBottom?: boolean }) => {
     const navigate = useNavigate();
     const isActive = activePreview === to;
+    const videoRef = useVideoAutoplay<HTMLVideoElement>();
 
     return (
         <motion.div
@@ -47,7 +49,7 @@ const FloatingBubble = ({ to, icon, videoSrc, label, className, delay, activePre
         >
             <div className="w-20 h-20 md:w-24 md:h-24 bg-white/80 backdrop-blur-md rounded-full shadow-xl border-4 border-white/50 flex items-center justify-center text-3xl md:text-4xl overflow-hidden relative group-hover:border-white transition-all">
                 {videoSrc ? (
-                    <video src={videoSrc} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-90" />
+                    <video ref={videoRef} src={videoSrc} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-90" />
                 ) : (
                     icon
                 )}
@@ -240,6 +242,7 @@ export const HomePage: React.FC = () => {
     const navigate = useNavigate();
     const [activePreview, setActivePreview] = React.useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = React.useState(false);
+    const bgVideoRef = useVideoAutoplay<HTMLVideoElement>();
 
     const toggleFullscreen = async () => {
         try {
@@ -272,6 +275,7 @@ export const HomePage: React.FC = () => {
             {/* 1. Background Layer */}
             <div className="absolute inset-0 z-0 text-white flex items-center justify-center">
                 <video
+                    ref={bgVideoRef}
                     src={homepageBg}
                     className="absolute inset-0 w-full h-full object-cover"
                     autoPlay
