@@ -1,357 +1,258 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Star, Crown, Heart, Smile } from 'lucide-react';
+import { Check, X, Sparkles, Zap, Crown, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BackButton } from '../components/BackButton';
-import { MagicFireworks } from '../components/effects/MagicFireworks';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 
-const PLANS = [
-    {
-        id: 'free',
-        name: 'Free Explorer 🎈',
-        price: '0',
-        period: '/forever',
-        points: 50,
-        color: 'slate',
-        icon: <Smile className="w-6 h-6 text-slate-500" />,
-        headline: "Try the Magic",
-        features: [
-            '50 Magic Points (One-time)',
-            '3 Audio Stories / Day',
-            '(Standard Voice)',
-            'Read & Save Stories',
-            'Try Video & Art'
-        ],
-        valueDescription: (
-            <>
-                <div className="text-[10px] font-bold opacity-70 mb-1">Enough to make:</div>
-                <div className="text-xs leading-relaxed">
-                    🧩 <b>5</b> Comic Strips<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>1</b> Storybook (4-page)<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🖼️ <b>5</b> Images
-                </div>
-            </>
-        ),
-        highlight: false,
-        buttonText: 'Your Plan'
-    },
-    {
-        id: 'basic',
-        name: 'Basic',
-        price: '9.99',
-        period: '/mo',
-        points: 1000,
-        color: 'blue',
-        icon: <Heart className="w-6 h-6 text-blue-500" />,
-        headline: "Best for Comics & Stories",
-        features: [
-            '1,000 Magic Points / mo',
-            'Create Stories & Comics',
-            'Generate Pictures',
-            'Clone Voices',
-            'No Video Generation'
-        ],
-        valueDescription: (
-            <>
-                <div className="text-[10px] font-bold opacity-70 mb-1">Monthly creation power:</div>
-                <div className="text-xs leading-relaxed">
-                    🧩 <b>100</b> Comic Strips <span className="text-[9px] opacity-70">(3/day!)</span><br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>25</b> Storybooks <span className="text-[9px] opacity-70">(1/day)</span><br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🖼️ <b>100</b> Images
-                </div>
-            </>
-        ),
-        highlight: false,
-        buttonText: 'Start Basic'
-    },
-    {
-        id: 'pro',
-        name: 'Pro',
-        price: '19.99',
-        period: '/mo',
-        points: 2200,
-        color: 'purple',
-        icon: <Star className="w-6 h-6 text-white" />,
-        headline: "Video Magic & More",
-        features: [
-            '2,200 Magic Points / mo',
-            'Everything in Basic',
-            '✨ Video Animation Support',
-            'Priority Generation',
-            'Full Magic Experience'
-        ],
-        valueDescription: (
-            <>
-                <div className="text-[10px] font-bold opacity-70 mb-1">Monthly creation power:</div>
-                <div className="text-xs leading-relaxed">
-                    🎥 <b>36</b> Animation Videos<br />
-                    <span className="text-[9px] opacity-80 pl-4">Approx. 1 per day</span><br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🧩 <b>220</b> Comic Strips<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>55</b> Storybooks
-                </div>
-                <div className="mt-1.5 p-1.5 bg-white/10 rounded-md text-[9px] leading-tight opacity-90">
-                    <b>Mix & Match:</b> 10 Videos + 20 Storybooks + 80 Comics
-                </div>
-            </>
-        ),
-        highlight: true,
-        buttonText: 'Get Pro'
-    },
-    {
-        id: 'yearly_pro',
-        name: 'Yearly Pro',
-        price: '99.00',
-        period: '/yr',
-        points: 12000,
-        color: 'amber',
-        icon: <Crown className="w-6 h-6 text-amber-600" />,
-        headline: "For Schools & Power Users",
-        features: [
-            '12,000 Magic Points (Instant)',
-            'Include All Pro Features',
-            'Save $140/yr (58% OFF)',
-            'Best for Schools',
-            '1 Year Full Access'
-        ],
-        valueDescription: (
-            <>
-                <div className="text-[10px] font-bold opacity-70 mb-1">Yearly creation power:</div>
-                <div className="text-xs leading-relaxed">
-                    🎥 <b>200</b> Animation Videos<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 🧩 <b>1,200</b> Comic Strips<br />
-                    <span className="text-[9px] opacity-60 font-bold">OR</span> 📖 <b>300</b> Storybooks
-                </div>
-                <div className="mt-1.5 p-1.5 bg-yellow-100/50 rounded-md text-[9px] leading-tight text-amber-900 font-bold">
-                    Get all 12,000 points instantly!
-                </div>
-            </>
-        ),
-        highlight: false,
-        buttonText: 'Get Yearly'
-    }
-];
-
-const TOP_UPS = [
-    { title: 'Small Pouch', points: 450, price: '4.99', icon: '💰' },
-    { title: 'Treasure Chest', points: 1000, price: '9.99', icon: '💎', popular: true },
-    { title: 'Dragon Hoard', points: 2200, price: '19.99', icon: '🐲' }
-];
+// Feature Item Component
+const FeatureItem = ({ text, check = true, highlighted = false }: { text: string; check?: boolean; highlighted?: boolean }) => (
+    <li className="flex items-start">
+        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${check ? 'bg-green-100 text-green-500' : 'bg-gray-100 text-gray-400'}`}>
+            {check ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
+        </div>
+        <span className={`ml-3 text-sm ${highlighted ? 'font-bold text-gray-900' : 'text-gray-600'}`}>{text}</span>
+    </li>
+);
 
 export const SubscriptionPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [loading, setLoading] = useState<string | null>(null);
-    const [showFireworks, setShowFireworks] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
-    const handleSubscribe = async (planId: string) => {
-        if (!user) {
-            alert("Please login first!");
-            return;
-        }
-        setLoading(planId);
-        try {
-            const res = await fetch('/api/subscriptions/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.uid, planId, platform: 'web' })
-            });
-            const data = await res.json();
-            if (data.success) {
-                // Play Success Animation set
-                setShowFireworks(true);
+    const handleSubscribe = (planId: string) => {
+        setSelectedPlan(planId);
+        // TODO: Integrate with payment system
+        console.log(`Selected plan: ${planId}`);
+    };
 
-                // English Voice only
-                const text = "Yippee! Welcome to the club! You are now a Premium Member! Let's make some magic!";
-                if ('speechSynthesis' in window) {
-                    const utt = new SpeechSynthesisUtterance(text);
-                    window.speechSynthesis.speak(utt);
-                }
-
-                // Wait for animation then go back
-                setTimeout(() => {
-                    navigate('/generate');
-                }, 4000);
-            } else {
-                alert(`Failed: ${data.error}`);
-            }
-        } catch (e: any) {
-            alert(`Error: ${e.message}`);
-        } finally {
-            setLoading(null);
-        }
+    const handleTopUp = (amount: string) => {
+        // TODO: Integrate with payment system
+        console.log(`Top up: $${amount}`);
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
-            <MagicFireworks isVisible={showFireworks} onComplete={() => setShowFireworks(false)} />
-            {/* Background Decorations */}
-            <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-100 to-transparent pointer-events-none" />
+        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
+            {/* Back Button */}
+            <button
+                onClick={() => navigate(-1)}
+                className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+                <ArrowLeft size={20} />
+                <span className="font-medium">Back</span>
+            </button>
 
-            <header className="p-3 relative z-10 flex items-center shrink-0">
-                <BackButton onClick={() => navigate(-1)} />
-                <h2 className="ml-4 text-lg font-bold text-indigo-900/50">Membership</h2>
-            </header>
-
-            {/* Main Content Container - Flex Column to fill available space */}
-            <div className="flex-1 px-4 pb-4 relative z-10 flex flex-col justify-between min-h-0 overflow-hidden">
-
-                {/* Header Section - Modern */}
-                <div className="text-center mt-4 mb-8 shrink-0">
-                    <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-2 font-serif">
-                        Unlock Kids' Creativity ✨
-                    </h1>
-                    <p className="text-slate-600 text-xs md:text-sm font-medium max-w-xl mx-auto leading-relaxed">
-                        Become a member to get monthly <b>Magic Points</b> for stories, comics, and animation!
-                    </p>
-                </div>
-
-                {/* Section 1: Monthly Memberships */}
-                <div className="w-full max-w-7xl mx-auto px-2 md:px-4 mb-4">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                        <Crown className="w-5 h-5 text-indigo-500" />
-                        <h2 className="text-base font-black text-slate-700 uppercase tracking-widest">Monthly Memberships</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-1.5 md:gap-2 w-full items-end">
-                        {PLANS.slice(0, 4).map((plan) => (
-                            <motion.div
-                                key={plan.id}
-                                whileHover={{ y: -4 }}
-                                layout
-                                className={`
-                                    relative rounded-xl p-2 flex flex-col gap-1 shadow-sm transition-all
-                                    ${plan.highlight
-                                        ? 'bg-gradient-to-b from-purple-600 to-indigo-700 text-white z-10 ring-2 ring-purple-200 shadow-xl scale-105 origin-bottom'
-                                        : plan.id === 'yearly_pro'
-                                            ? 'bg-gradient-to-b from-amber-50 to-orange-50 text-slate-900 border border-amber-200'
-                                            : 'bg-white text-slate-800 border border-slate-100'
-                                    }
-                                `}
-                            >
-                                {(plan.highlight || plan.id === 'yearly_pro') && (
-                                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-bold shadow-sm flex items-center gap-1 whitespace-nowrap ${plan.id === 'yearly_pro' ? 'bg-red-500 text-white animate-pulse' : 'bg-gradient-to-r from-amber-400 to-orange-500 text-white'}`}>
-                                        <Star className="w-2.5 h-2.5 fill-current" />
-                                        {plan.id === 'yearly_pro' ? 'SAVE $140 / YR!' : 'MOST POPULAR'}
-                                    </div>
-                                )}
-
-                                {/* Plan Header */}
-                                <div className="flex items-center gap-2">
-                                    <div className={`p-1.5 rounded-lg shrink-0 ${plan.highlight ? 'bg-white/20' : `bg-${plan.color}-100`}`}>
-                                        {React.cloneElement(plan.icon as React.ReactElement<{ className?: string }>, { className: "w-4 h-4" })}
-                                    </div>
-                                    <div className="text-left min-w-0">
-                                        <h3 className="text-xs font-bold opacity-90 leading-none truncate">{plan.name}</h3>
-                                        <div className="flex items-baseline gap-0.5">
-                                            <span className="text-lg font-black leading-none">${plan.price}</span>
-                                            <span className={`text-[9px] font-bold ${plan.highlight ? 'text-white/70' : 'text-slate-400'}`}>{plan.period}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Headline */}
-                                <div className={`text-[9px] font-medium italic mb-0.5 ${plan.highlight ? 'text-white/80' : 'text-slate-500'}`}>
-                                    "{plan.headline}"
-                                </div>
-
-                                {/* Points Badge */}
-                                <div className={`px-2 py-1 rounded-lg ${plan.highlight ? 'bg-white/10' : 'bg-slate-50'}`}>
-                                    <div className="text-[8px] font-bold opacity-70 leading-none mb-0.5">YOU GET</div>
-                                    <div className={`text-sm font-black leading-none ${plan.highlight ? 'text-amber-300' : 'text-purple-600'}`}>
-                                        {plan.points.toLocaleString()} Pts
-                                    </div>
-                                </div>
-
-                                {/* Features List - Tighter */}
-                                <ul className="space-y-0.5 text-left my-0.5 flex-1">
-                                    {plan.features.map((feat, i) => (
-                                        <li key={i} className="flex items-center gap-1.5">
-                                            <div className={`shrink-0 p-0.5 rounded-full ${plan.highlight ? 'bg-green-400/20 text-green-300' : 'bg-green-100 text-green-600'}`}>
-                                                <Check className="w-2 h-2 stroke-[3]" />
-                                            </div>
-                                            <span className={`text-[9px] font-bold leading-tight truncate ${feat.includes('No') ? 'opacity-50 line-through decoration-auto' : ''}`}>
-                                                {feat}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                {/* Value Description - Compact */}
-                                <div className={`mt-1 mb-1 p-1.5 rounded-lg text-left ${plan.highlight ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
-                                    {plan.valueDescription}
-                                </div>
-
-                                {/* Button */}
-                                <button
-                                    onClick={() => handleSubscribe(plan.id)}
-                                    disabled={loading !== null}
-                                    className={`
-                                        w-full py-2 rounded-lg font-black text-[10px] transition-all
-                                        disabled:opacity-50
-                                        ${plan.highlight
-                                            ? 'bg-white text-purple-700 hover:bg-slate-100'
-                                            : plan.id === 'yearly_pro'
-                                                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:brightness-110 shadow-md'
-                                                : 'bg-slate-900 text-white hover:bg-slate-800'
-                                        }
-                                    `}
-                                >
-                                    {loading === plan.id ? '...' : plan.buttonText}
-                                </button>
-                            </motion.div>
-                        ))}
-                    </div>
-
-                </div>
-
-                {/* Section 2: Top-Up Packages (Distinct Area) */}
-                <div className="w-full bg-indigo-50/50 border-t border-indigo-100 py-8 mt-8">
-                    <div className="max-w-4xl mx-auto px-4">
-                        <div className="flex items-center justify-center gap-2 mb-6">
-                            <span className="text-2xl">💎</span>
-                            <div className="text-center">
-                                <h2 className="text-base font-black text-slate-800 uppercase tracking-widest">Need a Boost?</h2>
-                                <p className="text-xs font-bold text-slate-400">One-time refill packs. No subscription needed.</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            {TOP_UPS.map((pkg, i) => (
-                                <motion.div
-                                    key={i}
-                                    whileHover={{ y: -2 }}
-                                    className={`relative bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all ${pkg.popular ? 'ring-2 ring-yellow-400 bg-yellow-50/50' : ''}`}
-                                >
-                                    {pkg.popular && (
-                                        <div className="absolute -top-2 left-4 bg-yellow-400 text-[8px] font-bold px-2 py-0.5 rounded-full text-slate-900 shadow-sm">
-                                            BEST VALUE
-                                        </div>
-                                    )}
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-xl">
-                                            {pkg.icon}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xs font-bold text-slate-800">{pkg.title}</h3>
-                                            <p className="text-sm font-black text-purple-600">+{pkg.points.toLocaleString()} Pts</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleSubscribe('topup_' + pkg.points)} // Handler needs update to support topups
-                                        className="bg-slate-900 text-white text-[10px] font-bold px-4 py-2 rounded-lg hover:bg-slate-800"
-                                    >
-                                        ${pkg.price}
-                                    </button>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <p className="text-center text-slate-400 text-[8px] shrink-0 pb-1 pt-0">
-                    Auto-renewing. Cancel anytime. <b>Parental Control Enabled.</b>
-                </p>
+            {/* Header */}
+            <div className="text-center max-w-3xl mx-auto mb-16">
+                <motion.h1
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-4xl font-extrabold text-indigo-900 sm:text-5xl"
+                >
+                    Unlock Unlimited Imagination
+                </motion.h1>
+                <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mt-4 text-xl text-gray-500"
+                >
+                    Give your child the power to create movies, books, and art with Magic Kat.
+                </motion.p>
+                <p className="mt-2 text-sm text-gray-400">Cancel anytime. No hidden fees.</p>
             </div>
+
+            {/* Tiers Grid */}
+            <div className="max-w-7xl mx-auto grid gap-8 lg:grid-cols-3 lg:gap-8 items-start mb-12">
+
+                {/* FREE PLAN */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100 opacity-90 hover:opacity-100 transition"
+                >
+                    <h3 className="text-lg font-semibold text-gray-900">Explorer</h3>
+                    <p className="mt-4 flex items-baseline text-gray-900">
+                        <span className="text-4xl font-extrabold tracking-tight">$0</span>
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">One-time welcome gift</p>
+                    <div className="mt-6 bg-gray-50 rounded-xl p-4 text-center">
+                        <span className="block text-2xl font-bold text-gray-700">50 Pts</span>
+                        <span className="text-xs text-gray-500">Total</span>
+                    </div>
+                    <p className="mt-2 text-xs text-center text-gray-500">
+                        Just enough for a taste: <b>1 Storybook</b>
+                    </p>
+                    <ul className="mt-6 space-y-4">
+                        <FeatureItem text="Try Art & Stories" />
+                        <FeatureItem text="Standard Voice Only" />
+                        <FeatureItem text="No Video Generation" check={false} />
+                    </ul>
+                    <button
+                        onClick={() => handleSubscribe('free')}
+                        className="mt-8 block w-full bg-gray-100 border border-transparent rounded-xl py-3 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors"
+                    >
+                        Current Plan
+                    </button>
+                </motion.div>
+
+                {/* BASIC PLAN */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-white rounded-2xl shadow-md p-8 border-2 border-blue-100 relative"
+                >
+                    <h3 className="text-lg font-semibold text-blue-600">Basic Creator</h3>
+                    <p className="mt-4 flex items-baseline text-gray-900">
+                        <span className="text-4xl font-extrabold tracking-tight">$9.99</span>
+                        <span className="ml-1 text-xl font-semibold text-gray-500">/mo</span>
+                    </p>
+                    <div className="mt-6 bg-blue-50 rounded-xl p-4 text-center">
+                        <span className="block text-2xl font-bold text-blue-600">1,000 Pts</span>
+                        <span className="text-xs text-blue-400">Refilled Monthly</span>
+                    </div>
+                    <p className="mt-2 text-xs text-center text-blue-600 font-medium">
+                        Make <b>25 Storybooks</b> / month
+                    </p>
+                    <ul className="mt-6 space-y-4">
+                        <FeatureItem text="Create Stories & Comics" />
+                        <FeatureItem text="Clone Voices" />
+                        <FeatureItem text="No Video Generation" check={false} />
+                    </ul>
+                    <button
+                        onClick={() => handleSubscribe('basic')}
+                        className="mt-8 block w-full bg-blue-100 border border-transparent rounded-xl py-3 text-sm font-semibold text-blue-700 hover:bg-blue-200 transition-colors"
+                    >
+                        Start Basic
+                    </button>
+                </motion.div>
+
+                {/* PRO PLAN (Hero) */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-white rounded-2xl shadow-xl p-8 border-2 border-purple-500 relative transform md:-translate-y-4"
+                >
+                    <div className="absolute top-0 right-0 -mt-3 mr-3 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full text-xs font-bold text-white uppercase tracking-wide shadow-md">
+                        Most Popular
+                    </div>
+                    <h3 className="text-lg font-semibold text-purple-600 flex items-center gap-2">
+                        Pro Magician <Sparkles size={18} />
+                    </h3>
+                    <p className="mt-4 flex items-baseline text-gray-900">
+                        <span className="text-5xl font-extrabold tracking-tight">$19.99</span>
+                        <span className="ml-1 text-xl font-semibold text-gray-500">/mo</span>
+                    </p>
+                    <div className="mt-6 bg-purple-50 rounded-xl p-4 text-center border border-purple-100">
+                        <span className="block text-3xl font-bold text-purple-600">2,200 Pts</span>
+                        <span className="text-xs text-purple-400">Refilled Monthly</span>
+                    </div>
+                    <p className="mt-2 text-xs text-center text-purple-600 font-medium">
+                        🎥 Create <b>36 Videos</b> / month!
+                    </p>
+                    <ul className="mt-6 space-y-4">
+                        <FeatureItem text="Everything in Basic" />
+                        <FeatureItem text="Video Generation Access 🎬" highlighted />
+                        <FeatureItem text="Priority GPU Speed 🚀" highlighted />
+                    </ul>
+                    <motion.button
+                        onClick={() => handleSubscribe('pro')}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="mt-8 block w-full bg-purple-600 border border-transparent rounded-xl py-4 text-md font-bold text-white hover:bg-purple-700 shadow-lg hover:shadow-purple-500/30 transition-all"
+                    >
+                        Get Pro
+                    </motion.button>
+                </motion.div>
+
+            </div>
+
+            {/* YEARLY DEAL BANNER */}
+            <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="max-w-7xl mx-auto mb-20"
+            >
+                <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-3xl p-1 shadow-2xl">
+                    <div className="bg-white rounded-[20px] p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Crown className="text-yellow-500 fill-current" size={24} />
+                                <span className="text-sm font-bold text-orange-600 uppercase tracking-wider">Best for Schools & Power Users</span>
+                            </div>
+                            <h3 className="text-3xl font-bold text-gray-900">Yearly Ultimate Pass</h3>
+                            <p className="mt-2 text-gray-600">
+                                Get <span className="font-bold text-black">12,000 Points</span> instantly. That's enough for <b>200+ Videos</b>!
+                            </p>
+                        </div>
+                        <div className="text-center md:text-right">
+                            <p className="text-sm text-gray-500 line-through">$239.88</p>
+                            <p className="text-4xl font-black text-gray-900">$99.00<span className="text-lg text-gray-500 font-normal">/yr</span></p>
+                            <p className="text-green-600 font-bold text-sm">SAVE $140 (58% OFF)</p>
+                        </div>
+                        <motion.button
+                            onClick={() => handleSubscribe('yearly')}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-gray-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-black transition-transform shadow-xl"
+                        >
+                            Get Yearly Deal
+                        </motion.button>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* REFILL PACKS (Grid) */}
+            <div className="max-w-4xl mx-auto text-center">
+                <h3 className="text-xl font-bold text-gray-400 mb-8 uppercase tracking-widest">Or Top-up One Time</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+                    {/* Small Pouch */}
+                    <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                        onClick={() => handleTopUp('4.99')}
+                    >
+                        <div className="text-5xl mb-3">💰</div>
+                        <h4 className="font-bold text-gray-900">Small Pouch</h4>
+                        <p className="text-2xl font-extrabold text-gray-800 mt-2">450 Pts</p>
+                        <p className="text-sm text-gray-500 mt-1">$4.99</p>
+                    </motion.div>
+
+                    {/* Treasure Chest (Best Value) */}
+                    <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-white rounded-2xl p-6 border-2 border-blue-300 shadow-md hover:shadow-lg transition-all cursor-pointer relative"
+                        onClick={() => handleTopUp('9.99')}
+                    >
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">BEST VALUE</div>
+                        <div className="text-5xl mb-3">💎</div>
+                        <h4 className="font-bold text-gray-900">Treasure Chest</h4>
+                        <p className="text-2xl font-extrabold text-blue-600 mt-2">1,000 Pts</p>
+                        <p className="text-sm text-gray-500 mt-1">$9.99</p>
+                    </motion.div>
+
+                    {/* Dragon Hoard */}
+                    <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                        onClick={() => handleTopUp('19.99')}
+                    >
+                        <div className="text-5xl mb-3">🐲</div>
+                        <h4 className="font-bold text-gray-900">Dragon Hoard</h4>
+                        <p className="text-2xl font-extrabold text-gray-800 mt-2">2,200 Pts</p>
+                        <p className="text-sm text-gray-500 mt-1">$19.99</p>
+                    </motion.div>
+
+                </div>
+            </div>
+
+            {/* Navigation */}
+            <MagicNavBar />
         </div>
     );
 };
