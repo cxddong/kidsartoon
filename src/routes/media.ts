@@ -893,13 +893,21 @@ router.post('/image-to-video/task', (req, res, next) => {
     res.json({ taskId, usedModel: 'doubao-seedance-1-5-pro-251215', status: 'PENDING' });
 
   } catch (error: any) {
-    console.error('Video Task Start Error:', error);
+    console.error('[API] Video Task Start Error:', error);
+    console.error('[API] Error stack:', error.stack);
+    console.error('[API] Error details:', {
+      message: error.message,
+      name: error.name,
+      userId: req.body.userId,
+      action: req.body.action,
+      hasFile: !!req.file
+    });
     const uid = req.body.userId;
     // Refund
     if (uid && cost > 0) {
       await pointsService.grantPoints(uid, cost, 'refund_start_failed', 'Start failed');
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || 'Video task creation failed' });
   }
 });
 

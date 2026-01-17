@@ -550,13 +550,13 @@ export const MagicMoviePage: React.FC = () => {
                                 </motion.div>
                             </div>
 
-                            {/* STYLE & EFFECT ROW */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* STYLE & EFFECT - Stacked Rows */}
+                            <div className="space-y-6 max-w-2xl mx-auto">
 
-                                {/* LEFT: STYLE */}
-                                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm flex flex-col">
+                                {/* STYLE ROW */}
+                                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm">
                                     <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎨 Style</h3>
-                                    <div className="grid grid-cols-2 gap-1 w-full">
+                                    <div className="grid grid-cols-3 gap-2 w-full">
                                         {MAGIC_STYLES.map(sty => (
                                             <button
                                                 key={sty.id}
@@ -573,16 +573,12 @@ export const MagicMoviePage: React.FC = () => {
                                             </button>
                                         ))}
                                     </div>
-                                    <button className="w-full mt-auto py-3 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl text-[10px] sm:text-xs font-black text-white/30 uppercase tracking-widest hover:bg-white/10 transition-colors cursor-not-allowed flex items-center justify-center gap-2">
-                                        <span>More Incoming...</span>
-                                        <span className="grayscale opacity-50">🚀</span>
-                                    </button>
                                 </motion.div>
 
-                                {/* RIGHT: EFFECT */}
-                                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm flex flex-col">
+                                {/* EFFECT ROW */}
+                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm">
                                     <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">✨ Effect</h3>
-                                    <div className="grid grid-cols-2 gap-1 w-full">
+                                    <div className="grid grid-cols-3 gap-2 w-full">
                                         {MAGIC_EFFECTS.map(eff => (
                                             <button
                                                 key={eff.id}
@@ -599,10 +595,6 @@ export const MagicMoviePage: React.FC = () => {
                                             </button>
                                         ))}
                                     </div>
-                                    <button className="w-full mt-auto py-3 bg-white/5 border-2 border-dashed border-white/10 rounded-2xl text-[10px] sm:text-xs font-black text-white/30 uppercase tracking-widest hover:bg-white/10 transition-colors cursor-not-allowed flex items-center justify-center gap-2">
-                                        <span>More Incoming...</span>
-                                        <span className="grayscale opacity-50">🚀</span>
-                                    </button>
                                 </motion.div>
                             </div>
 
