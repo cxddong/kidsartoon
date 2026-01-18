@@ -17,6 +17,17 @@ interface HistoryThumbnailCardProps {
 const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onClick, viewMode = 'grid', isSelectionMode, isSelected, onToggle }) => {
     // Determine the best thumbnail URL
     const getThumbnailUrl = () => {
+        // Handle Animations (video content)
+        if (image.type === 'animation') {
+            // Try to get a thumbnail/poster first
+            if (image.meta?.thumbnailUrl) return image.meta.thumbnailUrl;
+            if (image.meta?.gridImageUrl) return image.meta.gridImageUrl;
+            if (image.meta?.originalImageUrl) return image.meta.originalImageUrl;
+            // Fallback: use video URL directly (browser will show first frame)
+            if (image.imageUrl && image.imageUrl.length > 5) return image.imageUrl;
+            return 'https://placehold.co/400x400/purple/white?text=Animation';
+        }
+
         // Special handlings for Audio Stories (where imageUrl is often .mp3)
         if (image.type === 'story') {
             if (image.meta?.originalImageUrl) return image.meta.originalImageUrl;
