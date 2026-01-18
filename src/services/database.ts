@@ -187,13 +187,21 @@ export class DatabaseService {
             const bucket = adminStorage.bucket();
             const file = bucket.file(filename);
 
+            // Generate download token for public URL access (bypasses CORS)
+            const downloadToken = uuidv4();
+
             await file.save(buffer, {
-                metadata: { contentType: mimeType },
+                metadata: {
+                    contentType: mimeType,
+                    metadata: {
+                        firebaseStorageDownloadTokens: downloadToken
+                    }
+                },
                 public: true // Make file public for legacy compatibility
             });
 
-            // Return public URL (assumes default bucket)
-            return `https://storage.googleapis.com/${bucket.name}/${filename}`;
+            // Return public URL with download token (accessible from browser without CORS issues)
+            return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filename)}?alt=media&token=${downloadToken}`;
         } catch (e) {
             console.error("Upload failed", e);
             throw e;
