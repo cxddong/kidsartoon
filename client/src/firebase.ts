@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
 import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
@@ -28,7 +28,16 @@ if (!firebaseConfig.apiKey) {
     // Mock to prevent immediate crash, app will fail gracefully later or show error
 } else {
     try {
-        app = initializeApp(firebaseConfig);
+        // Prevent duplicate initialization (HMR/hot reload issue)
+        const existingApps = getApps();
+        if (existingApps.length === 0) {
+            app = initializeApp(firebaseConfig);
+            console.log('[Firebase] Initialized new app');
+        } else {
+            app = existingApps[0];
+            console.log('[Firebase] Reusing existing app instance');
+        }
+
         authExports = getAuth(app);
         dbExports = initializeFirestore(app, { experimentalForceLongPolling: true });
         storageExports = getStorage(app);
