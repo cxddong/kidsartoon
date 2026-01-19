@@ -5,7 +5,7 @@ import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAPiovapSN9I5o56rJRrDwKiY-wWeHdY7I",
-    authDomain: "www.kidsartoon.com",
+    authDomain: "kat-antigravity.firebaseapp.com",  // Keep Firebase default for OAuth
     projectId: "kat-antigravity",
     storageBucket: "kat-antigravity.firebasestorage.app",
     messagingSenderId: "1045560094198",
