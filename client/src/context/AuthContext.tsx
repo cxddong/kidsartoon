@@ -218,10 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             console.log('🔐 Starting Google login with popup...');
 
-            // FORCE CONSENT PARAMETER RIGHT HERE
-            googleProvider.setCustomParameters({
-                prompt: 'consent'
-            });
+
 
             const result = await signInWithPopup(auth, googleProvider);
 
