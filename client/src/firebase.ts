@@ -43,7 +43,9 @@ if (!firebaseConfig.apiKey) {
         storageExports = getStorage(app);
         googleProviderExports = new GoogleAuthProvider();
         googleProviderExports.setCustomParameters({
-            prompt: 'consent'  // Force OAuth consent screen every time
+            prompt: 'consent',           // Force OAuth consent screen
+            access_type: 'offline',      // Request offline access
+            include_granted_scopes: 'false'  // Don't include previously granted scopes
         });
         appleProviderExports = new OAuthProvider('apple.com');
     } catch (e) {
