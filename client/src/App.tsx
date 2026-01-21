@@ -119,7 +119,7 @@ const AppRoutes = () => {
         <Route path="/animation" element={<MagicMoviePage />} />
         <Route path="/generate/audio" element={<AudioStoryPage />} />
         <Route path="/audio" element={<AudioStoryPage />} />
-        <Route path="/magic-lab" element={<MagicLabPage />} />
+        <Route path="/ask-magic-kat" element={<MagicLabPage />} />
         <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
         <Route path="/jump-into-art" element={<JumpIntoArtPage />} />
         <Route path="/magic-art" element={<MagicArtStudioPage />} />

@@ -26,7 +26,7 @@ export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="relative cursor-pointer group"
-            onClick={() => navigate('/magic-lab')}
+            onClick={() => navigate('/ask-magic-kat')}
         >
             {/* Breathing Aura */}
             <div className="absolute inset-0 rounded-full bg-indigo-500/30 blur-3xl animate-pulse group-hover:bg-purple-500/40 transition-colors" />
