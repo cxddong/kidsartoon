@@ -39,6 +39,8 @@ export const MagicArtClassPage: React.FC = () => {
     // --- Drawing Tools State ---
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
     const [brushColor, setBrushColor] = useState('#000000');
+    const [brushSize, setBrushSize] = useState(5); // Brush thickness
+    const [showColorPicker, setShowColorPicker] = useState(false); // Color picker modal
     const [permissionDenied, setPermissionDenied] = useState(false); // Microphone permission state
 
     // --- Helper: Play Ding Sound ---
@@ -423,9 +425,9 @@ export const MagicArtClassPage: React.FC = () => {
                     <ArrowLeft size={20} />
                 </button>
 
-                {/* AI ZONE (Top) - Centered and prominent */}
-                <div className="p-6 pt-16 bg-gradient-to-b from-indigo-100 to-white border-b-2 border-indigo-200 flex flex-col items-center gap-3">
-                    <div className="w-32 h-32 md:w-40 md:h-40 shrink-0">
+                {/* AI ZONE (Top) - Compact to prevent overflow */}
+                <div className="p-4 pt-16 bg-gradient-to-b from-indigo-100 to-white border-b-2 border-indigo-200 flex flex-col items-center">
+                    <div className="w-24 h-24 shrink-0">
                         <KatTutor
                             message={lesson.steps[currentStepIndex].tutorMessage}
                             position="static"
@@ -436,57 +438,112 @@ export const MagicArtClassPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* TOOLS SECTION - Organized in a grid */}
-                <div className="flex-1 p-6 overflow-y-auto">
-                    <h3 className="text-sm font-black text-indigo-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span className="text-xl">🎨</span> Drawing Tools
+                {/* TOOLS SECTION - Organized and Complete */}
+                <div className="flex-1 p-4 overflow-y-auto">
+                    <h3 className="text-xs font-black text-indigo-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="text-lg">🎨</span> Drawing Tools
                     </h3>
 
-                    {/* Tool Grid - 2 columns */}
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                        {/* Pen Tool */}
+                    {/* Tool Selection - Pen/Eraser */}
+                    <div className="grid grid-cols-2 gap-2 mb-4">
                         <button
-                            onClick={() => { setTool('pen'); setBrushColor('#000000'); }}
-                            className={`aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 ${tool === 'pen' ? 'ring-4 ring-indigo-400 scale-105' : ''}`}
+                            onClick={() => setTool('pen')}
+                            className={`p-3 bg-white rounded-xl shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-1 transition-all ${tool === 'pen' ? 'ring-2 ring-indigo-400 scale-105' : ''}`}
                         >
-                            <img src="/assets/icon_pencil_3d.png" alt="Pencil" className="w-12 h-12 object-contain drop-shadow" />
+                            <img src="/assets/icon_pencil_3d.png" alt="Pencil" className="w-10 h-10 object-contain" />
                             <span className="text-xs font-bold text-gray-700">Pencil</span>
                         </button>
 
-                        {/* Eraser Tool */}
                         <button
                             onClick={() => setTool('eraser')}
-                            className={`aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 ${tool === 'eraser' ? 'ring-4 ring-pink-400 scale-105' : ''}`}
+                            className={`p-3 bg-white rounded-xl shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-1 transition-all ${tool === 'eraser' ? 'ring-2 ring-pink-400 scale-105' : ''}`}
                         >
-                            <img src="/assets/icon_eraser_3d.png" alt="Eraser" className="w-12 h-12 object-contain drop-shadow" />
+                            <img src="/assets/icon_eraser_3d.png" alt="Eraser" className="w-10 h-10 object-contain" />
                             <span className="text-xs font-bold text-gray-700">Eraser</span>
                         </button>
+                    </div>
 
-                        {/* Color Palette */}
-                        <button
-                            onClick={() => setBrushColor(brushColor === '#000000' ? '#FF5733' : '#000000')}
-                            className="aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:rotate-12"
-                        >
-                            <img src="/assets/icon_palette_3d.png" alt="Palette" className="w-12 h-12 object-contain drop-shadow" />
-                            <span className="text-xs font-bold text-gray-700">Colors</span>
-                        </button>
+                    {/* Brush Size Slider */}
+                    <div className="mb-4 bg-white p-3 rounded-xl shadow-sm">
+                        <label className="text-xs font-bold text-gray-700 mb-2 block">Brush Size: {brushSize}px</label>
+                        <input
+                            type="range"
+                            min="1"
+                            max="20"
+                            value={brushSize}
+                            onChange={(e) => setBrushSize(Number(e.target.value))}
+                            className="w-full h-2 bg-gradient-to-r from-indigo-200 to-purple-300 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600"
+                        />
+                        <div className="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Thin</span>
+                            <span>Thick</span>
+                        </div>
+                    </div>
 
-                        {/* Undo */}
+                    {/* Color Picker */}
+                    <div className="mb-4">
+                        <label className="text-xs font-bold text-gray-700 mb-2 block">Color</label>
+                        <div className="bg-white p-3 rounded-xl shadow-sm">
+                            {/* Current Color Display */}
+                            <button
+                                onClick={() => setShowColorPicker(!showColorPicker)}
+                                className="w-full h-12 rounded-lg mb-3 border-2 border-gray-200 flex items-center justify-between px-3 hover:border-indigo-400 transition-colors"
+                                style={{ backgroundColor: brushColor }}
+                            >
+                                <span className="text-white text-xs font-bold drop-shadow-md" style={{ color: brushColor === '#FFFFFF' ? '#000' : '#fff' }}>
+                                    {brushColor.toUpperCase()}
+                                </span>
+                                <span className="text-xs font-bold text-white drop-shadow-md" style={{ color: brushColor === '#FFFFFF' ? '#000' : '#fff' }}>
+                                    {showColorPicker ? '▲' : '▼'}
+                                </span>
+                            </button>
+
+                            {/* Color Grid */}
+                            {showColorPicker && (
+                                <div className="grid grid-cols-6 gap-2">
+                                    {[
+                                        '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
+                                        '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#FFC0CB', '#A52A2A',
+                                        '#808080', '#C0C0C0', '#FFD700', '#90EE90', '#87CEEB', '#DDA0DD'
+                                    ].map(color => (
+                                        <button
+                                            key={color}
+                                            onClick={() => { setBrushColor(color); setShowColorPicker(false); }}
+                                            className={`w-8 h-8 rounded-lg border-2 hover:scale-110 transition-transform ${brushColor === color ? 'ring-2 ring-indigo-600 ring-offset-1' : 'border-gray-300'}`}
+                                            style={{ backgroundColor: color }}
+                                            title={color}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="grid grid-cols-2 gap-2 mb-4">
                         <button
                             onClick={() => canvasRef.current?.handleUndo()}
-                            className="aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:-rotate-45"
+                            className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-1 transition-all hover:scale-105"
                         >
-                            <img src="/assets/icon_undo_3d.png" alt="Undo" className="w-12 h-12 object-contain drop-shadow" />
+                            <img src="/assets/icon_undo_3d.png" alt="Undo" className="w-10 h-10 object-contain" />
                             <span className="text-xs font-bold text-gray-700">Undo</span>
+                        </button>
+
+                        <button
+                            onClick={() => canvasRef.current?.clear()}
+                            className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-1 transition-all hover:scale-105"
+                        >
+                            <span className="text-2xl">🗑️</span>
+                            <span className="text-xs font-bold text-gray-700">Clear</span>
                         </button>
                     </div>
 
                     {/* Done Button - Prominent */}
                     <button
                         onClick={() => { setIsFinished(true); confetti() }}
-                        className="w-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-black text-lg py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-3"
+                        className="w-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-black text-base py-3 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2"
                     >
-                        <img src="/assets/icon_done_3d.png" alt="Done" className="w-8 h-8 object-contain drop-shadow" />
+                        <img src="/assets/icon_done_3d.png" alt="Done" className="w-6 h-6 object-contain drop-shadow" />
                         <span>I'm Done!</span>
                     </button>
                 </div>
