@@ -33,6 +33,7 @@ export const MagicArtClassPage: React.FC = () => {
     const audioCtxRef = useRef<AudioContext | null>(null);
     const audioCacheRef = useRef<Map<string, ArrayBuffer>>(new Map());
     const hasGreeted = useRef(false);
+    const hasModeSelectGreeted = useRef(false); // For mode-select screen
 
     // --- Drawing Tools State ---
     const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
@@ -384,12 +385,8 @@ export const MagicArtClassPage: React.FC = () => {
                     position="static"
                     startSpeaking={true}
                     onSpeak={() => {
-                        if (!hasGreeted.current) { // Re-using ref or creating new one? 
-                            // Actually hasGreeted might be for the first screen. 
-                            // I should just let it speak or control it. 
-                            // The user complained about latency. 
-                            speakMinimax("Where do you want to draw? Screen or Paper?");
-                        } else {
+                        if (!hasModeSelectGreeted.current) {
+                            hasModeSelectGreeted.current = true;
                             speakMinimax("Where do you want to draw? Screen or Paper?");
                         }
                     }}
