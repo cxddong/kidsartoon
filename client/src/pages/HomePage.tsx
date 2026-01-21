@@ -76,7 +76,7 @@ export const HomePage: React.FC = () => {
                     <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'academy' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
                         {/* ICON REMOVED per user request */}
                         {/* <div className="text-6xl md:text-8xl drop-shadow-2xl filter">🏰</div> */}
-                        <div className="bg-white/12 backdrop-blur-[2px] rounded-xl px-2 py-1 border border-white/15">
+                        <div className="inline-block bg-white/12 backdrop-blur-[2px] rounded-xl px-1.5 py-0.5 border border-white/15">
                             <img
                                 src={magicAcademyTxtImg}
                                 alt="Magic Academy"
@@ -112,7 +112,7 @@ export const HomePage: React.FC = () => {
                     <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'studio' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
                         {/* ICON REMOVED per user request */}
                         {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🎡</div> */}
-                        <div className="bg-white/12 backdrop-blur-[2px] rounded-xl px-2 py-1 border border-white/15">
+                        <div className="inline-block bg-white/12 backdrop-blur-[2px] rounded-xl px-1.5 py-0.5 border border-white/15">
                             <img
                                 src={wonderStudioTxtImg}
                                 alt="Wonder Studio"
@@ -149,7 +149,7 @@ export const HomePage: React.FC = () => {
                     <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'valley' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
                         {/* ICON REMOVED per user request */}
                         {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🌳</div> */}
-                        <div className="bg-white/12 backdrop-blur-[2px] rounded-xl px-2 py-1 border border-white/15">
+                        <div className="inline-block bg-white/12 backdrop-blur-[2px] rounded-xl px-1.5 py-0.5 border border-white/15">
                             <img
                                 src={sunshineValleyTxtImg}
                                 alt="Sunshine Valley"
