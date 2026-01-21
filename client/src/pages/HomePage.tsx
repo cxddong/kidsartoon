@@ -76,11 +76,13 @@ export const HomePage: React.FC = () => {
                     <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'academy' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
                         {/* ICON REMOVED per user request */}
                         {/* <div className="text-6xl md:text-8xl drop-shadow-2xl filter">🏰</div> */}
-                        <img
-                            src={magicAcademyTxtImg}
-                            alt="Magic Academy"
-                            className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
-                        />
+                        <div className="bg-white/15 backdrop-blur-sm rounded-3xl p-4 border border-white/20">
+                            <img
+                                src={magicAcademyTxtImg}
+                                alt="Magic Academy"
+                                className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                            />
+                        </div>
                     </div>
                 </button>
 
@@ -110,11 +112,13 @@ export const HomePage: React.FC = () => {
                     <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'studio' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
                         {/* ICON REMOVED per user request */}
                         {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🎡</div> */}
-                        <img
-                            src={wonderStudioTxtImg}
-                            alt="Wonder Studio"
-                            className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
-                        />
+                        <div className="bg-white/15 backdrop-blur-sm rounded-3xl p-4 border border-white/20">
+                            <img
+                                src={wonderStudioTxtImg}
+                                alt="Wonder Studio"
+                                className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                            />
+                        </div>
                     </div>
                 </button>
 
@@ -145,11 +149,13 @@ export const HomePage: React.FC = () => {
                     <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'valley' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
                         {/* ICON REMOVED per user request */}
                         {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🌳</div> */}
-                        <img
-                            src={sunshineValleyTxtImg}
-                            alt="Sunshine Valley"
-                            className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
-                        />
+                        <div className="bg-white/15 backdrop-blur-sm rounded-3xl p-4 border border-white/20">
+                            <img
+                                src={sunshineValleyTxtImg}
+                                alt="Sunshine Valley"
+                                className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                            />
+                        </div>
                     </div>
                 </button>
 
