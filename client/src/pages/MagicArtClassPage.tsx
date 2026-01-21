@@ -144,7 +144,7 @@ export const MagicArtClassPage: React.FC = () => {
 
     // --- Speech Recognition ---
     useEffect(() => {
-        if (turnState !== 'user_listening') return;
+        if (turnState !== 'user_listening' || permissionDenied) return;
 
         console.log("🎤 [Speech] Setup initiated. TurnState:", turnState);
 
@@ -284,11 +284,14 @@ export const MagicArtClassPage: React.FC = () => {
                             Microphone blocked?
                         </p>
                         <button
-                            onClick={() => {
-                                alert("Please click the lock/settings icon in your browser address bar and allow Microphone access.");
-                                setPermissionDenied(false);
-                                setTurnState('processing');
-                                setTimeout(() => setTurnState('user_listening'), 100);
+                            onClick={async () => {
+                                try {
+                                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                                    setPermissionDenied(false);
+                                    setTurnState('user_listening');
+                                } catch (err) {
+                                    alert("Microphone is still blocked by the browser. \n\nPlease click the Lock 🔒 icon in the URL bar, find 'Microphone', and set it to 'Allow'. Then refresh the page.");
+                                }
                             }}
                             className="bg-red-100 px-6 py-3 rounded-full shadow-lg font-bold text-red-600 flex items-center gap-2 animate-bounce cursor-pointer hover:bg-red-200 border-2 border-red-200"
                         >
@@ -320,11 +323,20 @@ export const MagicArtClassPage: React.FC = () => {
                 <KatTutor
                     message="Where do you want to draw? Screen or Paper?"
                     emotion="thinking"
-                    position="center"
+                    position="static"
                     startSpeaking={true}
-                    onSpeak={() => speakMinimax("Where do you want to draw? Screen or Paper?")}
+                    onSpeak={() => {
+                        if (!hasGreeted.current) { // Re-using ref or creating new one? 
+                            // Actually hasGreeted might be for the first screen. 
+                            // I should just let it speak or control it. 
+                            // The user complained about latency. 
+                            speakMinimax("Where do you want to draw? Screen or Paper?");
+                        } else {
+                            speakMinimax("Where do you want to draw? Screen or Paper?");
+                        }
+                    }}
                 />
-                <div className="flex gap-4">
+                <div className="flex gap-4 mt-8 z-10">
                     <button onClick={() => setMode('digital')} className="px-8 py-4 bg-indigo-100 rounded-2xl font-bold text-indigo-700 text-xl hover:bg-indigo-200">
                         📱 On Screen
                     </button>
@@ -439,10 +451,14 @@ export const MagicArtClassPage: React.FC = () => {
                         className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
                     >
                         <button
-                            onClick={() => {
-                                setPermissionDenied(false);
-                                setTurnState('processing');
-                                setTimeout(() => setTurnState('user_listening'), 100);
+                            onClick={async () => {
+                                try {
+                                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                                    setPermissionDenied(false);
+                                    setTurnState('user_listening');
+                                } catch (err) {
+                                    alert("Microphone is still blocked by the browser. \n\nPlease click the Lock 🔒 icon in the URL bar, find 'Microphone', and set it to 'Allow'. Then refresh the page.");
+                                }
                             }}
                             className="bg-red-500 text-white px-8 py-4 rounded-full font-bold text-xl shadow-xl hover:bg-red-600 flex items-center gap-4 cursor-pointer"
                         >
