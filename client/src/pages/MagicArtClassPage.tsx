@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 
 import { ArtClassCanvas, type ArtClassCanvasRef } from '../components/art-class/ArtClassCanvas';
 import { KatTutor } from '../components/art-class/KatTutor';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { CAT_LESSON } from '../services/artClass';
 import { useAuth } from '../context/AuthContext';
 
@@ -24,6 +25,7 @@ export const MagicArtClassPage: React.FC = () => {
     // --- UX State ---
     const [mode, setMode] = useState<'selection' | 'mode-select' | 'digital' | 'real'>('selection');
     const [showExamples, setShowExamples] = useState(false);
+    const [audioInitialized, setAudioInitialized] = useState(false); // Track if audio is ready
 
     // --- Voice/Turn State ---
     const [turnState, setTurnState] = useState<TurnState>('ai_speaking');
@@ -252,6 +254,31 @@ export const MagicArtClassPage: React.FC = () => {
         setPermissionDenied(false); // Retry permission
     };
 
+    // --- Handler: Initialize Audio (User Gesture Required) ---
+    const handleStartClick = async () => {
+        try {
+            // Create/resume AudioContext
+            if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            if (audioCtxRef.current.state === 'suspended') {
+                await audioCtxRef.current.resume();
+            }
+            console.log("✅ AudioContext initialized");
+
+            setAudioInitialized(true);
+
+            // Play welcome message
+            if (!hasGreeted.current) {
+                hasGreeted.current = true;
+                speakMinimax("Welcome! What do you want to draw today?");
+            }
+        } catch (error) {
+            console.error("Failed to initialize audio:", error);
+            setAudioInitialized(true); // Still proceed, will fallback to speechSynthesis
+        }
+    };
+
     // --- Render: Rigid Split Layout (Anti-Blocking) ---
     // Only applies to Digital Mode for now, others can stay as full overlays or migrate later
 
@@ -260,69 +287,93 @@ export const MagicArtClassPage: React.FC = () => {
     if (mode === 'selection') {
         // Existing Selection UI but using new speakMinimax
         return (
-            <div className="fixed inset-0 bg-[url('/assets/paper_texture.jpg')] bg-cover flex flex-col items-center justify-center">
-                <KatTutor
-                    message="Welcome! What do you want to draw today?"
-                    emotion="happy"
-                    position="static"
-                    startSpeaking={true}
-                    onSpeak={() => {
-                        if (!hasGreeted.current) {
-                            hasGreeted.current = true;
-                            speakMinimax("Welcome! What do you want to draw today?");
-                        }
-                    }}
-                />
-
-                {/* Visual Listener */}
-                {turnState === 'user_listening' && !permissionDenied && (
-                    <div className="mt-8 animate-pulse text-indigo-600 font-bold text-xl flex flex-col items-center">
-                        <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-2">
-                            <Mic className="w-8 h-8 text-indigo-600" />
-                        </div>
-                        Listening...
-                    </div>
-                )}
-
-                {/* Permission Denied Recovery - Selection Mode */}
-                {turnState === 'user_listening' && permissionDenied && (
-                    <div className="mt-8 flex flex-col items-center gap-2 z-50">
-                        <p className="text-red-500 font-bold text-sm bg-white/80 px-2 rounded">
-                            Microphone blocked?
-                        </p>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await navigator.mediaDevices.getUserMedia({ audio: true });
-                                    setPermissionDenied(false);
-                                    setTurnState('user_listening');
-                                } catch (err) {
-                                    alert("Microphone is still blocked by the browser. \n\nPlease click the Lock 🔒 icon in the URL bar, find 'Microphone', and set it to 'Allow'. Then refresh the page.");
-                                }
-                            }}
-                            className="bg-red-100 px-6 py-3 rounded-full shadow-lg font-bold text-red-600 flex items-center gap-2 animate-bounce cursor-pointer hover:bg-red-200 border-2 border-red-200"
+            <>
+                <MagicNavBar />
+                <div className="fixed inset-0 bg-[url('/assets/paper_texture.jpg')] bg-cover flex flex-col items-center justify-center">
+                    {/* Start Button Overlay (Required for Audio) */}
+                    {!audioInitialized && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
                         >
-                            <MicOff className="w-5 h-5" />
-                            Enable Microphone
-                        </button>
-                    </div>
-                )}
+                            <motion.button
+                                onClick={handleStartClick}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="px-12 py-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-black text-3xl rounded-full shadow-2xl border-4 border-white flex items-center gap-4"
+                            >
+                                <Volume2 className="w-10 h-10" />
+                                <span>Start Art Class!</span>
+                            </motion.button>
+                        </motion.div>
+                    )}
 
-                <button onClick={() => setShowExamples(true)} className="mt-8 bg-white px-6 py-3 rounded-full shadow-lg font-bold text-gray-600 flex items-center gap-2">
-                    💡 Need Ideas?
-                </button>
+                    {audioInitialized && (
+                        <>
+                            <KatTutor
+                                message="Welcome! What do you want to draw today?"
+                                emotion="happy"
+                                position="static"
+                                startSpeaking={false}
+                                onSpeak={() => {
+                                    // Audio already played in handleStartClick
+                                }}
+                            />
 
-                {showExamples && (
-                    <div className="mt-8 flex gap-4 animate-in slide-in-from-bottom">
-                        <div onClick={() => { speakMinimax("A Cat!"); setTimeout(() => setMode('mode-select'), 1000) }} className="w-40 h-40 bg-white rounded-2xl shadow-xl flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition-transform">
-                            <span className="text-4xl">🐱</span>
-                            <span className="font-bold mt-2">Cat</span>
-                        </div>
-                    </div>
-                )}
-            </div>
+                            {/* Visual Listener */}
+                            {turnState === 'user_listening' && !permissionDenied && (
+                                <div className="mt-8 animate-pulse text-indigo-600 font-bold text-xl flex flex-col items-center">
+                                    <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-2">
+                                        <Mic className="w-8 h-8 text-indigo-600" />
+                                    </div>
+                                    Listening...
+                                </div>
+                            )}
+
+                            {/* Permission Denied Recovery - Selection Mode */}
+                            {turnState === 'user_listening' && permissionDenied && (
+                                <div className="mt-8 flex flex-col items-center gap-2 z-50">
+                                    <p className="text-red-500 font-bold text-sm bg-white/80 px-2 rounded">
+                                        Microphone blocked?
+                                    </p>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await navigator.mediaDevices.getUserMedia({ audio: true });
+                                                setPermissionDenied(false);
+                                                setTurnState('user_listening');
+                                            } catch (err) {
+                                                alert("Microphone is still blocked by the browser. \n\nPlease click the Lock 🔒 icon in the URL bar, find 'Microphone', and set it to 'Allow'. Then refresh the page.");
+                                            }
+                                        }}
+                                        className="bg-red-100 px-6 py-3 rounded-full shadow-lg font-bold text-red-600 flex items-center gap-2 animate-bounce cursor-pointer hover:bg-red-200 border-2 border-red-200"
+                                    >
+                                        <MicOff className="w-5 h-5" />
+                                        Enable Microphone
+                                    </button>
+                                </div>
+                            )}
+
+                            <button onClick={() => setShowExamples(true)} className="mt-8 bg-white px-6 py-3 rounded-full shadow-lg font-bold text-gray-600 flex items-center gap-2">
+                                💡 Need Ideas?
+                            </button>
+
+                            {showExamples && (
+                                <div className="mt-8 flex gap-4 animate-in slide-in-from-bottom">
+                                    <div onClick={() => { speakMinimax("A Cat!"); setTimeout(() => setMode('mode-select'), 1000) }} className="w-40 h-40 bg-white rounded-2xl shadow-xl flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition-transform">
+                                        <span className="text-4xl">🐱</span>
+                                        <span className="font-bold mt-2">Cat</span>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </>
         )
     }
+
 
     if (mode === 'mode-select') {
         return (
