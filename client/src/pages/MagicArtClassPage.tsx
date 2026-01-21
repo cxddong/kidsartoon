@@ -410,20 +410,25 @@ export const MagicArtClassPage: React.FC = () => {
 
     // --- MAIN RIGID SPLIT LAYOUT (Digital) ---
     return (
-        <div className="fixed inset-0 w-full h-full bg-slate-50 flex flex-col md:flex-row overflow-hidden">
+        <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col md:flex-row overflow-hidden">
 
-            {/* 1. SIDEBAR (AI + Tools) - Left on Desktop, Top/Bottom on Mobile */}
-            <div className="md:w-1/4 w-full md:h-full flex flex-col bg-white border-r border-slate-200 z-10 shrink-0 shadow-lg">
+            {/* 1. SIDEBAR (AI + Tools) - Clean and Organized */}
+            <div className="md:w-80 w-full md:h-full flex flex-col bg-white/80 backdrop-blur-lg border-r-2 border-indigo-200 z-10 shrink-0 shadow-xl">
 
-                {/* AI ZONE (Top) */}
-                <div className="p-4 bg-indigo-50 border-b border-indigo-100 flex-none flex flex-row md:flex-col items-center gap-4 text-center relative overflow-visible">
-                    <button onClick={() => navigate('/home')} className="absolute top-2 left-2 p-2 text-gray-400 hover:text-gray-800"><ArrowLeft size={20} /></button>
+                {/* Back Button - Floating */}
+                <button
+                    onClick={() => navigate('/home')}
+                    className="absolute top-4 left-4 p-2 bg-white rounded-full shadow-md text-indigo-600 hover:text-indigo-800 hover:scale-110 transition-all z-50"
+                >
+                    <ArrowLeft size={20} />
+                </button>
 
-                    {/* Kat Container - Static now */}
-                    <div className="w-24 h-24 md:w-40 md:h-40 shrink-0 relative">
+                {/* AI ZONE (Top) - Centered and prominent */}
+                <div className="p-6 pt-16 bg-gradient-to-b from-indigo-100 to-white border-b-2 border-indigo-200 flex flex-col items-center gap-3">
+                    <div className="w-32 h-32 md:w-40 md:h-40 shrink-0">
                         <KatTutor
                             message={lesson.steps[currentStepIndex].tutorMessage}
-                            position="static"  // New Static Prop
+                            position="static"
                             videoSrc={masterpieceVideo}
                             isSpeaking={isSpeaking}
                             onSpeak={() => speakMinimax(lesson.steps[currentStepIndex].tutorMessage)}
@@ -431,38 +436,58 @@ export const MagicArtClassPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* CONVERSATION LOG / STATUS (Middle) */}
-                <div className="flex-1 p-4 bg-slate-50 overflow-y-auto hidden md:block">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Conversation</h3>
-                    <div className="space-y-2">
-                        <div className="bg-white p-3 rounded-xl rounded-tl-none shadow-sm text-sm text-gray-600">
-                            {turnState === 'ai_speaking' ? "Speaking..." : turnState === 'user_listening' ? "Waiting for you..." : "Thinking..."}
-                        </div>
+                {/* TOOLS SECTION - Organized in a grid */}
+                <div className="flex-1 p-6 overflow-y-auto">
+                    <h3 className="text-sm font-black text-indigo-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span className="text-xl">🎨</span> Drawing Tools
+                    </h3>
+
+                    {/* Tool Grid - 2 columns */}
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                        {/* Pen Tool */}
+                        <button
+                            onClick={() => { setTool('pen'); setBrushColor('#000000'); }}
+                            className={`aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 ${tool === 'pen' ? 'ring-4 ring-indigo-400 scale-105' : ''}`}
+                        >
+                            <img src="/assets/icon_pencil_3d.png" alt="Pencil" className="w-12 h-12 object-contain drop-shadow" />
+                            <span className="text-xs font-bold text-gray-700">Pencil</span>
+                        </button>
+
+                        {/* Eraser Tool */}
+                        <button
+                            onClick={() => setTool('eraser')}
+                            className={`aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 ${tool === 'eraser' ? 'ring-4 ring-pink-400 scale-105' : ''}`}
+                        >
+                            <img src="/assets/icon_eraser_3d.png" alt="Eraser" className="w-12 h-12 object-contain drop-shadow" />
+                            <span className="text-xs font-bold text-gray-700">Eraser</span>
+                        </button>
+
+                        {/* Color Palette */}
+                        <button
+                            onClick={() => setBrushColor(brushColor === '#000000' ? '#FF5733' : '#000000')}
+                            className="aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:rotate-12"
+                        >
+                            <img src="/assets/icon_palette_3d.png" alt="Palette" className="w-12 h-12 object-contain drop-shadow" />
+                            <span className="text-xs font-bold text-gray-700">Colors</span>
+                        </button>
+
+                        {/* Undo */}
+                        <button
+                            onClick={() => canvasRef.current?.handleUndo()}
+                            className="aspect-square bg-white rounded-2xl shadow-md hover:shadow-xl flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:-rotate-45"
+                        >
+                            <img src="/assets/icon_undo_3d.png" alt="Undo" className="w-12 h-12 object-contain drop-shadow" />
+                            <span className="text-xs font-bold text-gray-700">Undo</span>
+                        </button>
                     </div>
-                </div>
 
-                {/* VISUAL TOOLS (Bottom) */}
-                <div className="p-4 bg-white border-t border-slate-200 flex flex-row md:flex-wrap justify-center gap-4 overflow-x-auto">
-                    <button onClick={() => { setTool('pen'); setBrushColor('#000000'); }} className={`w-16 h-16 transition-transform hover:scale-110 ${tool === 'pen' ? 'scale-110 ring-4 ring-indigo-200 rounded-xl' : ''}`}>
-                        <img src="/assets/icon_pencil_3d.png" alt="Pencil" className="w-full h-full object-contain drop-shadow" />
-                    </button>
-                    <button onClick={() => setTool('eraser')} className={`w-16 h-16 transition-transform hover:scale-110 ${tool === 'eraser' ? 'scale-110 ring-4 ring-pink-200 rounded-xl' : ''}`}>
-                        <img src="/assets/icon_eraser_3d.png" alt="Eraser" className="w-full h-full object-contain drop-shadow" />
-                    </button>
-
-                    {/* Palette (Popover trigger in real app, simple color switch for now) */}
-                    <button onClick={() => setBrushColor(brushColor === '#000000' ? '#FF5733' : '#000000')} className="w-16 h-16 transition-transform hover:scale-110 active:rotate-12">
-                        <img src="/assets/icon_palette_3d.png" alt="Palette" className="w-full h-full object-contain drop-shadow" />
-                    </button>
-
-                    <button onClick={() => canvasRef.current?.handleUndo()} className="w-16 h-16 transition-transform hover:scale-110 active:-rotate-45">
-                        <img src="/assets/icon_undo_3d.png" alt="Undo" className="w-full h-full object-contain drop-shadow" />
-                    </button>
-
-                    <div className="flex-1 md:w-full md:flex-none"></div> {/* Spacer */}
-
-                    <button onClick={() => { setIsFinished(true); confetti() }} className="w-16 h-16 transition-transform hover:scale-110 ml-auto md:ml-0">
-                        <img src="/assets/icon_done_3d.png" alt="Done" className="w-full h-full object-contain drop-shadow" />
+                    {/* Done Button - Prominent */}
+                    <button
+                        onClick={() => { setIsFinished(true); confetti() }}
+                        className="w-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-black text-lg py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-3"
+                    >
+                        <img src="/assets/icon_done_3d.png" alt="Done" className="w-8 h-8 object-contain drop-shadow" />
+                        <span>I'm Done!</span>
                     </button>
                 </div>
             </div>

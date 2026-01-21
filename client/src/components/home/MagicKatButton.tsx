@@ -31,8 +31,8 @@ export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
             {/* Breathing Aura */}
             <div className="absolute inset-0 rounded-full bg-indigo-500/30 blur-3xl animate-pulse group-hover:bg-purple-500/40 transition-colors" />
 
-            {/* Main Circle */}
-            <div className="relative w-40 h-40 md:w-56 md:h-56 bg-white/20 backdrop-blur-xl rounded-full shadow-[0_0_50px_rgba(139,92,246,0.3)] border-[6px] border-white/40 flex items-center justify-center overflow-hidden z-20 group-hover:border-white/60 transition-all">
+            {/* Main Circle - Responsive sizing */}
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 xl:w-56 xl:h-56 bg-white/20 backdrop-blur-xl rounded-full shadow-[0_0_50px_rgba(139,92,246,0.3)] border-[6px] border-white/40 flex items-center justify-center overflow-hidden z-20 group-hover:border-white/60 transition-all">
                 <video
                     ref={videoRef}
                     src={videoSrc}
@@ -45,11 +45,11 @@ export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
                 />
             </div>
 
-            {/* Label */}
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 z-30">
-                <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 flex items-center gap-2 shadow-lg group-hover:bg-white/20 transition-all">
-                    <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300 animate-spin-slow" />
-                    <span className="text-white font-bold text-sm tracking-widest uppercase text-shadow-sm whitespace-nowrap">
+            {/* Label - Responsive sizing */}
+            <div className="absolute -bottom-6 sm:-bottom-8 md:-bottom-10 left-1/2 -translate-x-1/2 z-30">
+                <div className="bg-white/10 backdrop-blur-md px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-full border border-white/20 flex items-center gap-1 sm:gap-2 shadow-lg group-hover:bg-white/20 transition-all">
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-300 fill-yellow-300 animate-spin-slow" />
+                    <span className="text-white font-bold text-xs sm:text-sm tracking-widest uppercase text-shadow-sm whitespace-nowrap">
                         Ask Magic Kat
                     </span>
                 </div>
