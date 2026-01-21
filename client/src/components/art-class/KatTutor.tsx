@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Volume2 } from 'lucide-react';
 
@@ -9,13 +9,25 @@ interface KatTutorProps {
     position?: 'left' | 'right' | 'center' | 'bottom-right' | 'static';
     className?: string;
     startSpeaking?: boolean;
+    videoSrc?: string; // Optional video source
+    isSpeaking?: boolean; // Control video playback
 }
 
-export const KatTutor: React.FC<KatTutorProps> = ({ message, emotion = 'happy', onSpeak, position = 'bottom-right', className = '', startSpeaking = false }) => {
+export const KatTutor: React.FC<KatTutorProps> = ({
+    message,
+    emotion = 'happy',
+    onSpeak,
+    position = 'bottom-right',
+    className = '',
+    startSpeaking = false,
+    videoSrc,
+    isSpeaking = false
+}) => {
     // Determine Kat Image based on emotion usually
     // detailed implementations would swap images
     const [displayedMessage, setDisplayedMessage] = useState(message);
     const [hasSpoken, setHasSpoken] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
         setDisplayedMessage(message);
@@ -28,6 +40,20 @@ export const KatTutor: React.FC<KatTutorProps> = ({ message, emotion = 'happy', 
             setHasSpoken(true);
         }
     }, [startSpeaking, onSpeak, hasSpoken]);
+
+    // Video playback control based on isSpeaking
+    useEffect(() => {
+        if (!videoRef.current || !videoSrc) return;
+
+        if (isSpeaking) {
+            // AI is speaking - play video
+            videoRef.current.play().catch(err => console.warn('Video play failed:', err));
+        } else {
+            // AI stopped speaking - pause and reset to start
+            videoRef.current.pause();
+            videoRef.current.currentTime = 0;
+        }
+    }, [isSpeaking, videoSrc]);
 
     const positionClasses = {
         'left': 'top-20 left-4 flex-row',
@@ -46,13 +72,24 @@ export const KatTutor: React.FC<KatTutorProps> = ({ message, emotion = 'happy', 
             >
                 {/* Kat Avatar */}
                 <div className="relative w-32 h-32 md:w-48 md:h-48 drop-shadow-2xl pointer-events-auto transition-transform hover:scale-110 cursor-pointer" onClick={onSpeak}>
-                    {/* Placeholder for Kat 3D Render - Using Emoji or existing asset for now */}
-                    <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full border-4 border-white flex items-center justify-center text-6xl shadow-inner">
-                        {emotion === 'happy' && '🦁'}
-                        {emotion === 'thinking' && '🤔'}
-                        {emotion === 'waiting' && '👀'}
-                        {emotion === 'celebrate' && '🎉'}
-                    </div>
+                    {videoSrc ? (
+                        <video
+                            ref={videoRef}
+                            src={videoSrc}
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full rounded-full object-cover border-4 border-white shadow-inner"
+                        />
+                    ) : (
+                        /* Placeholder for Kat 3D Render - Using Emoji or existing asset for now */
+                        <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full border-4 border-white flex items-center justify-center text-6xl shadow-inner">
+                            {emotion === 'happy' && '🦁'}
+                            {emotion === 'thinking' && '🤔'}
+                            {emotion === 'waiting' && '👀'}
+                            {emotion === 'celebrate' && '🎉'}
+                        </div>
+                    )}
                     <div className="absolute -bottom-2 -right-2 bg-yellow-400 p-2 rounded-full border-2 border-white">
                         <Volume2 className="w-6 h-6 text-yellow-900" />
                     </div>

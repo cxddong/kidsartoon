@@ -9,6 +9,7 @@ import { KatTutor } from '../components/art-class/KatTutor';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { CAT_LESSON } from '../services/artClass';
 import { useAuth } from '../context/AuthContext';
+import masterpieceVideo from '../assets/masterpiece.mp4';
 
 // Turn-Taking State Machine for Kid-Friendly Voice Interaction
 type TurnState = 'ai_speaking' | 'transition' | 'user_listening' | 'processing';
@@ -317,6 +318,8 @@ export const MagicArtClassPage: React.FC = () => {
                                 emotion="happy"
                                 position="static"
                                 startSpeaking={false}
+                                videoSrc={masterpieceVideo}
+                                isSpeaking={isSpeaking}
                                 onSpeak={() => {
                                     // Audio already played in handleStartClick
                                 }}
@@ -384,6 +387,8 @@ export const MagicArtClassPage: React.FC = () => {
                     emotion="thinking"
                     position="static"
                     startSpeaking={true}
+                    videoSrc={masterpieceVideo}
+                    isSpeaking={isSpeaking}
                     onSpeak={() => {
                         if (!hasModeSelectGreeted.current) {
                             hasModeSelectGreeted.current = true;
@@ -419,6 +424,8 @@ export const MagicArtClassPage: React.FC = () => {
                         <KatTutor
                             message={lesson.steps[currentStepIndex].tutorMessage}
                             position="static"  // New Static Prop
+                            videoSrc={masterpieceVideo}
+                            isSpeaking={isSpeaking}
                             onSpeak={() => speakMinimax(lesson.steps[currentStepIndex].tutorMessage)}
                         />
                     </div>
