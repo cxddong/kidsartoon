@@ -21,6 +21,13 @@ import jewelIcon from '../assets/magic_icons/jewel.jpg';
 import holoIcon from '../assets/magic_icons/holo.jpg';
 import artStudioBg from '../assets/artstudio.mp4';
 
+// Import Fluffy Friends PNG images for textures
+import fluffyFriends from '../assets/Fluffy Friends.png';
+import candyLand from '../assets/Candy Land.png';
+import toyKingdom from '../assets/Toy Kingdom.png';
+import neonGlow from '../assets/Neon Glow.png';
+import movieMagic from '../assets/Movie Magic.png';
+
 interface ArtMode {
     id: 'colorize' | 'style_transfer' | 'remix';
     label: string;
@@ -110,11 +117,11 @@ const COLOR_VIBES = [
 ];
 
 const MAGIC_TEXTURES = [
-    { id: 'brick', label: 'Toy Brick', icon: '🧱' },
-    { id: 'clay', label: 'Clay', icon: '🧸' },
-    { id: '3d', label: 'Cute 3D', icon: '🦄' },
-    { id: 'voxel', label: 'Voxel Block', icon: '👾' },
-    { id: 'paper', label: 'Paper Cut', icon: '✂️' },
+    { id: 'brick', label: 'Toy Brick', icon: '🧱', image: toyKingdom },
+    { id: 'clay', label: 'Clay', icon: '🧸', image: fluffyFriends },
+    { id: '3d', label: 'Cute 3D', icon: '🦄', image: candyLand },
+    { id: 'voxel', label: 'Voxel Block', icon: '👾', image: neonGlow },
+    { id: 'paper', label: 'Paper Cut', icon: '✂️', image: movieMagic },
 ];
 
 const CanvasPreviewModal = ({ image, onClose }: { image: string, onClose: () => void }) => {
