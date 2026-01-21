@@ -221,7 +221,15 @@ export const AudioStoryPage: React.FC = () => {
             formData.append('voiceText', prompt);
             formData.append('voice', builderData.voice);
             formData.append('voiceTier', builderData.voiceTier);
+            formData.append('modelTier', builderData.modelTier);
             formData.append('userId', user?.uid || 'demo');
+
+            console.log('[Frontend] Sending Story Data:', {
+                voice: builderData.voice,
+                voiceTier: builderData.voiceTier,
+                modelTier: builderData.modelTier,
+                prompt: prompt.substring(0, 100) + '...'
+            });
 
             const res = await fetch('/api/media/image-to-voice', {
                 method: 'POST',
@@ -368,6 +376,7 @@ export const AudioStoryPage: React.FC = () => {
                                                 userId={user?.uid}
                                                 isRecharging={isRecharging}
                                                 rechargeTime={rechargeTime}
+                                                userPlan={user?.plan}
                                             />
                                         </>
                                     ) : (

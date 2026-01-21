@@ -21,41 +21,41 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative border-4 border-orange-200"
+                className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl relative border-4 border-orange-200 max-h-[90vh] overflow-y-auto"
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors z-10"
                 >
                     <X size={24} />
                 </button>
 
-                <div className="text-center mb-8">
-                    <span className="text-5xl mb-4 block">🧩</span>
-                    <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight">
+                <div className="text-center mb-6">
+                    <span className="text-5xl mb-2 block">🧩</span>
+                    <h2 className="text-2xl md:text-3xl font-black text-slate-800 uppercase tracking-tight">
                         Magic Puzzle
                     </h2>
-                    <p className="text-slate-500 font-bold mt-2">
+                    <p className="text-slate-500 font-bold mt-1 text-sm md:text-base">
                         {hasSavedProgress ? "Continue your adventure?" : "Choose your challenge!"}
                     </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                     {hasSavedProgress && onContinue && (
                         <button
                             onClick={onContinue}
-                            className="w-full py-5 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-2xl font-black text-xl shadow-lg hover:scale-105 transition-transform border-b-4 border-orange-700 active:border-b-0 active:translate-y-1"
+                            className="w-full py-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-2xl font-black text-lg shadow-lg hover:scale-105 transition-transform border-b-4 border-orange-700 active:border-b-0 active:translate-y-1"
                         >
                             🚀 CONTINUE GAME
                         </button>
                     )}
 
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 gap-2">
                         {(Object.entries(DIFFICULTY_CONFIG) as [DifficultyLevel, any][]).map(([level, config]) => (
                             <button
                                 key={level}
                                 onClick={() => onSelect(level)}
-                                className={`w-full py-4 px-6 rounded-2xl border-2 transition-all flex items-center justify-between group
+                                className={`w-full py-3 px-5 rounded-2xl border-2 transition-all flex items-center justify-between group
                                     ${level === 'baby' ? 'border-green-200 bg-green-50 hover:bg-green-100 text-green-700' :
                                         level === 'easy' ? 'border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700' :
                                             level === 'smart' ? 'border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700' :
@@ -63,12 +63,12 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
                                                     'border-red-200 bg-red-50 hover:bg-red-100 text-red-700'}`}
                             >
                                 <div className="text-left">
-                                    <div className="font-black text-lg uppercase">{config.label}</div>
-                                    <div className="text-sm opacity-70 font-bold">
+                                    <div className="font-black text-base md:text-lg uppercase">{config.label}</div>
+                                    <div className="text-xs md:text-sm opacity-70 font-bold">
                                         {config.grid}x{config.grid} Grid
                                     </div>
                                 </div>
-                                <span className="text-2xl group-hover:scale-125 transition-transform">
+                                <span className="text-xl md:text-2xl group-hover:scale-125 transition-transform">
                                     {level === 'baby' ? '👶' :
                                         level === 'easy' ? '🌟' :
                                             level === 'smart' ? '🧠' :
@@ -80,7 +80,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
                 </div>
 
                 {hasSavedProgress && (
-                    <p className="text-center text-xs text-slate-400 font-bold mt-6 uppercase tracking-widest">
+                    <p className="text-center text-xs text-slate-400 font-bold mt-4 uppercase tracking-widest">
                         Or start a new challenge!
                     </p>
                 )}

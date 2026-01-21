@@ -31,7 +31,7 @@ export interface UserRecord {
     password?: string;
     email?: string;
     isSubscribed?: boolean;
-    plan?: 'basic' | 'pro';
+    plan?: 'basic' | 'pro' | 'yearly' | 'explorer'; // Updated for new tiers
     subscriptionPlatform?: string;
     subscriptionId?: string;
     subscriptionDate?: string;
@@ -196,8 +196,7 @@ export class DatabaseService {
                     metadata: {
                         firebaseStorageDownloadTokens: downloadToken
                     }
-                },
-                public: true // Make file public for legacy compatibility
+                }
             });
 
             // Return public URL with download token (accessible from browser without CORS issues)
@@ -232,6 +231,12 @@ export class DatabaseService {
         } catch (e) { return null; }
     }
 
+    public async updateVideoTask(taskId: string, updates: any) {
+        try {
+            await adminDb.collection('video_tasks').doc(taskId).update(updates);
+        } catch (e) { console.error('updateVideoTask failed', e); }
+    }
+
     public async markTaskRefunded(taskId: string) {
         try {
             await adminDb.collection('video_tasks').doc(taskId).update({
@@ -241,11 +246,12 @@ export class DatabaseService {
         } catch (e) { console.error('markTaskRefunded failed', e); }
     }
 
-    public async markTaskCompleted(taskId: string) {
+    public async markTaskCompleted(taskId: string, videoUrl?: string) {
         try {
-            await adminDb.collection('video_tasks').doc(taskId).update({
-                status: 'COMPLETED'
-            });
+            const updateData: any = { status: 'COMPLETED' };
+            if (videoUrl) updateData.videoUrl = videoUrl;
+
+            await adminDb.collection('video_tasks').doc(taskId).update(updateData);
         } catch (e) { console.error('markTaskCompleted failed', e); }
     }
 
@@ -282,20 +288,56 @@ export class DatabaseService {
 
     public async getUserImages(userId: string, profileId?: string): Promise<ImageRecord[]> {
         try {
-            const snapshot = await adminDb.collection('images')
+            // 1. Fetch Primary Images (Assets)
+            const imagesSnap = await adminDb.collection('images')
                 .where("userId", "==", userId)
                 .get();
 
-            const results = snapshot.docs.map(d => {
+            let results = imagesSnap.docs.map(d => {
                 const data = d.data() as ImageRecord;
-                return {
-                    ...data,
-                    id: data.id || d.id
-                };
+                return { ...data, id: data.id || d.id };
             });
+
+            // 2. Fetch Backup Tasks (Recover lost items)
+            // If an item failed to save to 'images' but exists in 'video_tasks' with a URL, recover it.
+            const existingTaskIds = new Set(results.map(r => r.meta?.taskId).filter(Boolean));
+
+            try {
+                const tasksSnap = await adminDb.collection('video_tasks')
+                    .where("userId", "==", userId)
+                    .where("status", "==", "COMPLETED") // Only finished tasks
+                    .get();
+
+                const tasks = tasksSnap.docs.map(d => d.data());
+
+                for (const task of tasks) {
+                    // processing logic: if task has videoUrl AND isn't already in results
+                    if (task.videoUrl && task.taskId && !existingTaskIds.has(task.taskId)) {
+                        console.log(`[Database] Recovering lost video from task ${task.taskId}`);
+                        // Map task to ImageRecord format
+                        const recoveredImage: ImageRecord = {
+                            id: task.taskId, // Use task ID as Image ID
+                            userId: task.userId,
+                            imageUrl: task.videoUrl,
+                            type: 'animation',
+                            createdAt: task.createdAt || new Date().toISOString(),
+                            prompt: task.prompt,
+                            meta: {
+                                ...task.meta,
+                                taskId: task.taskId,
+                                recovered: true,
+                                profileId: task.profileId || task.meta?.profileId // Ensure profileId is carried over
+                            },
+                            favorite: false
+                        };
+                        results.push(recoveredImage);
+                    }
+                }
+            } catch (err) {
+                console.warn('[Database] Failed to fetch video_tasks backup:', err);
+            }
+
             // Sort in memory (descending by createdAt)
-            // Note: We filter by profileId client-side in the calling function if needed, 
-            // but for efficiency we could add a compound index later.
             return results.sort((a, b) => {
                 const timeA = new Date(a.createdAt || 0).getTime();
                 const timeB = new Date(b.createdAt || 0).getTime();
@@ -801,13 +843,28 @@ export class DatabaseService {
     public async getCheckInStatus(userId: string): Promise<{ streak: number, lastCheckInDate: string | null, canCheckIn: boolean, nextReward: number, dayCycle: number }> {
         try {
             const checkInRef = adminDb.collection('daily_checkins').doc(userId);
-            const snap = await checkInRef.get();
+            const userRef = adminDb.collection('users').doc(userId);
 
-            if (!snap.exists) {
-                return { streak: 0, lastCheckInDate: null, canCheckIn: true, nextReward: 2, dayCycle: 1 };
+            const [checkInSnap, userSnap] = await Promise.all([
+                checkInRef.get(),
+                userRef.get()
+            ]);
+
+            // Determine Reward based on Plan
+            let rewardAmount = 10; // Default / Explorer
+            if (userSnap.exists) {
+                const userData = userSnap.data() as UserRecord;
+                const plan = userData.plan || 'explorer';
+
+                if (plan === 'basic') rewardAmount = 30;
+                else if (plan === 'pro' || plan === 'yearly') rewardAmount = 50;
             }
 
-            const data = snap.data()!;
+            if (!checkInSnap.exists) {
+                return { streak: 0, lastCheckInDate: null, canCheckIn: true, nextReward: rewardAmount, dayCycle: 1 };
+            }
+
+            const data = checkInSnap.data()!;
             const lastDate = data.lastCheckInDate; // YYYY-MM-DD
             const today = new Date().toISOString().split('T')[0];
 
@@ -826,10 +883,9 @@ export class DatabaseService {
             }
 
             const dayCycle = (streak) % 7 + 1;
-            const rewardsMap: Record<number, number> = { 1: 2, 2: 2, 3: 3, 4: 3, 5: 5, 6: 5, 7: 10 };
-            const nextReward = rewardsMap[dayCycle] || 2;
+            // Removed legacy 7-day cycle map logic in favor of flat tier-based rewards
 
-            return { streak, lastCheckInDate: lastDate, canCheckIn, nextReward, dayCycle };
+            return { streak, lastCheckInDate: lastDate, canCheckIn, nextReward: rewardAmount, dayCycle };
 
         } catch (e) {
             console.error('[Database] getCheckInStatus failed:', e);
@@ -837,14 +893,27 @@ export class DatabaseService {
         }
     }
 
-    public async performCheckIn(userId: string, isVip: boolean): Promise<{ success: boolean, points: number, dayCycle: number, newStreak: number, message?: string }> {
+    public async performCheckIn(userId: string): Promise<{ success: boolean, points: number, dayCycle: number, newStreak: number, message?: string }> {
         const today = new Date().toISOString().split('T')[0];
         const checkInRef = adminDb.collection('daily_checkins').doc(userId);
         const userRef = adminDb.collection('users').doc(userId);
 
         try {
             return await adminDb.runTransaction(async (transaction) => {
-                const checkInDoc = await transaction.get(checkInRef);
+                const [checkInDoc, userDoc] = await Promise.all([
+                    transaction.get(checkInRef),
+                    transaction.get(userRef)
+                ]);
+
+                // Determine Points based on Tier
+                let basePoints = 10;
+                if (userDoc.exists) {
+                    const userData = userDoc.data() as UserRecord;
+                    const plan = userData.plan || 'explorer';
+                    if (plan === 'basic') basePoints = 30;
+                    else if (plan === 'pro' || plan === 'yearly') basePoints = 50;
+                }
+
                 let streak = 0;
 
                 if (checkInDoc.exists) {
@@ -868,12 +937,6 @@ export class DatabaseService {
                 }
 
                 const dayCycle = (streak - 1) % 7 + 1;
-                const rewardsMap: Record<number, number> = { 1: 2, 2: 2, 3: 3, 4: 3, 5: 5, 6: 5, 7: 10 };
-                let basePoints = rewardsMap[dayCycle] || 2;
-
-                if (isVip) {
-                    basePoints *= 2;
-                }
 
                 transaction.set(checkInRef, {
                     userId,

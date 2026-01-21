@@ -352,6 +352,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.uiMode !== undefined) firestoreData.uiMode = data.uiMode;
         if (data.profiles !== undefined) firestoreData.profiles = data.profiles;
         if (data.currentProfileId !== undefined) firestoreData.currentProfileId = data.currentProfileId;
+        if (data.parentPin !== undefined) firestoreData.parentPin = data.parentPin;
 
         await setDoc(doc(db, 'users', auth.currentUser.uid), firestoreData, { merge: true });
     };

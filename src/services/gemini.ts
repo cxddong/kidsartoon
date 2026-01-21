@@ -1,133 +1,175 @@
 import OpenAI from "openai";
-import { Part } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 
 // Model Selection Strategy
 type TaskType = 'chat' | 'vision' | 'script' | 'analysis' | 'tts';
 
-const MODEL_ROUTER: Record<TaskType, string> = {
-    chat: 'gpt-4o-mini',      // Low cost for casual conversation
-    vision: 'gpt-4o',         // High quality for image analysis
-    script: 'gpt-4o',         // JSON stability for structured generation
-    analysis: 'gpt-4o',       // Deep analysis tasks
+const MODEL_ROUTER_OPENAI: Record<TaskType, string> = {
+    chat: 'gpt-4o-mini',      // Default: Low cost for casual conversation
+    vision: 'gpt-4o',         // Advanced: High quality for image analysis
+    script: 'gpt-4o',         // Advanced: Structured generation (or gpt-5.2)
+    analysis: 'gpt-4o-mini',  // Cost reduction for general analysis
     tts: 'tts-1-hd'           // High quality voice
 };
 
-// Get API Key
-const getApiKey = () => {
-    return process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || "";
+const MODEL_ROUTER_GEMINI: Record<TaskType, string> = {
+    chat: 'gemini-1.5-flash',
+    vision: 'gemini-1.5-flash',
+    script: 'gemini-1.5-pro',
+    analysis: 'gemini-1.5-pro',
+    tts: 'gemini-1.5-flash' // Not used for TTS directly, but as fallback for logic
 };
 
-// Initialize OpenAI
+// API Key Selectors
+const getOpenAIApiKey = () => process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || "";
+const getGoogleApiKey = () => process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_API_KEY || "";
+
+// Instances
 let openaiInstance: OpenAI | null = null;
+let googleGenAIInstance: GoogleGenerativeAI | null = null;
 
 const getOpenAI = () => {
+    const apiKey = getOpenAIApiKey();
+    if (!apiKey) return null;
     if (!openaiInstance) {
-        const apiKey = getApiKey();
-        if (!apiKey) {
-            console.error("❌ [GeminiService] Missing OpenAI API Key. Please check .env");
-            throw new Error("Missing OpenAI API Key");
-        }
-        openaiInstance = new OpenAI({
-            apiKey: apiKey,
-            dangerouslyAllowBrowser: false // Server-side only
-        });
+        openaiInstance = new OpenAI({ apiKey, dangerouslyAllowBrowser: false });
     }
     return openaiInstance;
 };
 
+const getGoogleGenAI = () => {
+    const apiKey = getGoogleApiKey();
+    if (!apiKey) return null;
+    if (!googleGenAIInstance) {
+        googleGenAIInstance = new GoogleGenerativeAI(apiKey);
+    }
+    return googleGenAIInstance;
+};
+
 /**
- * GeminiService - Now powered by OpenAI GPT-4o
- * This maintains backward compatibility with existing code while using OpenAI's superior vision capabilities
+ * GeminiService - Powered by OpenAI with Google Gemini Fallback
+ * Provides a unified interface for AI tasks with high reliability.
  */
 export class GeminiService {
 
     constructor() {
-        console.log("✅ [GeminiService] Initialized (Powered by OpenAI GPT-4o)");
-    }
-
-    /**
-     * Select appropriate model based on task type
-     */
-    private selectModel(taskType: TaskType): string {
-        const model = MODEL_ROUTER[taskType];
-        console.log(`[GeminiService] Task: ${taskType} -> Model: ${model}`);
-        return model;
-    }
-
-    /**
-     * Generate text content with task-based routing
-     * @param taskType - Specify task type for model selection
-     */
-    async generateText(prompt: string, userId?: string, taskType: TaskType = 'script'): Promise<string> {
-        try {
-            const openai = getOpenAI();
-            const model = this.selectModel(taskType);
-            console.log(`[GeminiService->OpenAI] Generating Text with ${model}...`);
-
-            const response = await openai.chat.completions.create({
-                model: model,
-                messages: [
-                    { role: "system", content: "You are a creative AI assistant for children's art and storytelling." },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.7,
-            });
-
-            return response.choices[0].message.content || "";
-        } catch (error: any) {
-            console.error("❌ [GeminiService] generateText Failed:", error.message);
-            throw error;
+        const hasOpenAI = !!getOpenAIApiKey();
+        const hasGoogle = !!getGoogleApiKey();
+        console.log(`✅ [GeminiService] Initialized. Status: OpenAI=${hasOpenAI ? 'OK' : 'MISSING'}, Google=${hasGoogle ? 'OK' : 'MISSING'}`);
+        if (!hasOpenAI && !hasGoogle) {
+            console.error("❌ [GeminiService] CRITICAL: Both OpenAI and Google API keys are missing. Please check .env");
         }
     }
 
     /**
-     * Analyze image using GPT-4o Vision
-     * IMPORTANT: This maintains the original signature (base64Image first, prompt second)
+     * Generate text with cross-provider fallback
      */
-    async analyzeImage(base64Image: string, prompt: string = "Describe this image in detail."): Promise<string> {
+    async generateText(prompt: string, userId?: string, taskType: TaskType = 'script', modelTier: 'standard' | 'premium' = 'standard'): Promise<string> {
+        // 1. Try OpenAI
         try {
             const openai = getOpenAI();
-            console.log("[GeminiService->OpenAI] Analyzing Image with GPT-4o Vision...");
+            if (openai) {
+                let model = MODEL_ROUTER_OPENAI[taskType];
 
-            // Clean and format the base64 image
-            const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-            const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
+                // Model Tier Override
+                if (taskType === 'script') {
+                    if (modelTier === 'premium') {
+                        model = 'gpt-4o'; // Premium (GPT-5.2 in UI)
+                    } else {
+                        model = 'gpt-4o-mini'; // Standard
+                    }
+                }
 
-            const model = this.selectModel('vision');
-            const response = await openai.chat.completions.create({
-                model: model, // ✨ Task-based routing for vision tasks
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            { type: "text", text: prompt },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: imageUrl,
-                                    detail: "high" // High-res for detailed analysis
-                                },
-                            },
-                        ],
-                    },
-                ],
-                max_tokens: 1000,
-                temperature: 0.7,
-            });
+                console.log(`[GeminiService->OpenAI] Generating Text with ${model} (Tier: ${modelTier})...`);
+                const response = await openai.chat.completions.create({
+                    model: model,
+                    messages: [
+                        { role: "system", content: "You are a creative AI assistant for children's art and storytelling." },
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.7,
+                });
+                return response.choices[0].message.content || "";
+            }
+        } catch (openaiErr: any) {
+            console.warn("[GeminiService] OpenAI generateText failed, falling back to Gemini:", openaiErr.message);
+        }
 
-            const result = response.choices[0].message.content || "";
-            console.log("[GeminiService->OpenAI] Vision Success:", result.substring(0, 100) + "...");
-            return result;
+        // 2. Try Google Gemini
+        try {
+            const genAI = getGoogleGenAI();
+            if (genAI) {
+                const modelName = MODEL_ROUTER_GEMINI[taskType];
+                console.log(`[GeminiService->Gemini] Generating Text with ${modelName}...`);
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                return response.text();
+            }
+        } catch (geminiErr: any) {
+            console.error("❌ [GeminiService] All generateText providers failed:", geminiErr.message);
+            throw new Error("No AI providers available for text generation");
+        }
 
-        } catch (error: any) {
-            console.error("❌ [GeminiService] analyzeImage Failed:", error.message);
-            // Fallback to avoid crashing the app
+        throw new Error("Missing AI API Keys (OpenAI/Google)");
+    }
+
+    /**
+     * Analyze image with cross-provider fallback
+     */
+    async analyzeImage(base64Image: string, prompt: string = "Describe this image in detail."): Promise<string> {
+        const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+
+        // 1. Try OpenAI Vision
+        try {
+            const openai = getOpenAI();
+            if (openai) {
+                const modelName = MODEL_ROUTER_OPENAI.vision;
+                console.log(`[GeminiService->OpenAI] Analyzing Image with ${modelName}...`);
+                const response = await openai.chat.completions.create({
+                    model: modelName,
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: prompt },
+                                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${cleanBase64}`, detail: "high" } },
+                            ],
+                        },
+                    ],
+                    max_tokens: 1000,
+                    temperature: 0.7,
+                });
+                return response.choices[0].message.content || "";
+            }
+        } catch (openaiErr: any) {
+            console.warn("[GeminiService] OpenAI analyzeImage failed, falling back to Gemini:", openaiErr.message);
+        }
+
+        // 2. Try Google Gemini Vision
+        try {
+            const genAI = getGoogleGenAI();
+            if (genAI) {
+                console.log("[GeminiService->Gemini] Analyzing Image with Gemini 1.5 Flash...");
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const result = await model.generateContent([
+                    prompt,
+                    { inlineData: { data: cleanBase64, mimeType: "image/jpeg" } }
+                ]);
+                const response = await result.response;
+                return response.text();
+            }
+        } catch (geminiErr: any) {
+            console.error("❌ [GeminiService] All analyzeImage providers failed:", geminiErr.message);
+            // Friendly fallback object for children's UI
             return JSON.stringify({
                 detected: "A creative drawing",
                 suggestions: ["Try adding more colors!", "Draw a background setting!"],
                 feedback: "I can't see clearly right now, but keep creating! Your art is wonderful!"
             });
         }
+
+        return "I'm sorry, I'm having a little trouble seeing right now. Keep up the great work!";
     }
 
     /**
@@ -165,15 +207,7 @@ export class GeminiService {
         is_perfect: boolean;
         improvements_detected: string[];
     }> {
-        try {
-            const openai = getOpenAI();
-            console.log("[GeminiService->OpenAI] Analyzing Improvement (Multi-Image Vision)...");
-
-            // Clean base64 strings
-            const cleanOriginal = originalBase64.replace(/^data:image\/\w+;base64,/, "");
-            const cleanNew = newBase64.replace(/^data:image\/\w+;base64,/, "");
-
-            const systemPrompt = `You are **Magic Kat**, an encouraging Art Coach for children (ages 5-10).
+        const systemPrompt = `You are **Magic Kat**, an encouraging Art Coach for children (ages 5-10).
 
 **CONTEXT:**
 - Image 1: The student's first draft
@@ -189,8 +223,8 @@ export class GeminiService {
 
 **SCORING GUIDELINES:**
 - 90-100: Amazing improvement! Followed advice perfectly!
-- 70-89: Great progress! Significant improvements visible
-- 50-69: Good effort! Some improvements, keep going!
+- 75-89: Great progress! Significant improvements visible
+- 50-74: Good effort! Some improvements, keep going!
 - 30-49: Nice try! Keep practicing, you're learning!
 - 0-29: Every artist takes time! Don't give up!
 
@@ -198,147 +232,189 @@ export class GeminiService {
 Return ONLY valid JSON with this exact structure:
 {
   "improvement_score": 85,
-  "feedback": "Wow! You added the bright yellow sun just like I suggested! It really makes your drawing pop! The colors are so much more vibrant now!",
-  "improvements_detected": ["Added yellow sun in sky", "Used brighter colors", "Added more background details"],
-  "next_suggestion": "Try adding some fluffy white clouds around the sun to make the sky even more interesting!",
+  "feedback": "Wow! You added the bright yellow sun just like I suggested! It really makes your drawing pop!",
+  "improvements_detected": ["Added yellow sun", "Used brighter colors"],
+  "next_suggestion": "Try adding some fluffy white clouds!",
   "is_perfect": false
 }`;
 
-            const response = await openai.chat.completions.create({
-                model: "gpt-4o",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    {
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: "Compare these two drawings and tell me how the second one improved! Be encouraging and specific!"
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: `data:image/jpeg;base64,${cleanOriginal}`,
-                                    detail: "high"
-                                }
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: `data:image/jpeg;base64,${cleanNew}`,
-                                    detail: "high"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                response_format: { type: "json_object" },
-                max_tokens: 600,
-                temperature: 0.7
-            });
+        const cleanOriginal = originalBase64.replace(/^data:image\/\w+;base64,/, "");
+        const cleanNew = newBase64.replace(/^data:image\/\w+;base64,/, "");
 
-            const result = JSON.parse(response.choices[0].message.content || "{}");
-
-            // Validate and provide defaults
-            const validatedResult = {
-                improvement_score: result.improvement_score || 50,
-                feedback: result.feedback || "Great job working on your art! Keep practicing!",
-                next_suggestion: result.next_suggestion || "Keep drawing and have fun!",
-                is_perfect: result.is_perfect || false,
-                improvements_detected: Array.isArray(result.improvements_detected)
-                    ? result.improvements_detected
-                    : ["You added new details!"]
-            };
-
-            console.log("[GeminiService->OpenAI] Improvement Analysis Success:", validatedResult.improvement_score + "%");
-            return validatedResult;
-
-        } catch (error: any) {
-            console.error("❌ [GeminiService] analyzeImprovement Failed:", error.message);
-            // Return encouraging fallback
-            return {
-                improvement_score: 70,
-                feedback: "You're making progress! Keep up the great work! I can see you're trying hard!",
-                improvements_detected: ["You added more details", "Your effort shows"],
-                next_suggestion: "Keep practicing and have fun with your art!",
-                is_perfect: false
-            };
+        // 1. Try OpenAI
+        try {
+            const openai = getOpenAI();
+            if (openai) {
+                const modelName = MODEL_ROUTER_OPENAI.vision;
+                console.log(`[GeminiService->OpenAI] Analyzing Improvement with ${modelName}...`);
+                const response = await openai.chat.completions.create({
+                    model: modelName,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: "Compare these two drawings and tell me how the second one improved!" },
+                                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${cleanOriginal}`, detail: "high" } },
+                                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${cleanNew}`, detail: "high" } }
+                            ]
+                        }
+                    ],
+                    response_format: { type: "json_object" },
+                    max_tokens: 600,
+                    temperature: 0.7
+                });
+                const result = JSON.parse(response.choices[0].message.content || "{}");
+                return this.validateImprovementResult(result);
+            }
+        } catch (e: any) {
+            console.warn("[GeminiService] OpenAI analyzeImprovement failed, falling back to Gemini:", e.message);
         }
+
+        // 2. Try Google Gemini
+        try {
+            const genAI = getGoogleGenAI();
+            if (genAI) {
+                console.log("[GeminiService->Gemini] Analyzing Improvement...");
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const result = await model.generateContent([
+                    systemPrompt + "\nOutput JSON.",
+                    { inlineData: { data: cleanOriginal, mimeType: "image/jpeg" } },
+                    { inlineData: { data: cleanNew, mimeType: "image/jpeg" } }
+                ]);
+                const response = await result.response;
+                const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+                return this.validateImprovementResult(JSON.parse(text));
+            }
+        } catch (e: any) {
+            console.error("❌ [GeminiService] analyzeImprovement all providers failed:", e.message);
+        }
+
+        return {
+            improvement_score: 70,
+            feedback: "You're making progress! Keep up the great work! Your new drawing shows you're practicing hard!",
+            improvements_detected: ["You added more details", "Your effort shows"],
+            next_suggestion: "Keep practicing and have fun with your art!",
+            is_perfect: false
+        };
+    }
+
+    private validateImprovementResult(result: any) {
+        return {
+            improvement_score: result.improvement_score || 50,
+            feedback: result.feedback || "Great job working on your art! Keep practicing!",
+            next_suggestion: result.next_suggestion || "Keep drawing and have fun!",
+            is_perfect: result.is_perfect || false,
+            improvements_detected: Array.isArray(result.improvements_detected)
+                ? result.improvements_detected
+                : ["You added new details!"]
+        };
     }
 
     /**
      * Chat with Sparkle/Magic Kat
      */
     async chatWithSparkle(history: any[], imageContext?: any): Promise<any> {
-        try {
-            const openai = getOpenAI();
-            console.log("[GeminiService->OpenAI] Chat Request");
-
-            // Convert history format
-            const messages: any[] = [];
-
-            // Add system instruction
-            messages.push({
-                role: "system",
-                content: `You are Sparkle, a magical, friendly, and enthusiastic AI companion for children in a creative art app called "Magic Lab".
+        const systemInstruction = `You are Sparkle, a magical, friendly, and enthusiastic AI companion for children in a creative art app called "Magic Lab".
 Your goal is to encourage creativity, praise their artwork, and help them turn their drawings into stories or animations.
 Keep your responses short (under 2-3 sentences), simple, and energetic. Use emojis! ✨🎨
-Current Context: ${JSON.stringify(imageContext || {})}`
-            });
+Current Context: ${JSON.stringify(imageContext || {})}`;
 
-            // Convert history
-            history.forEach(h => {
-                messages.push({
-                    role: h.role === 'user' ? 'user' : 'assistant',
-                    content: h.parts?.[0]?.text || h.message || ""
+        // 1. Try OpenAI
+        try {
+            const openai = getOpenAI();
+            if (openai) {
+                const modelName = MODEL_ROUTER_OPENAI.chat;
+                console.log(`[GeminiService->OpenAI] Chat Request with ${modelName}...`);
+                const messages: any[] = [{ role: "system", content: systemInstruction }];
+                history.forEach(h => {
+                    messages.push({
+                        role: h.role === 'user' ? 'user' : 'assistant',
+                        content: h.parts?.[0]?.text || h.message || ""
+                    });
                 });
-            });
 
-            const response = await openai.chat.completions.create({
-                model: "gpt-4o-mini", // Use mini for chat to save costs
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 150
-            });
-
-            const replyText = response.choices[0].message.content || "";
-
-            return {
-                sparkleTalk: replyText,
-                tags: {},
-                text: replyText
-            };
+                const response = await openai.chat.completions.create({
+                    model: modelName,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 150
+                });
+                const replyText = response.choices[0].message.content || "";
+                return { sparkleTalk: replyText, tags: {}, text: replyText };
+            }
         } catch (e: any) {
-            console.error("[GeminiService] Chat Failed:", e.message);
-            return {
-                sparkleTalk: "Oops! My magic wand hiccuped. Can you say that again? ✨",
-                text: "Error"
-            };
+            console.warn("[GeminiService] OpenAI chat failed, falling back to Gemini:", e.message);
         }
+
+        // 2. Try Google Gemini
+        try {
+            const genAI = getGoogleGenAI();
+            if (genAI) {
+                console.log("[GeminiService->Gemini] Chat Request");
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction });
+                const chat = model.startChat({
+                    history: history.map(h => ({
+                        role: h.role === 'user' ? 'user' : 'model',
+                        parts: h.parts || [{ text: h.message || "" }]
+                    }))
+                });
+                const result = await chat.sendMessage("Continue the conversation.");
+                const replyText = result.response.text();
+                return { sparkleTalk: replyText, tags: {}, text: replyText };
+            }
+        } catch (e: any) {
+            console.error("❌ [GeminiService] chat all providers failed:", e.message);
+        }
+
+        return {
+            sparkleTalk: "Oops! My magic wand hiccuped. Can you say that again? ✨",
+            text: "Error"
+        };
     }
 
     /**
-     * Generate speech using OpenAI TTS
+     * Generate speech using OpenAI TTS or Fallback
      */
     async generateSpeech(text: string, lang: string = 'en-US'): Promise<Buffer> {
+        // 1. Try OpenAI TTS (High Quality)
         try {
             const openai = getOpenAI();
-            console.log(`[GeminiService->OpenAI] Generating Speech: "${text.substring(0, 30)}..."`);
-
-            const model = this.selectModel('tts');
-            const response = await openai.audio.speech.create({
-                model: model,
-                voice: "nova", // Friendly voice for children
-                input: text,
-                speed: 1.0
-            });
-
-            const arrayBuffer = await response.arrayBuffer();
-            return Buffer.from(arrayBuffer);
+            if (openai) {
+                const modelName = MODEL_ROUTER_OPENAI.tts;
+                console.log(`[GeminiService->OpenAI] Generating Speech with ${modelName}: "${text.substring(0, 30)}..."`);
+                const response = await openai.audio.speech.create({
+                    model: modelName,
+                    voice: "nova",
+                    input: text,
+                    speed: 1.0
+                });
+                const arrayBuffer = await response.arrayBuffer();
+                return Buffer.from(arrayBuffer);
+            }
         } catch (e: any) {
-            console.error("[GeminiService] TTS Failed:", e.message);
-            throw e;
+            console.warn("[GeminiService] OpenAI TTS failed, trying fallback:", e.message);
         }
+
+        // 2. Fallback: Google Translate TTS (Free but lower quality)
+        try {
+            // @ts-ignore
+            const googleTTS = await import('google-tts-api');
+            const url = googleTTS.getAudioUrl(text, {
+                lang: lang.split('-')[0], // 'en-US' -> 'en'
+                slow: false,
+                host: 'https://translate.google.com',
+            });
+            const resp = await fetch(url);
+            if (resp.ok) {
+                const arrayBuffer = await resp.arrayBuffer();
+                return Buffer.from(arrayBuffer);
+            }
+        } catch (e: any) {
+            console.error("❌ [GeminiService] All TTS providers failed:", e.message);
+        }
+
+        throw new Error("Speech generation failed");
     }
 
     /**

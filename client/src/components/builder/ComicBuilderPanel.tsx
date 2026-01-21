@@ -130,14 +130,14 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                         </div>
                         <span className="text-xs font-bold text-orange-200 uppercase tracking-wider ml-10">Choose an Art Style</span>
                     </h3>
-                    <div className="grid grid-cols-3 md:grid-cols-2 gap-2 pb-2 md:pb-0 justify-items-center relative z-10">
+                    <div className="flex overflow-x-auto snap-x gap-3 pb-4 md:pb-0 md:grid md:grid-cols-2 md:gap-2 md:overflow-visible scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                         {/* Render ALL 6 Styles */}
                         {COMIC_STYLES.map((item, index) => (
                             <button
                                 key={item.id}
                                 onClick={() => setVisualStyleId(prev => prev === item.id ? null : item.id)}
                                 className={cn(
-                                    "rounded-2xl border-4 transition-all w-full aspect-square animate-float overflow-hidden relative shadow-lg",
+                                    "rounded-2xl border-4 transition-all w-24 md:w-full aspect-square animate-float overflow-hidden relative shadow-lg shrink-0 snap-center",
                                     visualStyleId === item.id
                                         ? "border-orange-500 scale-105 shadow-xl z-10"
                                         : "border-slate-100 bg-white hover:border-orange-200 hover:scale-105",
@@ -182,17 +182,17 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                         </div>
                         <span className="text-xs font-bold text-green-200 uppercase tracking-wider ml-10">Assign a Role to your photo!</span>
                     </h3>
-                    <div className="grid grid-cols-3 gap-2 pb-2 justify-items-center">
+                    <div className="flex overflow-x-auto snap-x gap-3 pb-2 md:pb-2 md:grid md:grid-cols-3 md:gap-2 md:overflow-visible scrollbar-hide -mx-2 px-2 md:mx-0 md:px-0">
                         {CHARACTERS.map(item => (
                             <button
                                 key={item.id}
                                 onClick={() => setSelectedCharacterId(prev => prev === item.id ? null : item.id)}
                                 className={cn(
-                                    "rounded-2xl border-4 transition-all w-full aspect-square animate-float overflow-hidden relative",
+                                    "rounded-2xl border-4 transition-all w-20 md:w-full aspect-square animate-float overflow-hidden relative shrink-0 snap-center",
                                     selectedCharacterId === item.id
                                         ? "border-green-500 scale-105 shadow-xl z-10"
                                         : "border-white/20 bg-transparent hover:border-green-200 hover:scale-105",
-                                    item.id === 'other' && "col-start-2"
+                                    item.id === 'other' && "md:col-start-2"
                                 )}
                             >
                                 {(item as any).image ? (
@@ -303,14 +303,14 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                         </div>
                         <span className="text-xs font-bold text-yellow-200 uppercase tracking-wider ml-10">What is happening?</span>
                     </h3>
-                    <div className="grid grid-cols-3 md:grid-cols-2 gap-2 pb-2 md:pb-0 justify-items-center relative z-10">
+                    <div className="flex overflow-x-auto snap-x gap-3 pb-4 md:pb-0 md:grid md:grid-cols-2 md:gap-2 md:overflow-visible scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                         {/* Render 6 V4 Moods */}
                         {MOODS.map((item, index) => (
                             <button
                                 key={item.id}
                                 onClick={() => setSelectedMoodId(prev => prev === item.id ? null : item.id)}
                                 className={cn(
-                                    "rounded-2xl border-4 transition-all w-full aspect-square animate-float overflow-hidden relative shadow-lg",
+                                    "rounded-2xl border-4 transition-all w-24 md:w-full aspect-square animate-float overflow-hidden relative shadow-lg shrink-0 snap-center",
                                     selectedMoodId === item.id
                                         ? "border-yellow-500 scale-105 shadow-xl z-10"
                                         : "border-slate-100 bg-white hover:border-yellow-200 hover:scale-105"

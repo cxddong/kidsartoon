@@ -165,7 +165,7 @@ router.post('/speak-minimax', optionalApiKeyAuth, async (req, res) => {
         // Generate Cache Key (Text + Voice safe hash)
         // Simple hash: remove spaces, lowercase, take first 32 chars + length
         const cleanText = text.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 50);
-        const cacheKey = `minimax_${voiceId}_${cleanText}_${text.length}`;
+        const cacheKey = `minimax_v2_${voiceId}_${cleanText}_${text.length}`;
 
         // 1. CHECK CACHE
         try {
@@ -206,6 +206,7 @@ router.post('/speak-minimax', optionalApiKeyAuth, async (req, res) => {
             // Fall through to generation
         }
 
+        console.log(`[Sparkle Minimax] Request: voiceId="${voiceId}" -> CacheKey="${cacheKey}"`);
         console.log(`[Sparkle Minimax] Generating speech for: "${text.substring(0, 20)}..."`);
 
         // 2. GENERATE (MiniMax)

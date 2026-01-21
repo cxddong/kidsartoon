@@ -1,257 +1,297 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, X, Sparkles, Zap, Crown, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 
-// Feature Item Component
-const FeatureItem = ({ text, check = true, highlighted = false }: { text: string; check?: boolean; highlighted?: boolean }) => (
-    <li className="flex items-start">
-        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${check ? 'bg-green-100 text-green-500' : 'bg-gray-100 text-gray-400'}`}>
-            {check ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
-        </div>
-        <span className={`ml-3 text-sm ${highlighted ? 'font-bold text-gray-900' : 'text-gray-600'}`}>{text}</span>
-    </li>
-);
+// Register ChartJS
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 export const SubscriptionPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+    const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
-    const handleSubscribe = (planId: string) => {
-        setSelectedPlan(planId);
-        // TODO: Integrate with payment system
-        console.log(`Selected plan: ${planId}`);
+    // Chart Data
+    const chartLabels = ['Magic Cinema (10s)', 'Magic Cinema (5s)', 'Graphic Novel', 'Storybook (4pg)', 'Single Art', 'Chat/Analysis'];
+    const chartData = {
+        labels: chartLabels,
+        datasets: [
+            {
+                data: [160, 80, 100, 30, 10, 0],
+                backgroundColor: ['#EF4444', '#F97316', '#3B82F6', '#10B981', '#94A3B8', '#A78BFA'],
+                borderWidth: 0,
+            },
+        ],
     };
 
-    const handleTopUp = (amount: string) => {
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right' as const,
+                labels: {
+                    usePointStyle: true,
+                    font: {
+                        family: 'Nunito',
+                        size: 11
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context: any) => ` Cost: -${context.raw} Pt`
+                }
+            }
+        },
+        cutout: '65%',
+    };
+
+
+    const handleSubscribe = (planId: string) => {
         // TODO: Integrate with payment system
-        console.log(`Top up: $${amount}`);
+        console.log(`Subscribe: ${planId}`);
+        alert(`Subscription integration coming soon! (Selected: ${planId})`);
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
-            {/* Back Button */}
-            <button
-                onClick={() => navigate(-1)}
-                className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-                <ArrowLeft size={20} />
-                <span className="font-medium">Back</span>
-            </button>
+        <div className="min-h-screen bg-[#FFF7ED] text-[#1E293B] font-['Nunito'] pb-24">
 
             {/* Header */}
-            <div className="text-center max-w-3xl mx-auto mb-16">
-                <motion.h1
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-4xl font-extrabold text-indigo-900 sm:text-5xl"
-                >
-                    Unlock Unlimited Imagination
-                </motion.h1>
-                <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="mt-4 text-xl text-gray-500"
-                >
-                    Give your child the power to create movies, books, and art with Magic Kat.
-                </motion.p>
-                <p className="mt-2 text-sm text-gray-400">Cancel anytime. No hidden fees.</p>
-            </div>
-
-            {/* Tiers Grid */}
-            <div className="max-w-7xl mx-auto grid gap-8 lg:grid-cols-3 lg:gap-8 items-start mb-12">
-
-                {/* FREE PLAN */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100 opacity-90 hover:opacity-100 transition"
-                >
-                    <h3 className="text-lg font-semibold text-gray-900">Explorer</h3>
-                    <p className="mt-4 flex items-baseline text-gray-900">
-                        <span className="text-4xl font-extrabold tracking-tight">$0</span>
+            <header className="bg-indigo-900 text-white py-12 px-4 text-center rounded-b-[3rem] shadow-xl mb-12 relative overflow-hidden">
+                <div className="max-w-4xl mx-auto relative z-10">
+                    <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-tight font-['Fredoka']">
+                        Choose Your Magic Partner
+                    </h1>
+                    <p className="text-lg text-indigo-200 font-medium font-['Fredoka'] opacity-90">
+                        Unlock the full power of Two Cats
                     </p>
-                    <p className="mt-1 text-sm text-gray-500">One-time welcome gift</p>
-                    <div className="mt-6 bg-gray-50 rounded-xl p-4 text-center">
-                        <span className="block text-2xl font-bold text-gray-700">50 Pts</span>
-                        <span className="text-xs text-gray-500">Total</span>
+                </div>
+            </header>
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 space-y-16">
+
+                {/* 1. Persona Strategy (The Two Cats) */}
+                <section>
+                    <div className="text-center mb-10">
+                        <div className="inline-block bg-white px-6 py-2 rounded-full shadow-sm mb-4">
+                            <span className="text-indigo-900 font-bold uppercase tracking-widest text-xs">Why Upgrade?</span>
+                        </div>
+                        <h2 className="text-3xl font-bold text-indigo-900 font-['Fredoka']">Meet Your Magic Companions</h2>
                     </div>
-                    <p className="mt-2 text-xs text-center text-gray-500">
-                        Just enough for a taste: <b>1 Storybook</b>
-                    </p>
-                    <ul className="mt-6 space-y-4">
-                        <FeatureItem text="Try Art & Stories" />
-                        <FeatureItem text="Standard Voice Only" />
-                        <FeatureItem text="No Video Generation" check={false} />
-                    </ul>
-                    <button
-                        onClick={() => handleSubscribe('free')}
-                        className="mt-8 block w-full bg-gray-100 border border-transparent rounded-xl py-3 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors"
-                    >
-                        Current Plan
-                    </button>
-                </motion.div>
 
-                {/* BASIC PLAN */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white rounded-2xl shadow-md p-8 border-2 border-blue-100 relative"
-                >
-                    <h3 className="text-lg font-semibold text-blue-600">Basic Creator</h3>
-                    <p className="mt-4 flex items-baseline text-gray-900">
-                        <span className="text-4xl font-extrabold tracking-tight">$9.99</span>
-                        <span className="ml-1 text-xl font-semibold text-gray-500">/mo</span>
-                    </p>
-                    <div className="mt-6 bg-blue-50 rounded-xl p-4 text-center">
-                        <span className="block text-2xl font-bold text-blue-600">1,000 Pts</span>
-                        <span className="text-xs text-blue-400">Refilled Monthly</span>
-                    </div>
-                    <p className="mt-2 text-xs text-center text-blue-600 font-medium">
-                        Make <b>25 Storybooks</b> / month
-                    </p>
-                    <ul className="mt-6 space-y-4">
-                        <FeatureItem text="Create Stories & Comics" />
-                        <FeatureItem text="Clone Voices" />
-                        <FeatureItem text="No Video Generation" check={false} />
-                    </ul>
-                    <button
-                        onClick={() => handleSubscribe('basic')}
-                        className="mt-8 block w-full bg-blue-100 border border-transparent rounded-xl py-3 text-sm font-semibold text-blue-700 hover:bg-blue-200 transition-colors"
-                    >
-                        Start Basic
-                    </button>
-                </motion.div>
-
-                {/* PRO PLAN (Hero) */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-white rounded-2xl shadow-xl p-8 border-2 border-purple-500 relative transform md:-translate-y-4"
-                >
-                    <div className="absolute top-0 right-0 -mt-3 mr-3 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full text-xs font-bold text-white uppercase tracking-wide shadow-md">
-                        Most Popular
-                    </div>
-                    <h3 className="text-lg font-semibold text-purple-600 flex items-center gap-2">
-                        Pro Magician <Sparkles size={18} />
-                    </h3>
-                    <p className="mt-4 flex items-baseline text-gray-900">
-                        <span className="text-5xl font-extrabold tracking-tight">$19.99</span>
-                        <span className="ml-1 text-xl font-semibold text-gray-500">/mo</span>
-                    </p>
-                    <div className="mt-6 bg-purple-50 rounded-xl p-4 text-center border border-purple-100">
-                        <span className="block text-3xl font-bold text-purple-600">2,200 Pts</span>
-                        <span className="text-xs text-purple-400">Refilled Monthly</span>
-                    </div>
-                    <p className="mt-2 text-xs text-center text-purple-600 font-medium">
-                        🎥 Create <b>36 Videos</b> / month!
-                    </p>
-                    <ul className="mt-6 space-y-4">
-                        <FeatureItem text="Everything in Basic" />
-                        <FeatureItem text="Video Generation Access 🎬" highlighted />
-                        <FeatureItem text="Priority GPU Speed 🚀" highlighted />
-                    </ul>
-                    <motion.button
-                        onClick={() => handleSubscribe('pro')}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="mt-8 block w-full bg-purple-600 border border-transparent rounded-xl py-4 text-md font-bold text-white hover:bg-purple-700 shadow-lg hover:shadow-purple-500/30 transition-all"
-                    >
-                        Get Pro
-                    </motion.button>
-                </motion.div>
-
-            </div>
-
-            {/* YEARLY DEAL BANNER */}
-            <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="max-w-7xl mx-auto mb-20"
-            >
-                <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-3xl p-1 shadow-2xl">
-                    <div className="bg-white rounded-[20px] p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Crown className="text-yellow-500 fill-current" size={24} />
-                                <span className="text-sm font-bold text-orange-600 uppercase tracking-wider">Best for Schools & Power Users</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                        {/* Junior Kat */}
+                        <div className="bg-white rounded-3xl p-8 border-b-8 border-orange-400 shadow-lg relative overflow-hidden group hover:scale-[1.01] transition-transform">
+                            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6 relative z-10">
+                                <div className="text-7xl bg-orange-50 p-4 rounded-3xl group-hover:rotate-6 transition-transform">🐱</div>
+                                <div className="text-center sm:text-left">
+                                    <h3 className="text-2xl font-bold text-gray-800 font-['Fredoka']">Junior Kat</h3>
+                                    <div className="text-xs font-bold text-orange-600 uppercase tracking-widest mt-1">Free / Basic Tier</div>
+                                    <div className="mt-2 text-sm text-gray-600 font-medium italic">
+                                        "Hi! I'm Junior. I'm learning magic too! I can chat about your art and help fix simple things, but my spells are still basic!"
+                                    </div>
+                                </div>
                             </div>
-                            <h3 className="text-3xl font-bold text-gray-900">Yearly Ultimate Pass</h3>
-                            <p className="mt-2 text-gray-600">
-                                Get <span className="font-bold text-black">12,000 Points</span> instantly. That's enough for <b>200+ Videos</b>!
-                            </p>
+                            <div className="bg-orange-50 rounded-xl p-4 relative z-10">
+                                <ul className="space-y-2 text-sm text-gray-700">
+                                    <li className="flex items-center gap-3">
+                                        <span className="bg-white p-1 rounded-md shadow-sm text-lg">🧠</span>
+                                        <span><strong>Basic Brain:</strong> GPT-4o-mini</span>
+                                    </li>
+                                    <li className="flex items-center gap-3">
+                                        <span className="bg-white p-1 rounded-md shadow-sm text-lg">🤖</span>
+                                        <span><strong>Voice:</strong> Robot Voice</span>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
-                        <div className="text-center md:text-right">
-                            <p className="text-sm text-gray-500 line-through">$239.88</p>
-                            <p className="text-4xl font-black text-gray-900">$99.00<span className="text-lg text-gray-500 font-normal">/yr</span></p>
-                            <p className="text-green-600 font-bold text-sm">SAVE $140 (58% OFF)</p>
+
+                        {/* Magic Kat */}
+                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-8 border-b-8 border-purple-600 shadow-xl relative border-2 border-purple-200 overflow-hidden group hover:scale-[1.01] transition-transform">
+                            <div className="absolute top-0 right-0 bg-purple-600 text-white px-4 py-1 rounded-bl-xl font-bold text-xs shadow-sm z-20">PRO ONLY</div>
+                            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6 relative z-10">
+                                <div className="text-7xl bg-purple-100 p-4 rounded-3xl group-hover:-rotate-3 transition-transform">🦁</div>
+                                <div className="text-center sm:text-left">
+                                    <h3 className="text-2xl font-bold text-purple-900 font-['Fredoka']">Magic Kat</h3>
+                                    <div className="text-xs font-bold text-purple-600 uppercase tracking-widest mt-1">Archmage / Pro Tier</div>
+                                    <div className="mt-2 text-sm text-purple-800 font-medium italic">
+                                        "I am Magic Kat! ✨ I see the hidden potential in your art. I can transform your drawings into cinematic masterpieces with my true voice."
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white/60 rounded-xl p-4 relative z-10 border border-purple-100">
+                                <ul className="space-y-2 text-sm text-purple-900">
+                                    <li className="flex items-center gap-3">
+                                        <span className="bg-white p-1 rounded-md shadow-sm text-lg">🧠</span>
+                                        <span><strong>Super Brain:</strong> GPT-5.2 (Mentor)</span>
+                                    </li>
+                                    <li className="flex items-center gap-3">
+                                        <span className="bg-white p-1 rounded-md shadow-sm text-lg">🎭</span>
+                                        <span><strong>Voice:</strong> Real Emotion (MiniMax)</span>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
-                        <motion.button
-                            onClick={() => handleSubscribe('yearly')}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="bg-gray-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-black transition-transform shadow-xl"
-                        >
-                            Get Yearly Deal
-                        </motion.button>
                     </div>
-                </div>
-            </motion.div>
+                </section>
 
-            {/* REFILL PACKS (Grid) */}
-            <div className="max-w-4xl mx-auto text-center">
-                <h3 className="text-xl font-bold text-gray-400 mb-8 uppercase tracking-widest">Or Top-up One Time</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {/* 2. Subscription Tiers */}
+                <section>
+                    <div className="text-center mb-10">
+                        <h2 className="text-3xl font-bold text-indigo-900 font-['Fredoka']">Select Your Power Level</h2>
+                        <p className="text-gray-600 mt-2">Daily login bonuses included with every plan</p>
+                    </div>
 
-                    {/* Small Pouch */}
-                    <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-                        onClick={() => handleTopUp('4.99')}
-                    >
-                        <div className="text-5xl mb-3">💰</div>
-                        <h4 className="font-bold text-gray-900">Small Pouch</h4>
-                        <p className="text-2xl font-extrabold text-gray-800 mt-2">450 Pts</p>
-                        <p className="text-sm text-gray-500 mt-1">$4.99</p>
-                    </motion.div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
 
-                    {/* Treasure Chest (Best Value) */}
-                    <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="bg-white rounded-2xl p-6 border-2 border-blue-300 shadow-md hover:shadow-lg transition-all cursor-pointer relative"
-                        onClick={() => handleTopUp('9.99')}
-                    >
-                        <div className="absolute top-2 right-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">BEST VALUE</div>
-                        <div className="text-5xl mb-3">💎</div>
-                        <h4 className="font-bold text-gray-900">Treasure Chest</h4>
-                        <p className="text-2xl font-extrabold text-blue-600 mt-2">1,000 Pts</p>
-                        <p className="text-sm text-gray-500 mt-1">$9.99</p>
-                    </motion.div>
+                        {/* EXPLORER (Free) */}
+                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 h-auto flex flex-col relative hover:shadow-md transition-shadow">
+                            <h3 className="font-bold text-gray-500 font-['Fredoka'] uppercase tracking-wider text-sm mb-2">🥉 Explorer</h3>
+                            <div className="mb-4">
+                                <span className="text-4xl font-black text-gray-800">$0</span>
+                                <span className="text-gray-400 text-sm font-medium"> / forever</span>
+                            </div>
 
-                    {/* Dragon Hoard */}
-                    <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-                        onClick={() => handleTopUp('19.99')}
-                    >
-                        <div className="text-5xl mb-3">🐲</div>
-                        <h4 className="font-bold text-gray-900">Dragon Hoard</h4>
-                        <p className="text-2xl font-extrabold text-gray-800 mt-2">2,200 Pts</p>
-                        <p className="text-sm text-gray-500 mt-1">$19.99</p>
-                    </motion.div>
+                            <div className="mb-6 bg-[#FEF3C7] text-[#D97706] border border-[#FCD34D] px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                                <span>🎁</span> Daily: +10 Pt
+                            </div>
 
-                </div>
-            </div>
+                            <ul className="space-y-3 mb-8 flex-grow text-xs text-gray-600 font-medium">
+                                <li className="flex gap-2 items-center"><span className="text-green-500 text-lg">●</span> Audio Stories</li>
+                                <li className="flex gap-2 items-center"><span className="text-green-500 text-lg">●</span> Magic Puzzle</li>
+                                <li className="flex gap-2 items-center"><span className="text-green-500 text-lg">●</span> Basic Art Analysis</li>
+                                <li className="flex gap-2 items-center text-gray-400"><span className="text-red-300 text-lg">×</span> Watermarked Art</li>
+                                <li className="flex gap-2 items-center text-gray-400"><span className="text-red-300 text-lg">×</span> No Long Video</li>
+                            </ul>
+                            <button className="w-full bg-gray-100 text-gray-500 font-bold py-3 rounded-xl text-sm cursor-default">Current Plan</button>
+                        </div>
 
-            {/* Navigation */}
+                        {/* BASIC */}
+                        <div className="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-500 h-auto flex flex-col relative hover:shadow-lg transition-shadow">
+                            <h3 className="font-bold text-blue-600 font-['Fredoka'] uppercase tracking-wider text-sm mb-2">🥈 Basic</h3>
+                            <div className="mb-1">
+                                <span className="text-4xl font-black text-gray-800">$9.99</span>
+                                <span className="text-gray-400 text-sm font-medium"> / mo</span>
+                            </div>
+                            <div className="text-xs text-blue-400 font-bold mb-4">1,000 Pt Monthly</div>
+
+                            <div className="mb-6 bg-blue-50 text-blue-700 border border-blue-100 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                                <span>🎁</span> Daily: +30 Pt
+                            </div>
+
+                            <ul className="space-y-3 mb-8 flex-grow text-xs text-gray-600 font-medium">
+                                <li className="flex gap-2 items-center"><span className="text-blue-500 text-lg">●</span> <strong>No Watermark</strong></li>
+                                <li className="flex gap-2 items-center"><span className="text-blue-500 text-lg">●</span> Junior Kat (Robot Voice)</li>
+                                <li className="flex gap-2 items-center"><span className="text-blue-500 text-lg">●</span> Priority Queue</li>
+                            </ul>
+                            <button onClick={() => handleSubscribe('basic')} className="w-full bg-blue-50 text-blue-600 font-bold py-3 rounded-xl text-sm hover:bg-blue-100 transition-colors border border-blue-200">Start Basic</button>
+                        </div>
+
+                        {/* PRO (Most Popular) */}
+                        <div className="bg-white rounded-2xl p-6 shadow-xl border-t-4 border-purple-600 h-auto flex flex-col relative hover:shadow-2xl transition-shadow transform md:-translate-y-4">
+                            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">Most Popular</div>
+                            <h3 className="font-bold text-purple-600 font-['Fredoka'] uppercase tracking-wider text-sm mb-2 mt-2">🥇 Pro</h3>
+                            <div className="mb-1">
+                                <span className="text-5xl font-black text-gray-800">$19.99</span>
+                                <span className="text-gray-400 text-sm font-medium"> / mo</span>
+                            </div>
+                            <div className="text-xs text-purple-400 font-bold mb-4">2,500 Pt Monthly (Value!)</div>
+
+                            <div className="mb-6 bg-purple-50 text-purple-700 border border-purple-100 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                                <span>🎁</span> Daily: +50 Pt
+                            </div>
+
+                            <ul className="space-y-3 mb-8 flex-grow text-sm text-gray-700 font-medium">
+                                <li className="flex gap-2 items-center"><span className="text-purple-500 text-lg">✦</span> <strong>Magic Kat</strong> (GPT-5.2)</li>
+                                <li className="flex gap-2 items-center"><span className="text-purple-500 text-lg">✦</span> <strong>Emotional ID Voice</strong></li>
+                                <li className="flex gap-2 items-center"><span className="text-purple-500 text-lg">✦</span> <strong>10s Long Video</strong></li>
+                            </ul>
+                            <button onClick={() => handleSubscribe('pro')} className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl text-sm hover:bg-purple-700 transition-all shadow-lg shadow-purple-200">Get Pro</button>
+                        </div>
+
+                        {/* YEARLY (Best Value) */}
+                        <div className="bg-gradient-to-b from-yellow-50 to-white rounded-2xl p-6 shadow-lg border-2 border-yellow-400 h-auto flex flex-col relative hover:shadow-xl transition-shadow">
+                            <div className="absolute top-3 right-3 bg-red-100 text-red-600 text-xs font-black px-2 py-1 rounded-lg transform rotate-3">SAVE $140</div>
+                            <h3 className="font-bold text-yellow-600 font-['Fredoka'] uppercase tracking-wider text-sm mb-2">👑 Yearly VIP</h3>
+                            <div className="mb-1">
+                                <span className="text-4xl font-black text-gray-800">$99</span>
+                                <span className="text-gray-400 text-sm font-medium"> / yr</span>
+                            </div>
+                            <div className="text-xs text-green-600 font-bold mb-4">Just $8.25 / mo</div>
+
+                            <div className="mb-6 bg-yellow-100 text-yellow-800 border border-yellow-200 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                                <span>🎁</span> Daily: +50 Pt
+                            </div>
+
+                            <ul className="space-y-3 mb-8 flex-grow text-sm text-gray-700 font-medium">
+                                <li className="flex gap-2 items-center"><span className="text-yellow-500 text-lg">👑</span> <strong>All Pro Features</strong></li>
+                                <li className="flex gap-2 items-center"><span className="text-yellow-500 text-lg">🎁</span> <strong>12,000 Pt Instantly</strong></li>
+                                <li className="flex gap-2 items-center"><span className="text-yellow-500 text-lg">📚</span> <strong>20% Off Books</strong></li>
+                            </ul>
+                            <button onClick={() => handleSubscribe('yearly')} className="w-full bg-yellow-400 text-yellow-900 font-bold py-3 rounded-xl text-sm hover:bg-yellow-500 transition-colors shadow-md">Upgrade Yearly</button>
+                        </div>
+                    </div>
+                </section>
+
+                {/* 3. Cost Menu */}
+                <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 mb-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <h2 className="text-3xl font-bold text-indigo-900 mb-4 font-['Fredoka']">3. Magic Cost Menu</h2>
+                            <p className="text-gray-600 mb-6 text-sm">
+                                Know exactly what your magic spells cost.
+                            </p>
+                            <div className="bg-gray-50 p-6 rounded-2xl text-sm space-y-3">
+                                <div className="flex justify-between font-bold text-gray-400 text-xs uppercase tracking-wide border-b pb-2 mb-2">
+                                    <span>Spell / Feature</span><span>Cost</span>
+                                </div>
+                                <div className="flex justify-between items-center text-red-500 font-bold">
+                                    <span>🎬 Magic Cinema (10s)</span>
+                                    <span className="bg-red-50 px-2 py-1 rounded">-160 Pt</span>
+                                </div>
+                                <div className="flex justify-between items-center text-orange-500 font-bold">
+                                    <span>🎥 Magic Cinema (5s)</span>
+                                    <span className="bg-orange-50 px-2 py-1 rounded">-80 Pt</span>
+                                </div>
+                                <div className="flex justify-between items-center text-blue-600 font-medium">
+                                    <span>📘 Graphic Novel (4pg)</span>
+                                    <span className="bg-blue-50 px-2 py-1 rounded">-100 Pt</span>
+                                </div>
+                                <div className="flex justify-between items-center text-green-600 font-medium">
+                                    <span>📖 Storybook (4pg)</span>
+                                    <span className="bg-green-50 px-2 py-1 rounded">-30 Pt</span>
+                                </div>
+                                <div className="flex justify-between items-center text-gray-600">
+                                    <span>🖼️ Single Art / Card</span>
+                                    <span>-10 Pt</span>
+                                </div>
+                                <div className="flex justify-between items-center text-purple-600">
+                                    <span>🎓 Magic Coach</span>
+                                    <span>-5 / Free (Pro)</span>
+                                </div>
+                                <div className="flex justify-between items-center text-indigo-600 font-bold border-t pt-2 mt-2">
+                                    <span>💬 Chat & Puzzle</span>
+                                    <span className="bg-indigo-50 px-2 py-1 rounded">FREE</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="h-[300px] w-full relative flex items-center justify-center">
+                            <Doughnut data={chartData} options={chartOptions} />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="text-center">
+                                    <p className="text-gray-400 text-xs uppercase">Points</p>
+                                    <p className="text-2xl font-black text-indigo-900">Menu</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
             <MagicNavBar />
         </div>
     );

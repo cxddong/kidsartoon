@@ -1,0 +1,14 @@
+Tracing /api/magic-lab/chat SSE events...
+
+OMG, a story about a dragon and a cat?! *spins in circles with excitement* Once upon a time, a sassy cat named Whiskers decided to befriend a shy dragon named Sparky, who was afraid of his own fire breath! Together, they formed a paw-some duo, with Whiskers teaching Sparky to purr-fect his fire tricks while they both chased butterflies in the sky! *giggles* In the end, they became legends, known as the "Fire & Fur" team, spreading joy and laughter across the land! 🌈✨ 
+
+Do you want to make your own story? *jumps up and down* ACTION:navigate:/generate/audio!
+[EVENT] Audio Segment #1 received. Current text length: 563
+
+[EVENT] Audio Segment #2 received. Current text length: 563
+
+[EVENT] Audio Segment #3 received. Current text length: 563
+
+
+Stream ended.
+Summary: 3 audio segments received.

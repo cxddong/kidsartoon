@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, Play, RefreshCw, Video, Upload, Wand2, Volume2, CloudUpload, Sparkles, MoveLeft, Mic, Pause, X, Download, Share2, Facebook, Twitter, Instagram, Music } from 'lucide-react';
+import { ArrowRight, Loader2, Play, RefreshCw, Video, Upload, Wand2, Volume2, VolumeX, CloudUpload, Sparkles, MoveLeft, Mic, Pause, X, Download, Share2, Facebook, Twitter, Instagram, Music } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
@@ -55,37 +55,183 @@ const SPELLS: any = {
 };
 
 
+// Memoized Video Player Component to prevent re-render flickering
+const MemoVideoPlayer = memo(({ url, poster, initialMuted = true }: { url: string; poster?: string; initialMuted?: boolean }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(initialMuted);
+
+    // Autoplay handling: if browser blocks autoplay with sound, try muted playback
+    const handleAutoPlay = () => {
+        if (videoRef.current) {
+            // First try to play with current mute settings
+            videoRef.current.muted = isMuted;
+            videoRef.current.play()
+                .then(() => setIsPlaying(true))
+                .catch(() => {
+                    console.log("Autoplay blocked, attempting muted fallback");
+                    if (videoRef.current && !isMuted) {
+                        // If failed and was unmuted, try muting
+                        videoRef.current.muted = true;
+                        setIsMuted(true);
+                        videoRef.current.play().then(() => setIsPlaying(true));
+                    }
+                });
+        }
+    };
+
+    const togglePlay = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!videoRef.current) return;
+        if (videoRef.current.paused) {
+            videoRef.current.play();
+            setIsPlaying(true);
+        } else {
+            videoRef.current.pause();
+            setIsPlaying(false);
+        }
+    };
+
+    const toggleMute = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!videoRef.current) return;
+        const newMuted = !videoRef.current.muted;
+        videoRef.current.muted = newMuted;
+        setIsMuted(newMuted);
+    };
+
+    return (
+        <div className="relative group w-full bg-black rounded-xl overflow-hidden shadow-2xl" onClick={() => togglePlay()}>
+            <video
+                ref={videoRef}
+                src={url}
+                poster={poster}
+                autoPlay
+                muted={isMuted} // Controlled by state
+                loop
+                playsInline
+                crossOrigin="anonymous"
+                preload="auto"
+                className="w-full max-h-[70vh] aspect-square md:aspect-video bg-black"
+                onLoadedData={handleAutoPlay}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onError={(e) => console.error('Video load error:', e)}
+            />
+
+            {/* Premium Control Overlay */}
+            <div className={cn(
+                "absolute inset-0 flex items-center justify-center transition-all duration-300 bg-black/20",
+                isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+            )}>
+                <button
+                    onClick={togglePlay}
+                    className="p-6 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:scale-110 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                >
+                    {isPlaying ? <Pause size={40} fill="white" /> : <Play size={40} fill="white" className="ml-1" />}
+                </button>
+            </div>
+
+            {/* Mute Toggle (Top Right) */}
+            <button
+                onClick={toggleMute}
+                className="absolute top-4 right-4 p-3 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/10 hover:bg-black/60 transition-all z-20 group/mute"
+            >
+                {isMuted ? (
+                    <div className="flex items-center gap-2">
+                        <VolumeX size={20} />
+                        <span className="text-[10px] font-bold overflow-hidden max-w-0 group-hover/mute:max-w-[100px] transition-all duration-300">Tap to Unmute</span>
+                    </div>
+                ) : (
+                    <Volume2 size={20} />
+                )}
+            </button>
+        </div>
+    );
+});
+
+// Mock Lock Overlay for VIP Early Access
+const LockOverlay = ({ onUnlock }: { onUnlock: () => void }) => (
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-6 text-center">
+        <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-gradient-to-br from-slate-900 to-black border border-purple-500/30 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+        >
+            {/* Background Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-purple-500/20 blur-3xl rounded-full pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col items-center">
+                <div className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/30">
+                    <Sparkles className="w-8 h-8 text-purple-400" />
+                </div>
+
+                <h2 className="text-2xl font-black text-white mb-2">VIP Early Access</h2>
+                <p className="text-indigo-200 text-sm mb-8 leading-relaxed">
+                    Magic Video is currently in exclusive beta for our VIP members. Join the waitlist or upgrade to start creating movies today!
+                </p>
+
+                <div className="space-y-3 w-full">
+                    <button onClick={() => window.location.href = '/pricing'} className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-white hover:scale-105 transition-transform shadow-lg flex items-center justify-center gap-2">
+                        <span>Get VIP Access</span>
+                        <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => alert("Added to waitlist! We'll notify you soon.")} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl font-bold text-white/60 hover:bg-white/10 transition-colors text-sm">
+                        Join Waitlist
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+    </div>
+);
+
 export const MagicMoviePage: React.FC = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const location = useLocation();
-
-    // Steps: upload -> params -> generating -> finished
+    const { user, activeProfile } = useAuth();
     const [step, setStep] = useState<Step>('upload');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [resultData, setResultData] = useState<any>(null);
-    const [progress, setProgress] = useState(0);
+
+    // Params
+    const [action, setAction] = useState<string | undefined>(MAGIC_ACTIONS[0].id);
+    const [style, setStyle] = useState<string | undefined>();
+    const [effect, setEffect] = useState<string | undefined>();
+    const [selectedSpell, setSelectedSpell] = useState<'quick' | 'story' | 'cinema'>('story');
+    const [videoPrompt, setVideoPrompt] = useState<string>(''); // For tags/prompt enrichment
+
+    // NEW: Audio Params
+    const [audioMode, setAudioMode] = useState<'talk' | 'scene'>('talk');
+    const [voiceStyle, setVoiceStyle] = useState<'cute' | 'girl' | 'boy' | 'woman' | 'man' | 'robot' | 'monster'>('girl');
+    const [sceneMood, setSceneMood] = useState<'happy' | 'mysterious' | 'action'>('happy');
+    const [textInput, setTextInput] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
+    const [isSoundOn, setIsSoundOn] = useState(true);
+
+    // Generation State
     const [statusMessage, setStatusMessage] = useState('Initializing...');
+    const [progress, setProgress] = useState(0);
+    const [resultData, setResultData] = useState<any>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    // Puzzle State
     const [showPuzzle, setShowPuzzle] = useState(false);
 
-    // Builder States
-    // Builder States
-    const [action, setAction] = useState<string | undefined>(MAGIC_ACTIONS[0].id);
-    const [style, setStyle] = useState<string | undefined>(undefined);
-    const [effect, setEffect] = useState<string | undefined>(undefined);
-    // New Doubao 1.5 States
-    const [selectedSpell, setSelectedSpell] = useState<'quick' | 'story' | 'cinema'>('story');
-    const [audioMode, setAudioMode] = useState<'talk' | 'scene'>('talk');
-    const [voiceStyle, setVoiceStyle] = useState<'cute' | 'robot' | 'monster'>('cute');
-    const [sceneMood, setSceneMood] = useState<'happy' | 'mysterious' | 'action'>('happy');
-    const [textInput, setTextInput] = useState(""); // Character Speech - Start empty
-    const [isSoundOn, setIsSoundOn] = useState(true); // New: Sound Toggle
-    const [videoPrompt, setVideoPrompt] = useState(''); // Additional Prompt / Scene Description
-    const [isListening, setIsListening] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
-    const recognitionRef = useRef<any>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
+    // VIP Check
+    const isVIP = useMemo(() => {
+        if (!user) return false;
+        return user.plan === 'pro' || user.plan === 'yearly_pro' || user.plan === 'admin';
+    }, [user]);
+    const [renderId] = useState(() => Date.now().toString()); // Persistent ID for the current session
+
+    const memoizedVideoUrl = useMemo(() => {
+        if (!resultData?.videoUrl) return '';
+
+        // If it's an original URL from Volcengine or Firebase, return it directly (usually supports streaming)
+        // Only use the download proxy when the download button is clicked
+        return resultData.videoUrl;
+    }, [resultData?.videoUrl, renderId]);
 
 
     const addTag = (tag: string) => { setVideoPrompt(prev => (tag + ' ' + prev).substring(0, (SPELLS as any)[selectedSpell].limit)); };
@@ -109,17 +255,7 @@ export const MagicMoviePage: React.FC = () => {
         }
     }, [location.state]);
 
-    // Video element cleanup to prevent React errors
-    React.useEffect(() => {
-        return () => {
-            // Cleanup: pause and clear video on unmount to prevent AbortError
-            if (videoRef.current) {
-                videoRef.current.pause();
-                videoRef.current.src = '';
-                videoRef.current.load();
-            }
-        };
-    }, [resultData?.videoUrl]);
+
 
     // Cropper State
     const [cropImage, setCropImage] = useState<string | null>(null);
@@ -175,6 +311,9 @@ export const MagicMoviePage: React.FC = () => {
         formData.append('duration', durationMap[selectedSpell]);
         formData.append('generateAudio', isSoundOn ? 'true' : 'false'); // User controlled
         formData.append('userId', user.uid);
+        if (activeProfile) {
+            formData.append('profileId', activeProfile.id);
+        }
 
         // NEW: Audio Mode and Voice Style parameters
         formData.append('audioMode', audioMode); // 'talk' or 'scene'
@@ -210,11 +349,23 @@ export const MagicMoviePage: React.FC = () => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to generate video');
+                const errorText = await response.text();
+                try {
+                    const errorData = JSON.parse(errorText);
+                    throw new Error(errorData.error || `Server Error: ${response.status}`);
+                } catch (e) {
+                    throw new Error(`Server Error (${response.status}): ${errorText.substring(0, 100)}`);
+                }
             }
 
-            const data = await response.json();
+            const responseText = await response.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error('Server response parse error:', responseText);
+                throw new Error('Invalid server response (not JSON)');
+            }
 
             // Check for success field from backend
             if (data.success === false) {
@@ -235,7 +386,10 @@ export const MagicMoviePage: React.FC = () => {
 
             // Simulated progress (since backend doesn't provide real progress)
             let simulatedProgress = 0;
+            let isCompleted = false; // Guard flag to prevent race conditions
+
             const progressInterval = setInterval(() => {
+                if (isCompleted) return; // Exit if already completed
                 simulatedProgress += 2;
                 if (simulatedProgress < 90) {
                     setProgress(simulatedProgress);
@@ -243,12 +397,18 @@ export const MagicMoviePage: React.FC = () => {
             }, 1000);
 
             const pollInterval = setInterval(async () => {
+                if (isCompleted) return; // Exit immediately if already completed
+
                 try {
                     const statusRes = await fetch(`/api/media/image-to-video/status/${taskId}`);
                     const statusData = await statusRes.json();
 
+                    // Double-check guard flag before processing (in case of concurrent request)
+                    if (isCompleted) return;
+
                     // Map backend status to frontend
                     if (statusData.status === 'SUCCEEDED' && statusData.videoUrl) {
+                        isCompleted = true; // Set flag FIRST to prevent any further processing
                         clearInterval(pollInterval);
                         clearInterval(progressInterval);
                         setProgress(100);
@@ -276,6 +436,7 @@ export const MagicMoviePage: React.FC = () => {
                         setStep('finished');
                         setStatusMessage('Complete!');
                     } else if (statusData.status === 'FAILED') {
+                        isCompleted = true; // Lock to prevent further processing
                         clearInterval(pollInterval);
                         clearInterval(progressInterval);
                         throw new Error(statusData.error || 'Generation failed');
@@ -286,6 +447,7 @@ export const MagicMoviePage: React.FC = () => {
                         }
                     }
                 } catch (err: any) {
+                    isCompleted = true;
                     clearInterval(pollInterval);
                     clearInterval(progressInterval);
                     alert(err.message || 'Failed to check status');
@@ -451,8 +613,9 @@ export const MagicMoviePage: React.FC = () => {
                 src={videoPageBg}
                 autoPlay
                 loop
-                muted
+                muted={true}
                 playsInline
+                crossOrigin="anonymous"
                 className="absolute inset-0 w-full h-full object-cover z-0"
             />
 
@@ -473,70 +636,83 @@ export const MagicMoviePage: React.FC = () => {
                 </div>
             </div>
 
+
             <div className="flex-1 w-full overflow-y-auto custom-scrollbar relative z-10">
-                <div className="w-full max-w-7xl mx-auto px-4 py-6">
+                {/* VIP LOCK OVERLAY */}
+                {!isVIP && <LockOverlay onUnlock={() => { }} />}
+
+                <div className={cn("w-full max-w-7xl mx-auto px-4 py-6", !isVIP && "filter blur-sm pointer-events-none select-none")}>
 
                     {/* STEP 1: UPLOAD */}
                     {step === 'upload' && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="w-full max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh] relative"
+                            className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-start justify-center gap-12 min-h-[60vh] px-4"
                         >
-                            <h2 className="text-3xl font-black text-white mb-8 text-center">First, choose a picture! 📸</h2>
+                            {/* Left Col: Upload Box */}
+                            <div className="flex-1 w-full max-w-xl flex flex-col items-center">
+                                <h2 className="text-xl md:text-3xl font-black text-white mb-8 text-center drop-shadow-lg">First, choose a picture! 📸</h2>
 
-                            <div className="relative w-full aspect-[4/3] bg-slate-800/50 rounded-3xl border-4 border-dashed border-white/20 hover:border-purple-400/50 transition-colors group cursor-pointer overflow-hidden flex flex-col items-center justify-center max-w-2xl"
-                                onClick={() => document.getElementById('anim-upload')?.click()}>
+                                <div className="relative w-full aspect-[4/3] bg-slate-800/50 rounded-3xl border-4 border-dashed border-white/20 hover:border-purple-400/50 transition-colors group cursor-pointer overflow-hidden flex flex-col items-center justify-center shadow-2xl"
+                                    onClick={() => document.getElementById('anim-upload')?.click()}>
 
-                                {/* Background Video Hint - Original, No Effects */}
-                                <video src={generateVideo} autoPlay loop muted playsInline disablePictureInPicture className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+                                    {/* Background Video Hint */}
+                                    <video src={generateVideo} autoPlay loop muted playsInline disablePictureInPicture className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-60 group-hover:opacity-80 transition-opacity" />
 
-                                <input type="file" id="anim-upload" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                            </div>
+                                    <div className="relative z-10 flex flex-col items-center">
+                                        <div className="bg-black/50 p-4 rounded-full mb-3 backdrop-blur-sm border border-white/10 group-hover:scale-110 transition-transform">
+                                            <Upload className="w-8 h-8 text-white" />
+                                        </div>
+                                        <span className="text-white font-bold text-lg drop-shadow-md">Click to Upload</span>
+                                        <span className="text-white/70 text-sm mt-1">or drag & drop</span>
+                                    </div>
 
-                            {/* Upload Tip - Positioned beside upload box on large screens */}
-                            <div className="hidden lg:block absolute left-[calc(100%+2rem)] top-32 w-80">
-                                <div className="bg-blue-500/20 border-2 border-blue-400/50 rounded-2xl p-4 backdrop-blur-sm">
-                                    <p className="text-white/90 text-sm leading-relaxed">
-                                        💡 <strong>Tip:</strong> For best video results, upload colored images or use{' '}
-                                        <button
-                                            onClick={() => navigate('/magic-art')}
-                                            className="font-bold text-yellow-300 hover:text-yellow-200 underline cursor-pointer transition-colors"
-                                        >
-                                            KAT Coloring
-                                        </button>{' '}
-                                        to add colors to your artwork, or try{' '}
-                                        <button
-                                            onClick={() => navigate('/creative-journey')}
-                                            className="font-bold text-pink-300 hover:text-pink-200 underline cursor-pointer transition-colors"
-                                        >
-                                            Mentor Journey
-                                        </button>{' '}
-                                        to enhance and color your drawings!
-                                    </p>
+                                    <input type="file" id="anim-upload" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                                </div>
+
+                                {/* Mobile Tip - Visible only on small screens */}
+                                <div className="lg:hidden mt-8 w-full">
+                                    <div className="bg-blue-500/20 border-2 border-blue-400/50 rounded-2xl p-5 backdrop-blur-sm">
+                                        <p className="text-white/90 text-sm leading-relaxed text-center">
+                                            💡 <strong>Tip:</strong> For best results, use colorful drawings! Try{' '}
+                                            <button
+                                                onClick={() => navigate('/magic-art', { state: { returnTo: location.pathname } })}
+                                                className="font-bold text-yellow-300 hover:text-yellow-200 underline"
+                                            >
+                                                KAT Coloring
+                                            </button>
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Mobile version - below upload box */}
-                            <div className="lg:hidden mt-6 w-full">
-                                <div className="bg-blue-500/20 border-2 border-blue-400/50 rounded-2xl p-4 backdrop-blur-sm">
-                                    <p className="text-white/90 text-sm leading-relaxed text-center">
-                                        💡 <strong>Tip:</strong> For best video results, upload colored images or use{' '}
-                                        <button
-                                            onClick={() => navigate('/magic-art')}
-                                            className="font-bold text-yellow-300 hover:text-yellow-200 underline cursor-pointer transition-colors"
-                                        >
-                                            KAT Coloring
-                                        </button>{' '}
-                                        to add colors to your artwork, or try{' '}
-                                        <button
-                                            onClick={() => navigate('/creative-journey')}
-                                            className="font-bold text-pink-300 hover:text-pink-200 underline cursor-pointer transition-colors"
-                                        >
-                                            Mentor Journey
-                                        </button>{' '}
-                                        to enhance and color your drawings!
+                            {/* Right Col: Desktop Tip - Visible only on large screens, standard flow */}
+                            <div className="hidden lg:block w-80 pt-24 shrink-0">
+                                <div className="bg-indigo-900/40 border-2 border-indigo-400/30 rounded-3xl p-6 backdrop-blur-xl shadow-xl sticky top-24">
+                                    <h3 className="text-indigo-200 font-bold mb-3 flex items-center gap-2">
+                                        <Sparkles className="w-5 h-5" />
+                                        <span>Pro Tips</span>
+                                    </h3>
+                                    <p className="text-white/80 text-sm leading-relaxed mb-4">
+                                        Full-body characters work best! Make sure arms and legs are visible for cool dance moves.
                                     </p>
+                                    <div className="bg-black/20 rounded-xl p-3 mb-4">
+                                        <p className="text-white/90 text-xs">
+                                            Try coloring your art first in{' '}
+                                            <button
+                                                onClick={() => navigate('/magic-art', { state: { returnTo: location.pathname } })}
+                                                className="font-bold text-yellow-300 hover:text-yellow-200 underline transition-colors"
+                                            >
+                                                KAT Coloring
+                                            </button>
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2 text-xs text-white/50">
+                                        <span>✨ Colored Art</span>
+                                        <span>•</span>
+                                        <span>🧍 Full Body</span>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
@@ -564,7 +740,7 @@ export const MagicMoviePage: React.FC = () => {
                             <div className="space-y-6 max-w-2xl mx-auto">
 
                                 {/* STYLE ROW */}
-                                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm">
+                                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-slate-900/60 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
                                     <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎨 Style</h3>
                                     <div className="grid grid-cols-3 gap-2 w-full">
                                         {MAGIC_STYLES.map(sty => (
@@ -586,7 +762,7 @@ export const MagicMoviePage: React.FC = () => {
                                 </motion.div>
 
                                 {/* EFFECT ROW */}
-                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm">
+                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-slate-900/60 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
                                     <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">✨ Effect</h3>
                                     <div className="grid grid-cols-3 gap-2 w-full">
                                         {MAGIC_EFFECTS.map(eff => (
@@ -610,7 +786,7 @@ export const MagicMoviePage: React.FC = () => {
 
                             {/* ACTION ROW */}
                             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
-                                <div className="space-y-3 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-sm">
+                                <div className="space-y-3 bg-slate-900/60 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
                                     <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎬 Action</h3>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 w-full">
                                         {MAGIC_ACTIONS.map(act => (
@@ -786,43 +962,33 @@ export const MagicMoviePage: React.FC = () => {
                                         {audioMode === 'talk' && (
                                             <div className="mt-4">
                                                 <h4 className="text-white/70 text-xs font-bold uppercase tracking-wider mb-2">Voice Style</h4>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    <button
-                                                        onClick={() => setVoiceStyle('cute')}
-                                                        className={cn(
-                                                            "flex flex-col items-center justify-center p-2 rounded-lg border transition-all relative overflow-hidden aspect-square",
-                                                            voiceStyle === 'cute' ? "ring-2 ring-pink-300 bg-pink-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                        )}
-                                                    >
-                                                        <img src={voiceCuteIcon} alt="Cute" className="absolute inset-0 w-full h-full object-cover" />
-                                                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
-                                                            <div className="text-[10px] font-bold text-white drop-shadow-md text-center">Cute</div>
-                                                        </div>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setVoiceStyle('robot')}
-                                                        className={cn(
-                                                            "flex flex-col items-center justify-center p-2 rounded-lg border transition-all relative overflow-hidden aspect-square",
-                                                            voiceStyle === 'robot' ? "ring-2 ring-cyan-300 bg-cyan-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                        )}
-                                                    >
-                                                        <img src={voiceRobotIcon} alt="Robot" className="absolute inset-0 w-full h-full object-cover" />
-                                                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
-                                                            <div className="text-[10px] font-bold text-white drop-shadow-md text-center">Robot</div>
-                                                        </div>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setVoiceStyle('monster')}
-                                                        className={cn(
-                                                            "flex flex-col items-center justify-center p-2 rounded-lg border transition-all relative overflow-hidden aspect-square",
-                                                            voiceStyle === 'monster' ? "ring-2 ring-green-300 bg-green-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                        )}
-                                                    >
-                                                        <img src={voiceMonsterIcon} alt="Monster" className="absolute inset-0 w-full h-full object-cover" />
-                                                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
-                                                            <div className="text-[10px] font-bold text-white drop-shadow-md text-center">Monster</div>
-                                                        </div>
-                                                    </button>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {[
+                                                        { id: 'girl', label: 'Girl', icon: '👧' },
+                                                        { id: 'boy', label: 'Boy', icon: '👦' },
+                                                        { id: 'woman', label: 'Lady', icon: '👩' },
+                                                        { id: 'man', label: 'Man', icon: '👨' },
+                                                        { id: 'cute', label: 'Cute', icon: '👶' },
+                                                        { id: 'robot', label: 'Robot', icon: '🤖' },
+                                                        { id: 'monster', label: 'Monster', icon: '👹' },
+                                                    ].map(v => (
+                                                        <button
+                                                            key={v.id}
+                                                            onClick={() => setVoiceStyle(v.id as any)}
+                                                            className={cn(
+                                                                "flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all relative overflow-hidden aspect-square",
+                                                                voiceStyle === v.id ? "ring-2 ring-pink-300 bg-pink-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                            )}
+                                                        >
+                                                            <div className="absolute inset-0 flex items-center justify-center opacity-20 text-4xl grayscale brightness-50">
+                                                                {/* Optional Background visual if needed */}
+                                                            </div>
+                                                            <div className="relative z-10 flex flex-col items-center">
+                                                                <div className="text-2xl mb-1 drop-shadow-md filter">{v.icon}</div>
+                                                                <div className="text-[9px] font-bold text-white text-center leading-tight">{v.label}</div>
+                                                            </div>
+                                                        </button>
+                                                    ))}
                                                 </div>
 
                                                 {/* Character Speech Input - Talk mode needs text for lip-sync */}
@@ -898,6 +1064,7 @@ export const MagicMoviePage: React.FC = () => {
 
                                 {/* Generate Button */}
                                 <button
+                                    type="button"
                                     onClick={handleGenerate}
                                     className="w-full py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white rounded-3xl font-black text-xl flex flex-col items-center justify-center"
                                 >
@@ -954,23 +1121,12 @@ export const MagicMoviePage: React.FC = () => {
                                         {console.log('[MagicMovie] resultData:', resultData)}
                                         {console.log('[MagicMovie] videoUrl:', resultData?.videoUrl)}
 
-                                        <div className="rounded-2xl overflow-hidden mb-6 bg-black shadow-2xl flex justify-center bg-black/50 backdrop-blur-sm">
-                                            <video
-                                                key={resultData?.videoUrl}
-                                                src={resultData?.videoUrl}
-                                                controls
-                                                loop
-                                                playsInline
-                                                preload="metadata"
-                                                className="w-full max-h-[70vh] aspect-square md:aspect-video bg-black"
-                                                onError={(e) => {
-                                                    console.error('Video load error:', e);
-                                                    // Fallback: user can still download via proxy
-                                                }}
-                                            >
-                                                <source src={resultData?.videoUrl} type="video/mp4" />
-                                                Your browser doesn't support video playback. Click Download to view the video.
-                                            </video>
+                                        <div className="mb-6 flex justify-center">
+                                            <MemoVideoPlayer
+                                                url={memoizedVideoUrl}
+                                                poster={imagePreview || undefined}
+                                                initialMuted={!isSoundOn} // Respect user's sound preference
+                                            />
                                         </div>
                                         <div className="space-y-4">
                                             {/* Action Buttons */}

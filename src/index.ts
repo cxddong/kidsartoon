@@ -1,5 +1,6 @@
 // src/index.ts
 import 'dotenv/config'; // Read .env (Must be at the top)
+// Server Status: Restarted with Fallback Support
 import { router as pictureBookRouter } from './routes/picturebook.js';
 import fs from 'fs'; // For checking clientDist
 import express from 'express';

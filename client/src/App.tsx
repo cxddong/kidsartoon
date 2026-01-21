@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
+import { ToastProvider } from './context/ToastContext';
+import { PointAnimationProvider } from './context/PointAnimationContext';
 // import { SoundManager } from './components/SoundManager'; // SUSPECT 1
 
 // Existing Pages
@@ -41,9 +43,12 @@ import { ParentReportPage } from './pages/ParentReportPage';
 import MagicPressPage from './pages/MagicPressPage';
 import PublicShowcasePage from './pages/PublicShowcasePage';
 import { MagicArtStudioPage } from './pages/MagicArtStudioPage';
+import { MagicArtClassPage } from './pages/MagicArtClassPage';
 import { ScreenTimeManager } from './components/ScreenTimeManager';
 import { ImageAdjustDebugPage } from './pages/ImageAdjustDebugPage';
 import { JumpIntoArtPage } from './pages/JumpIntoArtPage';
+import { AuditViewPage } from './pages/AuditViewPage';
+import { MagicKatLoader } from './components/ui/MagicKatLoader';
 
 
 
@@ -52,7 +57,7 @@ const RequireAuth = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <div className="h-screen w-screen flex items-center justify-center bg-white"><div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <MagicKatLoader fullScreen text="Checking magic pass..." />;
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -77,6 +82,7 @@ const AppRoutes = () => {
       <Route path="/" element={<SplashPage />} />
       <Route path="/splash" element={<SplashPage />} />
       <Route path="/view/:shareId" element={<PublicShowcasePage />} />
+      <Route path="/audit-view" element={<AuditViewPage />} />
 
       {/* New Routing Structure */}
       <Route path="/home" element={<HomePage />} /> {/* Formerly GeneratePage */}
@@ -117,6 +123,7 @@ const AppRoutes = () => {
         <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
         <Route path="/jump-into-art" element={<JumpIntoArtPage />} />
         <Route path="/magic-art" element={<MagicArtStudioPage />} />
+        <Route path="/art-class" element={<MagicArtClassPage />} />
 
         {/* Debug Routes */}
         <Route path="/debug/image-adjust" element={<ImageAdjustDebugPage />} />
@@ -142,10 +149,14 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ScreenTimeManager>
-          {/* <SoundManager /> */}
-          <AppRoutes />
-        </ScreenTimeManager>
+        <ToastProvider>
+          <PointAnimationProvider>
+            <ScreenTimeManager>
+              {/* <SoundManager /> */}
+              <AppRoutes />
+            </ScreenTimeManager>
+          </PointAnimationProvider>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

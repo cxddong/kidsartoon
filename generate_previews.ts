@@ -1,4 +1,4 @@
-
+import 'dotenv/config';
 import { minimaxService } from './src/services/minimax.ts';
 import fs from 'fs';
 import path from 'path';

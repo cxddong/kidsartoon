@@ -65,19 +65,23 @@ router.post('/generate', async (req, res) => {
         const REPORT_COST = 60;
         const isVIP = ['premium', 'vip', 'admin'].includes(userPlan);
 
+        const hasRedeemedFirst = userData?.hasRedeemedFirstReport === true;
+
         if (!isVIP) {
-            if (userPoints < REPORT_COST) {
+            if (!hasRedeemedFirst) {
+                console.log(`[Reports] First time report - Free for ${userId}`);
+            } else if (userPoints < REPORT_COST) {
                 return res.status(402).json({
                     error: 'Insufficient points',
                     required: REPORT_COST,
                     current: userPoints,
                     message: 'Unlock deep scientific analysis for 60 points or upgrade to Premium'
                 });
+            } else {
+                // Deduct points (grantPoints with negative amount)
+                await pointsService.grantPoints(userId, -REPORT_COST, 'parent_report', 'Weekly Scientific Report Generation');
+                console.log(`[Reports] Deducted ${REPORT_COST} points from ${userId}`);
             }
-
-            // Deduct points (grantPoints with negative amount)
-            await pointsService.grantPoints(userId, -REPORT_COST, 'parent_report', 'Weekly Scientific Report Generation');
-            console.log(`[Reports] Deducted ${REPORT_COST} points from ${userId}`);
         } else {
             console.log(`[Reports] VIP user ${userId} - Free access`);
         }
@@ -199,6 +203,12 @@ Be evidence-based. Cite real data.`;
         };
 
         await databaseService.saveReport(userId, report);
+
+        // Mark first report as redeemed
+        if (!isVIP && !hasRedeemedFirst) {
+            await adminDb.collection('users').doc(userId).update({ hasRedeemedFirstReport: true });
+        }
+
         res.json({ success: true, report });
 
     } catch (error: any) {
@@ -249,6 +259,12 @@ router.get('/check-cost', async (req, res) => {
 
         if (isVIP) {
             return res.json({ needsPayment: false, isVIP: true });
+        }
+
+        // Check for First-Time Free Benefit
+        const hasRedeemedFirst = userData?.hasRedeemedFirstReport === true;
+        if (!hasRedeemedFirst) {
+            return res.json({ needsPayment: false, isFirstTime: true });
         }
 
         // Needs payment

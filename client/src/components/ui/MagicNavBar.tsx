@@ -12,7 +12,7 @@ export const MagicNavBar = () => {
 
     return (
         // 容器定位：固定在底部，居中悬浮
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <div className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50">
 
             {/* 🔮 胶囊本体 - 可变形 */}
             <motion.div
@@ -96,8 +96,8 @@ const NavButton = ({ icon, label, onClick, active, isExpanded }: any) => (
         whileTap={{ scale: 0.9 }}
         onClick={onClick}
         className={`flex items-center justify-center rounded-full transition-colors duration-200 ${active
-                ? 'text-indigo-600 bg-white/50'
-                : 'text-gray-200 hover:text-white hover:bg-white/30'
+            ? 'text-indigo-600 bg-white/50'
+            : 'text-gray-200 hover:text-white hover:bg-white/30'
             }`}
         animate={{
             width: isExpanded ? 90 : 36,

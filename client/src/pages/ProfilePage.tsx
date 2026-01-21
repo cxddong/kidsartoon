@@ -13,7 +13,10 @@ import PictureBookReader from '../components/viewer/PictureBookReader';
 import { CartoonBookViewer } from '../components/viewer/CartoonBookViewer';
 // import { BottomNav } from '../components/BottomNav';
 import { MagicNavBar } from '../components/ui/MagicNavBar'; // IMPORTED
+import { MagicEmptyState } from '../components/ui/MagicEmptyState';
 import { ParentCodeModal } from '../components/ParentCodeModal';
+import { MagicKatLoader } from '../components/ui/MagicKatLoader';
+import { useToast } from '../context/ToastContext';
 
 import profileLeftVideo from '../assets/profileleft.mp4';
 
@@ -222,6 +225,8 @@ export const ProfilePage: React.FC = () => {
 
 
 
+    const { showToast } = useToast();
+
     // Selection Handlers
     const toggleSelectionMode = () => {
         setIsSelectionMode(!isSelectionMode);
@@ -244,7 +249,7 @@ export const ProfilePage: React.FC = () => {
         if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} items? This cannot be undone.`)) return;
 
         if (!user) {
-            alert("Error: No user logged in!");
+            showToast("Error: No user logged in!", 'error');
             return;
         }
 
@@ -262,15 +267,16 @@ export const ProfilePage: React.FC = () => {
                 if (!res.ok) {
                     const err = await res.json();
                     console.error("Delete failed for", id, err);
-                    alert(`Failed to delete item: ${err.error || 'Unknown error'}`);
+                    showToast(`Failed to delete item: ${err.error || 'Unknown error'}`, 'error');
                     // Revert optimistic update for this item if possible, or just reload
                     window.location.reload();
                 }
             } catch (e) {
                 console.error("Failed to delete", id, e);
-                alert("Failed to delete item due to network error.");
+                showToast("Failed to delete item due to network error.", 'error');
             }
         }
+        showToast("Items deleted successfully!", 'success');
     };
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -290,6 +296,19 @@ export const ProfilePage: React.FC = () => {
                 const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
+
+                    // DEBUG: Log Raw Data for Troubleshooting
+                    console.log('[DEBUG Profile] Raw Data:', data.length, 'items');
+                    if (data.length > 0) {
+                        console.log('[DEBUG Profile] Sample Item meta:', data[0].meta);
+                        // Check for recent video recovery
+                        const recentVideo = data.find((i: any) => i.type === 'animation');
+                        if (recentVideo) {
+                            console.log('[DEBUG Profile] Found Animation:', recentVideo.id, 'ProfileId:', recentVideo.meta?.profileId);
+                        }
+                    }
+                    console.log('[DEBUG Profile] Active Profile:', activeProfile ? activeProfile.id : 'PARENT');
+
                     if (Array.isArray(data)) {
                         // CLIENT-SIDE FILTERING FOR PROFILES
                         const filtered = data.filter(img => {
@@ -658,9 +677,7 @@ export const ProfilePage: React.FC = () => {
                     {/* Image Grid - Enlarged */}
                     <div className="bg-transparent min-h-[500px]">
                         {loadingImages ? (
-                            <div className="flex justify-center py-20">
-                                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                            </div>
+                            <MagicKatLoader fullScreen={false} text="Opening your magic backpack..." className="py-20" />
                         ) : (
                             <HistoryGrid
                                 images={filteredImages}
@@ -672,16 +689,13 @@ export const ProfilePage: React.FC = () => {
                             />
                         )}
                         {!loadingImages && filteredImages.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
-                                <p className="font-bold text-lg">No artworks found in {activeTab}.</p>
-                                <p className="text-sm max-w-xs text-center">Start creating or try logging in again if you expected to see something.</p>
-                                <button
-                                    onClick={() => window.location.reload()}
-                                    className="px-6 py-2 bg-white border border-slate-200 rounded-full font-bold shadow-sm hover:bg-slate-50 transition-colors"
-                                >
-                                    Refresh Page
-                                </button>
-                            </div>
+                            <MagicEmptyState
+                                title={`No ${activeTab === 'all' ? 'Artworks' : activeTab} Found`}
+                                description={activeTab === 'likes' ? "You haven't liked any magic yet!" : "Time to make some magic! Start creating your first masterpiece."}
+                                actionLabel="Start Creating"
+                                onAction={() => navigate('/home')}
+                                icon={<span className="text-6xl">🎨</span>}
+                            />
                         )}
                     </div>
                 </div>

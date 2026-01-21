@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { openAIService } from '../services/openai.js';
+import OpenAI from 'openai';
 
 export const magicLabRouter = Router();
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || ""
+});
 
 // System prompt for Magic Kat AI Guide
 const MAGIC_KAT_SYSTEM_PROMPT = `You are Magic Kat, a mischievous, playful, and hilarious AI cat assistant for the KidsArtoon creative app.
@@ -68,6 +73,54 @@ CRITICAL RULES:
 `;
 
 
+// POST /api/magic-lab/welcome
+magicLabRouter.post('/welcome', async (req, res) => {
+    try {
+        const welcomeText = "Heyyy! *stretches and yawns* I'm Magic Kat, your SUPER creative guide! 🐱✨ I was just chasing a laser pointer but NOW I'm here to help YOU make something AMAZING! What do you wanna create??";
+
+        // Generate audio for welcome message
+        let audioUrl = null;
+        try {
+            const audioBuffer = await openAIService.generateSpeech(welcomeText);
+            audioUrl = `data:audio/mpeg;base64,${audioBuffer.toString('base64')}`;
+        } catch (error) {
+            console.error('Welcome TTS generation failed:', error);
+        }
+
+        res.json({
+            message: welcomeText,
+            audioUrl
+        });
+
+    } catch (error) {
+        console.error('Magic Lab welcome error:', error);
+        res.status(500).json({ error: 'Failed to get welcome message' });
+    }
+});
+
+/**
+ * 🛠️ Helper to generate audio segments (returns base64)
+ */
+async function generateAudioSegment(text: string): Promise<string | null> {
+    try {
+        if (!text.trim() || text.length < 3) return null;
+
+        console.log(`[MagicLab] Generating audio for segment: "${text.substring(0, 30)}..."`);
+        const audioBuffer = await openAIService.generateSpeech(text);
+        const base64 = audioBuffer.toString('base64');
+
+        const fs = await import('fs');
+        try {
+            fs.appendFileSync('tts_debug.log', `${new Date().toISOString()} - Generated: "${text.substring(0, 20)}..." - Bytes: ${audioBuffer.length}\n`);
+        } catch (e) { }
+
+        return base64;
+    } catch (err) {
+        console.error('[MagicLab] Segment TTS failed:', err);
+        return null;
+    }
+}
+
 // POST /api/magic-lab/chat
 magicLabRouter.post('/chat', async (req, res) => {
     try {
@@ -77,77 +130,92 @@ magicLabRouter.post('/chat', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
+        // Set SSE Headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
         // Build conversation context
         const messages = [
             { role: 'system', content: MAGIC_KAT_SYSTEM_PROMPT },
-            ...conversationHistory.slice(-10), // Keep last 10 messages for context
+            ...conversationHistory.slice(-10).map((m: any) => ({
+                role: m.role,
+                content: m.content
+            })),
             { role: 'user', content: message }
         ];
 
-        // Call OpenAI directly
-        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
-                messages,
-                temperature: 0.7,
-                max_tokens: 150
-            })
+        // Call OpenAI with Streaming
+        const stream = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: messages as any,
+            temperature: 0.7,
+            max_tokens: 250,
+            stream: true,
         });
 
-        if (!openaiResponse.ok) {
-            throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+        let fullContent = "";
+        let sentenceBuffer = "";
+        const audioPromiseQueue: Promise<string | null>[] = [];
+
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || "";
+            if (!content) continue;
+
+            // 1. Send Text Chunk to Frontend
+            res.write(`data: ${JSON.stringify({ type: 'text', content })}\n\n`);
+
+            fullContent += content;
+            sentenceBuffer += content;
+
+            // 2. Detect Sentence Boundry
+            if (/[.!?。！？\n]/.test(content)) {
+                const trimmedSentence = sentenceBuffer.trim();
+                if (trimmedSentence) {
+                    // Trigger TTS asynchronously and track PRomise to preserve order
+                    console.log(`[MagicLab] Queueing TTS: "${trimmedSentence.substring(0, 30)}..."`);
+                    audioPromiseQueue.push(generateAudioSegment(trimmedSentence));
+                }
+                sentenceBuffer = "";
+            }
         }
 
-        const response = await openaiResponse.json();
-        const aiReply = response.choices[0].message.content;
+        if (sentenceBuffer.trim()) {
+            audioPromiseQueue.push(generateAudioSegment(sentenceBuffer.trim()));
+        }
 
-        // Parse for navigation action
-        let action = null;
-        let cleanReply = aiReply;
+        // 3. Send audio segments sequentially as they become ready
+        // This ensures they play in the correct order on the frontend
+        for (let i = 0; i < audioPromiseQueue.length; i++) {
+            const base64 = await audioPromiseQueue[i];
+            if (base64) {
+                console.log(`[MagicLab] Sending audio segment #${i + 1} to client`);
+                res.write(`data: ${JSON.stringify({ type: 'audio', audio: base64 })}\n\n`);
+            }
+        }
 
-        const actionMatch = aiReply.match(/ACTION:navigate:(\/[^\s]+)/);
+        // Parse for navigation actions
+        const actionMatch = fullContent.match(/ACTION:navigate:(\/[^\s]+)/);
         if (actionMatch) {
-            action = {
-                type: 'navigate',
-                route: actionMatch[1]
-            };
-            // Remove ACTION from displayed text
-            cleanReply = aiReply.replace(/ACTION:navigate:\/[^\s]+/, '').trim();
+            const action = { type: 'navigate', route: actionMatch[1] };
+            res.write(`data: ${JSON.stringify({ type: 'action', action })}\n\n`);
         }
 
-        // Update conversation history
-        const updatedHistory = [
+        // Final event
+        const finalHistory = [
             ...conversationHistory.slice(-10),
             { role: 'user', content: message },
-            { role: 'assistant', content: cleanReply }
+            { role: 'assistant', content: fullContent.replace(/ACTION:navigate:\/[^\s]+/, '').trim() }
         ];
 
-        // Generate voice for AI response
-        let audioUrl = null;
-        try {
-            const audioBuffer = await openAIService.generateSpeech(cleanReply);
-            audioUrl = `data:audio/mpeg;base64,${audioBuffer.toString('base64')}`;
-        } catch (error) {
-            console.error('TTS generation failed:', error);
-            // Continue without audio - text-only fallback
-        }
-
-        res.json({
-            reply: cleanReply,
-            audioUrl,
-            action,
-            conversationHistory: updatedHistory
-        });
+        res.write(`data: ${JSON.stringify({ type: 'done', conversationHistory: finalHistory })}\n\n`);
+        res.end();
+        console.log(`[MagicLab] Chat stream complete.`);
 
     } catch (error) {
         console.error('Magic Lab chat error:', error);
-        res.status(500).json({
-            error: 'Oops! Magic Kat got distracted by a laser pointer. Please try again! 🐱'
-        });
+        res.write(`data: ${JSON.stringify({ error: 'Oops! Magic Kat got distracted! Please try again! 🐱' })}\n\n`);
+        res.end();
     }
 });
+

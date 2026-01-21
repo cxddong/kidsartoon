@@ -132,7 +132,7 @@ const ColorPie = ({ colors }: { colors: string[] }) => {
 // -- Main Page --
 
 export const ParentDashboardPage: React.FC = () => {
-    const { user, activeProfile } = useAuth();
+    const { user, activeProfile, updateProfile } = useAuth();
     const navigate = useNavigate();
 
     // State
@@ -147,6 +147,7 @@ export const ParentDashboardPage: React.FC = () => {
     const [reportCost, setReportCost] = useState(60);
     const [hasEnoughPoints, setHasEnoughPoints] = useState(false);
     const [currentPoints, setCurrentPoints] = useState(0);
+    const [isFirstTimeFree, setIsFirstTimeFree] = useState(false);
 
     const handlePinVerify = async () => {
         if (!user || pinInput.length !== 4) return;
@@ -200,6 +201,11 @@ export const ParentDashboardPage: React.FC = () => {
                 setReportCost(data.cost);
                 setCurrentPoints(data.currentPoints);
                 setHasEnoughPoints(data.hasEnough);
+            } else if (data.isFirstTime) {
+                setIsFirstTimeFree(true);
+                setShowPremiumPrompt(true); // Re-use prompt but change content
+                setReportCost(0);
+                setHasEnoughPoints(true);
             } else {
                 // Free access (VIP or already generated)
                 // Report will load automatically via useEffect
@@ -296,9 +302,10 @@ export const ParentDashboardPage: React.FC = () => {
                         <br />• Personalized Parenting Tips
                     </p>
 
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-                        <p className="text-sm text-amber-900">
-                            <strong>Cost:</strong> {reportCost} Points
+                    <div className={cn("rounded-xl p-4 mb-6 border", isFirstTimeFree ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200")}>
+                        <p className={cn("text-sm", isFirstTimeFree ? "text-green-800" : "text-amber-900")}>
+                            <strong>Cost:</strong> {isFirstTimeFree ? <span className="line-through opacity-50 mr-2">60 Points</span> : `${reportCost} Points`}
+                            {isFirstTimeFree && <span className="font-bold text-green-600">FREE (First Time Gift!) 🎁</span>}
                             <br />
                             <strong>Your Balance:</strong> {currentPoints} Points
                         </p>
@@ -308,9 +315,12 @@ export const ParentDashboardPage: React.FC = () => {
                         <button
                             onClick={generateReport}
                             disabled={isLoading}
-                            className="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 disabled:opacity-50"
+                            className={cn(
+                                "w-full text-white py-3 rounded-xl font-bold hover:opacity-90 disabled:opacity-50",
+                                isFirstTimeFree ? "bg-green-600 hover:bg-green-700" : "bg-amber-600 hover:bg-amber-700"
+                            )}
                         >
-                            {isLoading ? 'Generating...' : `Unlock Report (${reportCost} Points)`}
+                            {isLoading ? 'Generating...' : isFirstTimeFree ? 'Claim Free Report' : `Unlock Report (${reportCost} Points)`}
                         </button>
                     ) : (
                         <div>
@@ -521,6 +531,35 @@ export const ParentDashboardPage: React.FC = () => {
                         </div>
                     </section>
                 </div>
+
+                {/* 4. Parent Settings */}
+                <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <Shield size={18} className="text-slate-500" />
+                        Security Settings
+                    </h3>
+                    <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <div>
+                            <p className="font-bold text-slate-700">Parent PIN</p>
+                            <p className="text-xs text-slate-500 mt-1">Protect this dashboard with a 4-digit code.</p>
+                            {user?.parentPin && <p className="text-[10px] text-green-600 font-bold mt-1 flex items-center gap-1"><CheckCircle size={10} /> PIN Active</p>}
+                        </div>
+                        <button
+                            onClick={() => {
+                                const newPin = window.prompt("Enter new 4-digit PIN:");
+                                if (newPin && newPin.length === 4 && /^\d+$/.test(newPin)) {
+                                    updateProfile({ parentPin: newPin });
+                                    alert("PIN updated successfully! Please remember it.");
+                                } else if (newPin) {
+                                    alert("Invalid PIN. Must be exactly 4 digits.");
+                                }
+                            }}
+                            className="px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm"
+                        >
+                            Change PIN
+                        </button>
+                    </div>
+                </section>
 
                 {/* Disclaimer */}
                 <footer className="text-center py-8 px-4">

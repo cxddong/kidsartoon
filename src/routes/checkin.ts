@@ -21,10 +21,10 @@ router.get('/status', async (req, res) => {
 // POST /api/checkin/claim
 router.post('/claim', async (req, res) => {
     try {
-        const { userId, isVip } = req.body;
+        const { userId } = req.body;
         if (!userId) return res.status(400).json({ error: 'userId required' });
 
-        const result = await databaseService.performCheckIn(userId, !!isVip);
+        const result = await databaseService.performCheckIn(userId);
         if (!result.success) {
             return res.status(400).json(result);
         }

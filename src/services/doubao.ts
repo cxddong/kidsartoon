@@ -77,7 +77,7 @@ export class DoubaoService {
     /**
      * Generate Image (Text-to-Image)
      */
-    async generateImage(prompt: string, size: '2K' | '4K' = '2K', seed?: number): Promise<string> {
+    async generateImage(prompt: string, size: '2K' | '4K' = '2K', seed?: number, watermark: boolean = true): Promise<string> {
         try {
             // New Model: Seedream 4.0 (Default fallback, overridden by env if needed)
             const model = process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-pro-4-0-t2i-250415';
@@ -94,10 +94,12 @@ export class DoubaoService {
                     prompt,
                     size: sizeParam,
                     seed: (seed !== undefined && !isNaN(seed)) ? Math.floor(Math.max(0, seed)) : undefined,
+                    width: sizeParam === "4096x4096" ? 4096 : 1024,
+                    height: sizeParam === "4096x4096" ? 4096 : 1024,
                     response_format: 'url',
                     guidance_scale: 3, // Updated per user request
                     sequential_image_generation: 'disabled',
-                    watermark: false // Keeping clean for app
+                    watermark: watermark // True = Add Watermark (Free), False = Clear (VIP)
                 })
             });
 
@@ -117,7 +119,7 @@ export class DoubaoService {
     /**
      * Generate Image from Image (Image-to-Image)
      */
-    async generateImageFromImage(prompt: string, imageUrl: string, size: '2K' | '4K' = '2K', seed?: number, imageWeight: number = 0.7): Promise<string> {
+    async generateImageFromImage(prompt: string, imageUrl: string, size: '2K' | '4K' = '2K', seed?: number, imageWeight: number = 0.7, watermark: boolean = true): Promise<string> {
         try {
             // NOTE: Seedream 3.0 might be T2I only (t2i in name). 
             // We keep the old model as fallback for I2I unless we verify 3.0 supports it.
@@ -135,7 +137,7 @@ export class DoubaoService {
                 image_weight: imageWeight,
                 response_format: 'url',
                 sequential_image_generation: 'disabled',
-                watermark: false
+                watermark: watermark
             };
 
             // Volcengine Seedream endpoint ID usually expects 'image' field for single reference
@@ -164,7 +166,7 @@ export class DoubaoService {
     /**
      * Sequential Image Generation (For Picture Books)
      */
-    async generateSequentialImages(prompt: string, imageUrl?: string, count: number = 5): Promise<string[]> {
+    async generateSequentialImages(prompt: string, imageUrl?: string, count: number = 5, watermark: boolean = true): Promise<string[]> {
         try {
             // Use new model for sequential too? 
             // If it supports it. "t2i" usually supports sequential if platform allows.
@@ -178,7 +180,8 @@ export class DoubaoService {
                 guidance_scale: 3,
                 sequential_image_generation: 'auto',
                 sequential_image_generation_options: {
-                    max_images: count
+                    max_images: count,
+                    watermark: watermark
                 },
                 response_format: 'url'
             };
@@ -728,9 +731,10 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
             duration?: 5 | 8 | 10;
             generateAudio?: boolean;
             extraPrompt?: string; // New: Additional user requirements
+            watermark?: boolean;
         }
     ): Promise<string> {
-        const { action, style, effect, duration, generateAudio, extraPrompt } = options;
+        const { action, style, effect, duration, generateAudio, extraPrompt, watermark = true } = options;
         // Action mappings (with camera and motion settings)
         const ACTION_MAP: Record<string, { prompt: string; motion?: number; camera?: string }> = {
             'dance': { prompt: 'character dancing happily, rhythmic movement', motion: 0.8 },
@@ -809,7 +813,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
         // 5. Append technical params to prompt (only use confirmed Seedance 1.5 parameters)
         // Confirmed params: resolution, duration, generate_audio, watermark
         // Removed unconfirmed: camera_fixed, fps, ratio (let model auto-detect from input image)
-        const promptWithParams = `${finalPrompt} --resolution ${resolution} --duration ${duration_val} --generate_audio ${generateAudio_val} --watermark false`;
+        const promptWithParams = `${finalPrompt} --resolution ${resolution} --duration ${duration_val} --generate_audio ${generateAudio_val} --watermark ${watermark}`;
 
         const payload = {
             model: model,
@@ -868,9 +872,10 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
             voiceStyle?: string; // For prompt enhancement only, not API param
             sceneMood?: string;  // For prompt enhancement only
             videoPrompt?: string; // New: Additional scene/action description
+            watermark?: boolean;
         }
     ): Promise<string> {
-        const { spell, audioMode, textInput, videoPrompt } = options;
+        const { spell, audioMode, textInput, videoPrompt, watermark = true } = options;
         const voiceStyle = options.voiceStyle || 'cute';
         const sceneMood = options.sceneMood || 'happy';
 
@@ -892,6 +897,10 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
             const cleanVoice = voiceStyle.toLowerCase();
             const speechMap: Record<string, string> = {
                 'cute': 'cute child voice, high pitch, happy tone, speaking loudly and clearly',
+                'girl': 'cute little girl voice, high pitch, feminine tone, speaking sweetly',
+                'boy': 'energetic little boy voice, happy tone, speaking loudly',
+                'woman': 'gentle female voice, soft and clear, lady speaking',
+                'man': 'deep male voice, clear and strong, man speaking',
                 'robot': 'robotic voice, mechanical tone, steady rhythm, loud clear audio',
                 'monster': 'deep monster voice, growling tone, low pitch, booming loud voice'
             };
@@ -922,7 +931,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
         const url = process.env.VOLC_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks';
 
         // Correct parameter format: --generate_audio true (NOT --audio_prompt or --lip_sync)
-        const promptWithParams = `${video_prompt} --resolution ${config.res} --duration ${config.duration} --generate_audio ${generate_audio} --watermark false`;
+        const promptWithParams = `${video_prompt} --resolution ${config.res} --duration ${config.duration} --generate_audio ${generate_audio} --watermark ${watermark}`;
 
         console.log(`[Doubao 1.5] Creating Task: Spell=${spell}, Mode=${audioMode}`);
         console.log(`[Doubao 1.5] Prompt: ${promptWithParams}`);

@@ -37,26 +37,26 @@ const STORY_VIBES: Record<string, Vibe> = {
 const VIBE_HINTS: Record<string, string[]> = {
     adventure: [
         "Finds a hidden treasure map in the attic",
-        "Discovers a secret portal behind the waterfall",
+        "Discovers a portal behind the waterfall",
         "Rescues a baby dragon from a dark cave",
-        "Solves the riddle of the ancient stone guardians"
+        "Solves the riddle of the ancient guardians"
     ],
     funny: [
-        "Accidentally drinks a potion that makes them float",
+        "Accidentally drinks a floaty potion",
         "A regular sandwich starts telling jokes",
         "Dresses up as a bush to prank the gardener",
-        "The pet cat starts wearing human clothes and dancing"
+        "The pet cat starts wearing human clothes"
     ],
     fairytale: [
         "A magical fairy grants three unusual wishes",
-        "Travels to a kingdom made entirely of candy",
-        "Meets a misunderstood dragon who loves to knit",
-        "Finds a pair of boots that can jump over mountains"
+        "Travels to a kingdom made of candy",
+        "Meets a misunderstood dragon who knits",
+        "Finds boots that can jump over mountains"
     ],
     school: [
-        "Finds a magical pen that does homework automatically",
+        "Finds a pen that does homework automatically",
         "The school bus turns into a space rocket",
-        "A science experiment creates a friendly slime monster",
+        "A science experiment creates friendly slime",
         "Wins the talent show with a real magic trick"
     ]
 };
@@ -129,19 +129,7 @@ export const CartoonBookBuilderPage: React.FC = () => {
 
     useEffect(() => {
         incrementUsage();
-        const saved = sessionStorage.getItem('cartoon-book-result');
-        if (saved) {
-            // This part of the provided code was syntactically incorrect and out of context.
-            // It seems to be an attempt to restore state or handle a completed task.
-            // For now, I'm commenting out the problematic line to maintain syntax correctness.
-            // If the intention was to load a saved result, more logic would be needed here.
-            // const novelData = await novelRes.json();
-            // setGeneratedPages(novelData.pages || []);
-            // setPagesCompleted(novelData.pages?.length || 0);
-            // setGenerating(false);
-            // setCompletedTaskId(id); // Save for navigation
-        }
-    }, []); // Empty dependency array to run once on mount
+    }, []);
 
     const calculateCost = () => {
         const costs: Record<number, number> = { 4: 100, 8: 180, 12: 250 };
@@ -179,10 +167,10 @@ export const CartoonBookBuilderPage: React.FC = () => {
 
     const getSlotLabel = (slotId: string): string => {
         const labels: Record<string, Record<string, string>> = {
-            adventure: { slot1: '🦸 The Hero', slot2: '🦹 The Villain', slot3: '🏰 The Place', slot4: '�?Extra' },
-            funny: { slot1: '🤡 The Trickster', slot2: '😵 The Target', slot3: '🏫 The Place', slot4: '�?Extra' },
-            fairytale: { slot1: '�?The Dreamer', slot2: '🧙 Magical Being', slot3: '🌟 Magical Place', slot4: '�?Extra' },
-            school: { slot1: '🎒 The Student', slot2: '👫 Best Friend', slot3: '🏫 School Place', slot4: '�?Extra' }
+            adventure: { slot1: '🦸 Hero', slot2: '🦹 Villain', slot3: '🏰 Place', slot4: '✨ Extra' },
+            funny: { slot1: '🤡 Trickster', slot2: '😵 Target', slot3: '🏫 Place', slot4: '✨ Extra' },
+            fairytale: { slot1: '🧚 Dreamer', slot2: '🧙 Magical Being', slot3: '🌟 Magical Place', slot4: '✨ Extra' },
+            school: { slot1: '🎒 Student', slot2: '👫 Best Friend', slot3: '🏫 School Place', slot4: '✨ Extra' }
         };
         return labels[selectedVibe]?.[slotId] || slotId;
     };
@@ -203,7 +191,6 @@ export const CartoonBookBuilderPage: React.FC = () => {
         }
 
         setStep('generating');
-        // Immediate feedback so user doesn't think it's frozen
         setProgress(5);
         setStatusMessage('Connecting to Magic Lab AI...');
 
@@ -235,12 +222,11 @@ export const CartoonBookBuilderPage: React.FC = () => {
             console.error('Generation error:', err);
             alert(err.message || 'Failed to start generation');
             setStep('configure');
-            setGenerating(false); // Reset generating state on error
+            setGenerating(false);
         }
     };
 
     const pollProgress = (id: string) => {
-        // Clear any existing interval first
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
@@ -255,7 +241,6 @@ export const CartoonBookBuilderPage: React.FC = () => {
 
                 setPagesCompleted(data.pagesCompleted || 0);
 
-                // Use backend progress if available, otherwise fallback to page-based calculation
                 if (data.progress !== undefined) {
                     setProgress(data.progress);
                 } else {
@@ -282,11 +267,10 @@ export const CartoonBookBuilderPage: React.FC = () => {
                     setGeneratedPages(novelData.pages || []);
                     setPagesCompleted(novelData.pages?.length || 0);
                     setGenerating(false);
-                    setCompletedTaskId(id); // Save for navigation
-                    setTaskId(''); // Clear active task
+                    setCompletedTaskId(id);
+                    setTaskId('');
                     setStep('complete');
 
-                    // Save to user history
                     try {
                         await fetch('/api/media/save-cartoon-book', {
                             method: 'POST',
@@ -324,7 +308,6 @@ export const CartoonBookBuilderPage: React.FC = () => {
                         console.error('Failed to save to history:', saveErr);
                     }
                 } else if (data.status === 'PARTIAL_SUCCESS') {
-                    console.log('[GraphicNovel] Partial success');
                     if (intervalRef.current) {
                         clearInterval(intervalRef.current);
                         intervalRef.current = null;
@@ -336,7 +319,6 @@ export const CartoonBookBuilderPage: React.FC = () => {
                     alert(`Generated ${data.pagesCompleted}/${data.totalPages} pages. ${data.error || ''}`);
                     setStep('complete');
                 } else if (data.status === 'FAILED') {
-                    console.error('[GraphicNovel] Failed:', data.error);
                     if (intervalRef.current) {
                         clearInterval(intervalRef.current);
                         intervalRef.current = null;
@@ -347,7 +329,7 @@ export const CartoonBookBuilderPage: React.FC = () => {
                     setStep('configure');
                 }
             } catch (err) {
-                console.error('[GraphicNovel] Polling error:', err);
+                console.error('[CartoonBook] Polling error:', err);
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                     intervalRef.current = null;
@@ -358,7 +340,6 @@ export const CartoonBookBuilderPage: React.FC = () => {
         }, 3000);
     };
 
-    // Voice input handlers
     const handleVoiceInput = () => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             alert('Voice input is not supported in your browser. Please try Chrome or Edge.');
@@ -372,63 +353,45 @@ export const CartoonBookBuilderPage: React.FC = () => {
         recognition.interimResults = false;
         recognition.lang = 'en-US';
 
-        recognition.onstart = () => {
-            setIsListening(true);
-        };
-
+        recognition.onstart = () => setIsListening(true);
         recognition.onresult = (event: any) => {
             const transcript = event.results[0][0].transcript;
             setPlotHint((prev) => (prev ? prev + ' ' + transcript : transcript));
         };
-
-        recognition.onerror = (event: any) => {
-            console.error('Speech recognition error:', event.error);
-            setIsListening(false);
-            if (event.error !== 'no-speech') {
-                alert('Voice input error: ' + event.error);
-            }
-        };
-
-        recognition.onend = () => {
-            setIsListening(false);
-        };
-
+        recognition.onerror = () => setIsListening(false);
+        recognition.onend = () => setIsListening(false);
         recognition.start();
     };
 
     return (
         <div className="min-h-screen relative overflow-hidden">
-            {/* Background Video */}
             <div className="fixed inset-0 z-0">
                 <video
                     src={cartoonBookBg}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
+                    autoPlay loop muted playsInline
                     className="absolute inset-0 w-full h-full object-cover"
                 />
             </div>
 
-            <div className="relative z-10 p-4 sm:p-8">
+            <div className="relative z-10 p-2 sm:p-4">
                 <div className="max-w-6xl mx-auto">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-8">
+                    {/* Header - Compact */}
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
                         <button
                             onClick={() => navigate(-1)}
                             className="flex items-center gap-2 text-white hover:text-white/80 transition-colors"
                         >
-                            <ArrowLeft className="w-6 h-6" />
-                            <span className="font-bold">Back</span>
+                            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span className="font-bold text-xs sm:text-sm">Back</span>
                         </button>
 
-                        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xl rounded-full px-6 py-3 border border-white/20">
-                            <BookOpen className="w-6 h-6 text-yellow-400" />
-                            <span className="text-white font-black text-lg">Creator's Studio</span>
+                        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl rounded-full px-3 py-1.5 sm:px-4 sm:py-2 border border-white/20">
+                            <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                            <span className="text-white font-black text-xs sm:text-lg">Creator Studio</span>
                         </div>
 
                         {user && (
-                            <div className="text-white text-sm font-bold bg-white/10 px-4 py-2 rounded-full">
+                            <div className="text-white text-[10px] sm:text-xs font-bold bg-white/10 px-2.5 py-1 rounded-full border border-white/10">
                                 {user.points || 0} pts
                             </div>
                         )}
@@ -436,20 +399,18 @@ export const CartoonBookBuilderPage: React.FC = () => {
 
                     {/* Step 1: Vibe Selection */}
                     {step === 'vibe' && (
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                            <div className="text-center mb-12">
-                                <h1 className="text-white text-5xl font-black mb-4">
-                                    What kind of story are we making?
-                                </h1>
-                                <p className="text-white/80 text-xl">Choose your vibe to begin</p>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-4xl mx-auto">
+                            <div className="text-center">
+                                <h1 className="text-white text-2xl sm:text-4xl font-black mb-1 leading-tight">What's the vibe?</h1>
+                                <p className="text-white/70 text-sm sm:text-lg italic">Choose a theme for your story</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-6">
                                 {Object.values(STORY_VIBES).map(vibe => (
                                     <button
                                         key={vibe.id}
                                         onClick={() => handleVibeSelect(vibe.id)}
-                                        className="group relative bg-white/10 backdrop-blur-xl rounded-[2.5rem] p-12 border-2 border-white/20 hover:border-white hover:scale-[1.02] transition-all overflow-hidden aspect-[16/9] shadow-xl"
+                                        className="group relative bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 border-2 border-white/20 hover:border-white hover:scale-[1.02] transition-all overflow-hidden aspect-video shadow-xl"
                                     >
                                         {vibe.image && (
                                             <>
@@ -459,12 +420,10 @@ export const CartoonBookBuilderPage: React.FC = () => {
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                             </>
                                         )}
-                                        <div className="absolute bottom-8 left-8 text-left relative z-10">
-                                            <h3 className="text-white text-4xl font-black mb-2 drop-shadow-xl tracking-tight">{vibe.name}</h3>
-                                            <p className="text-white/80 text-lg font-bold drop-shadow-lg">{vibe.description}</p>
+                                        <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 text-left relative z-10">
+                                            <h3 className="text-white text-lg sm:text-3xl font-black drop-shadow-xl tracking-tight leading-tight">{vibe.name}</h3>
+                                            <p className="text-white/80 text-[10px] sm:text-base font-bold drop-shadow-lg hidden sm:block">{vibe.description}</p>
                                         </div>
-
-                                        {/* Glass reflection effect */}
                                         <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent transform skew-x-[-25deg] group-hover:left-[100%] transition-all duration-1000" />
                                     </button>
                                 ))}
@@ -472,43 +431,36 @@ export const CartoonBookBuilderPage: React.FC = () => {
                         </motion.div>
                     )}
 
-                    {/* Step 2: Assets (Freeform) */}
+                    {/* Step 2: Assets */}
                     {step === 'assets' && (
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                            <div className="text-center mb-8">
-                                <div className="text-6xl mb-4">{STORY_VIBES[selectedVibe]?.emoji}</div>
-                                <h1 className="text-white text-4xl font-black mb-4">Build Your {STORY_VIBES[selectedVibe]?.name}</h1>
-                                <p className="text-white/80 text-lg">Upload any images to any slots - your story, your rules!</p>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6 max-w-5xl mx-auto">
+                            <div className="text-center">
+                                <div className="text-4xl sm:text-6xl mb-2 sm:mb-4">{STORY_VIBES[selectedVibe]?.emoji}</div>
+                                <h1 className="text-white text-2xl sm:text-4xl font-black mb-1 sm:mb-2 italic leading-tight">Build {STORY_VIBES[selectedVibe]?.name}</h1>
+                                <p className="text-white/70 text-sm sm:text-lg italic">Add your characters & places!</p>
                             </div>
 
-                            {/* The Board - Always visible asset slots */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                 {(['slot1', 'slot2', 'slot3', 'slot4'] as const).map(slot => {
                                     const asset = assets[slot];
                                     return (
-                                        <div key={slot} className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border-2 border-white/20">
-                                            <h3 className="text-white text-sm font-bold mb-3 text-center">{getSlotLabel(slot)}</h3>
-
+                                        <div key={slot} className="bg-white/10 backdrop-blur-xl rounded-2xl p-3 sm:p-4 border-2 border-white/10">
+                                            <h3 className="text-white text-xs sm:text-sm font-bold mb-2 sm:mb-3 text-center">{getSlotLabel(slot)}</h3>
                                             {asset ? (
                                                 <div className="relative group">
                                                     <img src={asset.imageUrl} alt={slot} className="w-full aspect-square object-cover rounded-xl" />
-                                                    {asset.isCoached && (
-                                                        <div className="absolute top-2 right-2 bg-purple-500 rounded-full p-1">
-                                                            <Sparkles className="w-4 h-4 text-white" />
-                                                        </div>
-                                                    )}
                                                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-xl">
-                                                        <button onClick={() => openAssetModal(slot)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded">Edit</button>
-                                                        <button onClick={() => removeAsset(slot)} className="px-3 py-1 bg-red-500 text-white text-xs rounded">Remove</button>
+                                                        <button onClick={() => openAssetModal(slot)} className="px-2 py-1 bg-blue-500 text-white text-[10px] rounded">Edit</button>
+                                                        <button onClick={() => removeAsset(slot)} className="px-2 py-1 bg-red-500 text-white text-[10px] rounded">Del</button>
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <button
                                                     onClick={() => openAssetModal(slot)}
-                                                    className="w-full aspect-square border-2 border-dashed border-white/30 hover:border-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all hover:bg-white/10"
+                                                    className="w-full aspect-square border-2 border-dashed border-white/20 hover:border-white/50 rounded-xl flex flex-col items-center justify-center gap-1 sm:gap-2 transition-all hover:bg-white/10"
                                                 >
-                                                    <Plus className="w-8 h-8 text-white/50" />
-                                                    <span className="text-white/50 text-xs">Add</span>
+                                                    <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-white/30" />
+                                                    <span className="text-white/30 text-[10px] sm:text-xs">Add</span>
                                                 </button>
                                             )}
                                         </div>
@@ -519,40 +471,33 @@ export const CartoonBookBuilderPage: React.FC = () => {
                             <button
                                 onClick={() => canProceed() ? setStep('configure') : alert('Add at least one asset')}
                                 disabled={!canProceed()}
-                                className="w-full py-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-2xl font-black rounded-2xl hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
+                                className="w-full py-4 sm:py-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xl sm:text-2xl font-black rounded-2xl hover:scale-[1.02] transition-transform disabled:opacity-50"
                             >
-                                Next: Configure Book �?
+                                Next Step ✨
                             </button>
                         </motion.div>
                     )}
 
                     {/* Step 3: Configure */}
                     {step === 'configure' && (
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                            <h1 className="text-white text-4xl font-black text-center mb-8">Configure Your Book</h1>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+                            <h1 className="text-white text-2xl sm:text-4xl font-black text-center italic leading-tight">Final Touches</h1>
 
-                            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 space-y-8">
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/20 space-y-6 sm:space-y-8">
                                 <div>
-                                    <label className="text-white text-xl font-bold block mb-4">📖 Book Length:</label>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                                    <label className="text-white text-lg sm:text-xl font-bold block mb-2 sm:mb-4 italic">📖 Book Length:</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                                         {BOOK_LENGTH_OPTIONS.map(opt => (
                                             <button
                                                 key={opt.pages}
                                                 onClick={() => setTotalPages(opt.pages as 4 | 8 | 12)}
-                                                className={`relative overflow-hidden rounded-xl transition-all group aspect-square shadow-lg ${totalPages === opt.pages
-                                                    ? 'scale-105 ring-4 ring-yellow-400 z-10'
-                                                    : 'hover:scale-105 hover:ring-2 hover:ring-white/50'
-                                                    }`}
+                                                className={`relative overflow-hidden rounded-xl transition-all group aspect-square shadow-lg ${totalPages === opt.pages ? 'scale-105 ring-4 ring-yellow-400 z-10' : 'hover:scale-105 hover:ring-2 hover:ring-white/50'}`}
                                             >
-                                                <img
-                                                    src={opt.image}
-                                                    alt={opt.label}
-                                                    className="absolute inset-0 w-full h-full object-cover"
-                                                />
-                                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm p-3 text-center">
-                                                    <div className="text-white font-black text-lg">{opt.label}</div>
-                                                    <div className="text-white/80 text-xs font-bold">{opt.pages} Pages</div>
-                                                    <div className="text-yellow-300 text-xs font-bold mt-1">-{opt.cost} pts</div>
+                                                <img src={opt.image} alt={opt.label} className="absolute inset-0 w-full h-full object-cover" />
+                                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm p-2 sm:p-3 text-center">
+                                                    <div className="text-white font-black text-sm sm:text-lg">{opt.label}</div>
+                                                    <div className="text-white/80 text-[10px] sm:text-xs font-bold">{opt.pages} Pages</div>
+                                                    <div className="text-yellow-300 text-[10px] sm:text-xs font-bold sm:mt-1">-{opt.cost} pts</div>
                                                 </div>
                                             </button>
                                         ))}
@@ -560,115 +505,72 @@ export const CartoonBookBuilderPage: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="text-white text-xl font-bold block mb-4">🎨 Layout:</label>
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <label className="text-white text-lg sm:text-xl font-bold block mb-2 sm:mb-4 italic">🎨 Layout:</label>
+                                    <div className="grid grid-cols-2 gap-4 sm:gap-6">
                                         {LAYOUT_OPTIONS.map(opt => (
                                             <button
                                                 key={opt.id}
                                                 onClick={() => setLayout(opt.id as 'standard' | 'dynamic')}
-                                                className={`relative overflow-hidden rounded-xl transition-all group aspect-[4/3] shadow-lg ${layout === opt.id
-                                                    ? 'scale-105 ring-4 ring-yellow-400 z-10'
-                                                    : 'hover:scale-105 hover:ring-2 hover:ring-white/50'
-                                                    }`}
+                                                className={`relative overflow-hidden rounded-xl transition-all group aspect-[4/3] shadow-lg ${layout === opt.id ? 'scale-105 ring-4 ring-yellow-400 z-10' : 'hover:scale-105 hover:ring-2 hover:ring-white/50'}`}
                                             >
-                                                <img
-                                                    src={opt.image}
-                                                    alt={opt.label}
-                                                    className="absolute inset-0 w-full h-full object-cover"
-                                                />
-                                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm p-3 text-center">
-                                                    <div className="text-white font-black text-lg">{opt.label}</div>
-                                                    <div className="text-white/80 text-xs font-bold">{opt.desc}</div>
+                                                <img src={opt.image} alt={opt.label} className="absolute inset-0 w-full h-full object-cover" />
+                                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm p-2 sm:p-3 text-center">
+                                                    <div className="text-white font-black text-sm sm:text-lg">{opt.label}</div>
+                                                    <div className="text-white/80 text-[10px] sm:text-xs font-bold">{opt.desc}</div>
                                                 </div>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* Art Style Selection */}
                                 <div>
-                                    <label className="text-white text-xl font-bold block mb-4">🖌�?Art Style:</label>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <label className="text-white text-lg sm:text-xl font-bold block mb-2 sm:mb-4 italic">🖌️ Art Style:</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
                                         {VISUAL_STYLES.map(style => (
                                             <button
                                                 key={style.id}
                                                 onClick={() => setVisualStyle(style.id)}
-                                                className={`relative overflow-hidden rounded-xl transition-all group aspect-square ${visualStyle === style.id
-                                                    ? 'scale-105 shadow-xl ring-4 ring-yellow-400 z-10'
-                                                    : 'hover:scale-105 hover:ring-2 hover:ring-white/50'
-                                                    }`}
+                                                className={`relative overflow-hidden rounded-xl transition-all group aspect-square ${visualStyle === style.id ? 'scale-105 shadow-xl ring-4 ring-yellow-400 z-10' : 'hover:scale-105 hover:ring-2 hover:ring-white/50'}`}
                                             >
-                                                {/* Image - Full Visibility, No Effects */}
-                                                {style.image ? (
-                                                    <img
-                                                        src={style.image}
-                                                        alt={style.label}
-                                                        className="absolute inset-0 w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="absolute inset-0 bg-slate-800" />
-                                                )}
-
-                                                {/* Title - Pinned to Bottom */}
-                                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2">
-                                                    <span className="text-white font-bold text-sm block text-center">
-                                                        {style.label}
-                                                    </span>
+                                                {style.image ? <img src={style.image} alt={style.label} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 bg-slate-800" />}
+                                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-1.5 sm:p-2">
+                                                    <span className="text-white font-bold text-xs sm:text-sm block text-center leading-tight">{style.label}</span>
                                                 </div>
                                             </button>
                                         ))}
                                     </div>
-                                    {/* Show selected style description */}
-                                    <div className="mt-3 text-white/60 text-sm text-center italic">
-                                        {VISUAL_STYLES.find(s => s.id === visualStyle)?.prompt}
-                                    </div>
+                                    <div className="mt-2 text-white/50 text-[10px] sm:text-sm text-center italic">{VISUAL_STYLES.find(s => s.id === visualStyle)?.prompt}</div>
                                 </div>
 
                                 <div>
-                                    <label className="text-white text-lg font-bold block mb-3">Story Direction (Optional)</label>
-
+                                    <label className="text-white text-base sm:text-lg font-bold block mb-2 italic">Story Direction (Optional)</label>
                                     {selectedVibe && VIBE_HINTS[selectedVibe] && (
-                                        <div className="flex flex-wrap gap-2 mb-3">
+                                        <div className="flex flex-wrap gap-2 mb-2">
                                             {VIBE_HINTS[selectedVibe].map((hint, idx) => (
                                                 <button
                                                     key={idx}
                                                     onClick={() => setPlotHint(hint)}
-                                                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full text-xs text-white/80 transition-all"
+                                                    className="px-2 py-1 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full text-[10px] sm:text-xs text-white/80 transition-all font-medium"
                                                 >
                                                     + {hint}
                                                 </button>
                                             ))}
                                         </div>
                                     )}
-
                                     <div className="relative">
                                         <textarea
                                             value={plotHint}
                                             onChange={e => setPlotHint(e.target.value)}
-                                            className="w-full p-4 pr-24 rounded-xl bg-white/10 text-white border border-white/20 focus:border-purple-500 focus:outline-none" rows={4}
-                                            placeholder={`e.g., ${VIBE_HINTS[selectedVibe]?.[0] || 'The hero must save the kingdom...'}`}
+                                            className="w-full p-3 pr-20 rounded-xl bg-white/10 text-white border border-white/20 focus:border-purple-500 focus:outline-none text-sm" rows={3}
+                                            placeholder={`e.g., ${VIBE_HINTS[selectedVibe]?.[0] || 'The hero rescues a dragon...'}`}
                                         />
-                                        {/* Voice & Clear Buttons */}
-                                        <div className="absolute top-3 right-3 flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={handleVoiceInput}
-                                                className={`p-2 rounded-lg transition-all ${isListening
-                                                    ? 'bg-red-500 text-white animate-pulse'
-                                                    : 'bg-white/10 text-white hover:bg-white/20'
-                                                    }`}
-                                                title="Voice Input"
-                                            >
-                                                <Mic className="w-5 h-5" />
+                                        <div className="absolute top-2 right-2 flex gap-1.5">
+                                            <button type="button" onClick={handleVoiceInput} className={`p-1.5 rounded-lg transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/10 text-white hover:bg-white/20'}`} title="Voice Input">
+                                                <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
                                             </button>
                                             {plotHint && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPlotHint('')}
-                                                    className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all"
-                                                    title="Clear Text"
-                                                >
-                                                    <X className="w-5 h-5" />
+                                                <button type="button" onClick={() => setPlotHint('')} className="p-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all" title="Clear Text">
+                                                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                                                 </button>
                                             )}
                                         </div>
@@ -676,14 +578,14 @@ export const CartoonBookBuilderPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <button onClick={() => setStep('assets')} className="w-full py-4 bg-white/10 text-white font-bold rounded-xl">�?Back</button>
-                                <button onClick={handleGenerate} className="w-full py-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-2xl font-black rounded-2xl hover:scale-105 transition-transform">
-                                    <div className="flex items-center justify-center gap-3">
-                                        <Wand2 className="w-6 h-6" />
-                                        <span>Create Novel</span>
+                            <div className="space-y-3 sm:space-y-4">
+                                <button onClick={() => setStep('assets')} className="w-full py-3 sm:py-4 bg-white/10 text-white font-bold rounded-xl text-sm sm:text-base border border-white/10 hover:bg-white/20 transition-all">Back</button>
+                                <button onClick={handleGenerate} className="w-full py-4 sm:py-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xl sm:text-2xl font-black rounded-2xl hover:scale-[1.02] transition-transform shadow-lg shadow-purple-500/20">
+                                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                                        <Wand2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                                        <span>Create Masterpiece!</span>
                                     </div>
-                                    <div className="text-sm mt-1">-{calculateCost()} pts</div>
+                                    <div className="text-[10px] sm:text-sm mt-0.5 sm:mt-1 font-bold text-white/90">-{calculateCost()} pts</div>
                                 </button>
                             </div>
                         </motion.div>
@@ -692,27 +594,27 @@ export const CartoonBookBuilderPage: React.FC = () => {
                     {/* Step 4: Generating */}
                     {step === 'generating' && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center min-h-[60vh]">
-                            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-12 border border-white/20 max-w-md w-full text-center">
-                                <Loader2 className="w-16 h-16 text-purple-400 animate-spin mx-auto mb-6" />
-                                <h2 className="text-white text-2xl font-black mb-4">Creating Your Story...</h2>
-                                <p className="text-white/70 mb-6">{statusMessage}</p>
-                                <div className="w-full bg-black/30 rounded-full h-6 overflow-hidden mb-4">
+                            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 sm:p-12 border border-white/20 max-w-md w-full text-center">
+                                <Loader2 className="w-12 h-12 sm:w-16 sm:h-16 text-purple-400 animate-spin mx-auto mb-4 sm:mb-6" />
+                                <h2 className="text-white text-xl sm:text-2xl font-black mb-2 sm:mb-4">Creating Magic...</h2>
+                                <p className="text-white/70 text-sm mb-4 sm:mb-6">{statusMessage}</p>
+                                <div className="w-full bg-black/30 rounded-full h-4 sm:h-6 overflow-hidden mb-4">
                                     <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500" style={{ width: `${progress}%` }} />
                                 </div>
-                                <div className="text-white font-bold text-lg">{pagesCompleted} / {totalPages} pages</div>
+                                <div className="text-white font-bold text-sm sm:text-lg">{pagesCompleted} / {totalPages} pages</div>
                             </div>
                         </motion.div>
                     )}
 
                     {/* Step 5: Complete */}
                     {step === 'complete' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-8">
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-6 sm:space-y-8">
                             <div>
-                                <Sparkles className="w-20 h-20 text-yellow-400 mx-auto mb-4 animate-pulse" />
-                                <h1 className="text-white text-5xl font-black mb-4">🎉 Story Ready!</h1>
+                                <Sparkles className="w-16 h-16 sm:w-20 sm:h-20 text-yellow-400 mx-auto mb-4 animate-pulse" />
+                                <h1 className="text-white text-3xl sm:text-5xl font-black mb-2 sm:mb-4">🎉 Ready!</h1>
                             </div>
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button onClick={() => navigate(`/cartoon-book/reader/${completedTaskId}`)} className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xl font-bold rounded-xl hover:scale-105 transition-transform">
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                                <button onClick={() => navigate(`/cartoon-book/reader/${completedTaskId}`)} className="px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg sm:text-xl font-bold rounded-xl hover:scale-105 transition-transform">
                                     📖 Read Now
                                 </button>
                                 <button onClick={() => {
@@ -720,15 +622,15 @@ export const CartoonBookBuilderPage: React.FC = () => {
                                     setSelectedVibe('');
                                     setAssets({});
                                     setPlotHint('');
-                                }} className="px-8 py-4 bg-white/10 text-white text-xl font-bold rounded-xl hover:bg-white/20 transition-all">
-                                    �?Create Another
+                                }} className="px-6 py-3 sm:px-8 sm:py-4 bg-white/10 text-white text-lg sm:text-xl font-bold rounded-xl hover:bg-white/20 transition-all">
+                                    ✨ Create New
                                 </button>
                             </div>
                         </motion.div>
                     )}
                 </div>
 
-                {/* Asset Upload Modal */}
+                {/* Asset Modal */}
                 {editingSlot && user && (
                     <AssetUploadModal
                         isOpen={modalOpen}

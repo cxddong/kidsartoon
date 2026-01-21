@@ -1,0 +1,18 @@
+{
+  "status": 200,
+  "audioUrl": "/generated/audio-c387a1ee-c841-4caf-85ec-88e1baeb52d7.mp3",
+  "storyLength": 2310,
+  "fullResponse": {
+    "id": "c387a1ee-c841-4caf-85ec-88e1baeb52d7",
+    "keywords": [
+      "This is a test story for Titi. He should be a senior male voice from Minimax.",
+      "creative"
+    ],
+    "story": "Once upon a time, in a land where numbers ruled the day, there was a town called Mathopolis. Everything in Mathopolis was as orderly as could be, with streets lined up in perfect rows and houses that were exactly the same size. The town was a bit different, though, because its people weren't people at all—they were numbers! Amongst them were the mighty 100s, known for their double zeros and impressive stature. Now, one fine day, the great Number King gathered everyone in the Grand Square for a special announcement. As the sun cast a light gray glow over the scene, the King declared, \"Today, we shall witness a magical event, the likes of which Mathopolis has never seen—the Challenge of 100 × 100!\" The crowd buzzed with excitement, their numbers shimmering in the slightly darker shade. \"But what is 100 × 100?\" whispered little Number Ten to his friend, Number Twenty. \"Is it a grand dance or perhaps a parade?\" Number Twenty chuckled, \"Oh, little cutie, it's more than that! It's the greatest multiplication challenge in all the land!\" The numbers gathered around, eager to see what would happen. Then, with much pomp and flair, two enormous 100s strutted into the square, their zeros bouncing with each step. \"Welcome, everyone!\" boomed one of the 100s, \"We're here to show you the magic of multiplication!\" With a dramatic pause, the two 100s stood side by side, and suddenly, the air was filled with a low hum. The ground began to tremble as if it had caught a case of the giggles! \"Hold onto your hats, folks!\" shouted the 100s and, in a spectacular flash of gray, they multiplied, creating an enormous number: 10,000! Gasps echoed through the square, and the numbers danced with glee. \"Did you see that?\" squealed Number Fifty, \"It's a number so big, it could fill the entire sky!\" The Number King clapped his digits together, \"This is the power of numbers, my friends! Never forget how mighty you can be when you work together!\" And so, in Mathopolis, the numbers celebrated their grand achievement, and every time they saw a 100, they remembered the day when two simple numbers turned the entire town into a place of wonder and amazement. From that day on, the Challenge of 100 × 100 became an annual event, a reminder of the magic that numbers could create, even on the plainest of gray days.",
+    "audioUrl": "/generated/audio-c387a1ee-c841-4caf-85ec-88e1baeb52d7.mp3",
+    "imageUrl": "/generated/story-image-c387a1ee-c841-4caf-85ec-88e1baeb52d7.jpg",
+    "userId": "demo",
+    "provider": "openai",
+    "createdAt": "2026-01-20T17:27:19.283Z"
+  }
+}

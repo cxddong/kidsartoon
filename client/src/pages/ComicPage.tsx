@@ -99,7 +99,7 @@ export const ComicPage: React.FC = () => {
             }, 800);
         }
 
-        // Handle remix image from navigation (e.g., from Creative Journey)
+        // Handle remix image from navigation (e.g., from Creative Journey or ImageModal)
         // @ts-ignore
         if (location.state && location.state.remixImage) {
             // @ts-ignore
@@ -107,6 +107,15 @@ export const ComicPage: React.FC = () => {
             console.log("ComicPage received remixImage from nav:", remixImageUrl);
             setImagePreview(remixImageUrl);
             sessionStorage.setItem('comic-preview', remixImageUrl);
+
+            // Fetch info to create file object for generator
+            fetch(remixImageUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "remix-input.jpg", { type: blob.type || "image/jpeg" });
+                    setImageFile(file);
+                })
+                .catch(err => console.error("Failed to load remix image file:", err));
         }
 
         // Cleanup: Clear session storage when user leaves the page

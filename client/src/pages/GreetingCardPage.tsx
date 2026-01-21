@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ImageCropperModal } from '../components/ImageCropperModal';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     ArrowLeft, Camera, Upload, Wand2, Video, Sparkles,
     Check, X, Mic, Download, Share2, Info, Loader2,
@@ -155,6 +155,20 @@ const COMPOSITION_MODES = [
 export const GreetingCardPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Remix Handling
+    useEffect(() => {
+        // @ts-ignore
+        if (location.state && location.state.remixImage) {
+            // @ts-ignore
+            const remixUrl = location.state.remixImage;
+            console.log("GreetingCard received remix:", remixUrl);
+            setDrawing(remixUrl);
+            // Optional: Convert to blob if we wanted to allow 'Cropping' again, 
+            // but for now direct assignment works as 'drawing' state is just a string URL.
+        }
+    }, [location]);
 
     // --- State: Assets ---
     const [drawing, setDrawing] = useState<string | null>(null);

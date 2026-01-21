@@ -18,6 +18,7 @@ type Step = 'upload' | 'generating-book' | 'finished';
 
 export const PictureBookPage: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
 
     // Default to Picture Book mode
@@ -39,7 +40,25 @@ export const PictureBookPage: React.FC = () => {
         sessionStorage.removeItem('book-result');
         setBookData(null);
         setStep('upload');
-    }, []);
+
+        // Handle Remix
+        // @ts-ignore
+        if (location.state && location.state.remixImage) {
+            // @ts-ignore
+            const remixUrl = location.state.remixImage;
+            console.log("PictureBook received remix:", remixUrl);
+            setImagePreview(remixUrl);
+
+            fetch(remixUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "book-remix.jpg", { type: blob.type || "image/jpeg" });
+                    setImageFile(file);
+                })
+                .catch(err => console.error("Failed to load remix file:", err));
+        }
+
+    }, [location]);
 
     // Cropper State
     const [cropImage, setCropImage] = useState<string | null>(null);

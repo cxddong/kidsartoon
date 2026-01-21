@@ -15,6 +15,7 @@ import { pointsService, POINT_COSTS } from '../services/points.js';
 import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
 
 import { adminStorageService } from '../services/adminStorage.js';
 
@@ -202,6 +203,13 @@ router.get('/liked', async (req, res) => {
 // Image-to-Voice: analyze image + user voice to keywords, return audio URL and story
 router.post('/image-to-voice', upload.single('image'), async (req, res) => {
   const userId = req.body.userId;
+  console.log(`[Media] image-to-voice hit! Body:`, {
+    userId: req.body.userId,
+    voice: req.body.voice,
+    voiceTier: req.body.voiceTier,
+    modelTier: req.body.modelTier,
+    lang: req.query.lang || req.body.lang
+  });
   try {
     const userVoiceText = req.body.voiceText ?? '';
 
@@ -387,12 +395,12 @@ and user context: ${userVoiceText}.
         try {
           // We can't use generateCreativeContent directly for plain text yet without modifying schema,
           // so we use generateText which is optimized for plain storytelling.
-          story = await geminiService.generateText(prompt, userId);
+          story = await geminiService.generateText(prompt, userId, 'script', req.body.modelTier);
         } catch (e) {
-          story = await geminiService.generateText(prompt, userId);
+          story = await geminiService.generateText(prompt, userId, 'script', req.body.modelTier);
         }
       } else {
-        story = await geminiService.generateText(prompt, userId);
+        story = await geminiService.generateText(prompt, userId, 'script', req.body.modelTier);
       }
 
       console.log(`[Gemini] Generated Story Length: ${story.length} characters`);
@@ -410,86 +418,71 @@ and user context: ${userVoiceText}.
         // Log to file for agent visibility
         import('fs').then(fs => fs.appendFileSync('debug_gen.log', `[${new Date().toISOString()}] TEXT GEN ERROR: ${err.message} | Doubao: ${doubaoErr.message} \n`));
 
-        // Fallback 2: "Soft" Failure Message
-        if (lang === 'zh') {
-          story = `I am sorry, I am having trouble writing a story for this picture right now. (Error: ${err.message || "Connection Timeout"}). Please try uploading the image again!`;
-        } else {
-          story = `I am sorry, I am having trouble writing a story for this picture right now. (Error: ${err.message || "Connection Timeout"}). Please try uploading the image again!`;
-        }
+        // Fallback 2: "Soft" Failure Message (Child-Friendly)
+        story = `Oh sparkles! 🌟 My magic pen is taking a little nap right now. But don't worry! Your drawing is still amazing! Let's try to tell this story again in just a minute. ✨`;
       }
     }
 
     // 2. Generate Audio using Voice Tier System
     let audioUrl = '';
+    let usedProvider = 'openai'; // standard | minimax | elevenlabs
 
-    const voiceId = req.body.voice || 'standard'; // From frontend
-    const voiceTier = req.body.voiceTier || 'standard'; // standard | premium
+    let voiceId = req.body.voice || 'standard'; // From frontend
+    let voiceTier = req.body.voiceTier || 'standard'; // standard | premium
+
+    // ROBUSTNESS FIX: Force premium tier for known premium voice IDs
+    const PREMIUM_VOICES = ['kiki', 'aiai', 'titi', 'female-shaonv'];
+    if (PREMIUM_VOICES.includes(voiceId.toLowerCase())) {
+      console.log(`[Media] Auto-detecting premium tier for voice: ${voiceId}`);
+      voiceTier = 'premium';
+      voiceId = voiceId.toLowerCase();
+    }
 
     console.log(`Generating Speech for lang: ${lang}, Voice: ${voiceId}, Tier: ${voiceTier}...`);
 
     try {
       let audioBuffer: Buffer;
+      const fs = await import('fs');
+      const path = await import('path');
+      const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
+      if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
 
       if (voiceTier === 'premium') {
         // Minimax Handling for Kiki/Aiai/Titi
         if (voiceId === 'kiki' || voiceId === 'aiai' || voiceId === 'titi') {
-          console.log(`[TTS] Using Minimax Voice: ${voiceId}...`);
-          // Minimax Service takes (text, voiceKey) and maps internally to IDs provided by user
-          audioBuffer = await minimaxService.generateSpeech(story, voiceId);
+          try {
+            console.log(`[TTS] Attempting Minimax Voice: ${voiceId}...`);
+            audioBuffer = await minimaxService.generateSpeech(story, voiceId);
 
-          // Save audio file
-          const fs = await import('fs');
-          const path = await import('path');
-          const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
-          if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
-
-          const filename = `audio-${id}.mp3`;
-          const outputPath = path.join(outputDir, filename);
-          fs.writeFileSync(outputPath, audioBuffer);
-          audioUrl = `/generated/${filename}`;
-          console.log('[TTS] Minimax Audio Generated:', audioUrl);
-
-        } else {
-          // Existing Premium Voice (ElevenLabs) - Map voice IDs
-          const voiceMapping: Record<string, string> = {
-            'titi': VOICE_IDS.TITI,
-            'standard': VOICE_IDS.KIKI // Fallback
-          };
-
-          const elevenLabsVoiceId = voiceMapping[voiceId] || VOICE_IDS.KIKI;
-          console.log(`[TTS] Using ElevenLabs Premium Voice: ${voiceId} (${elevenLabsVoiceId})...`);
-
-          audioBuffer = await elevenLabsService.speak(story, elevenLabsVoiceId);
-
-          // Save audio file
-          const fs = await import('fs');
-          const path = await import('path');
-          const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
-          if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
-
-          const filename = `audio-${id}.mp3`;
-          const outputPath = path.join(outputDir, filename);
-          fs.writeFileSync(outputPath, audioBuffer);
-          audioUrl = `/generated/${filename}`;
-          console.log('[TTS] ElevenLabs Audio Generated:', audioUrl);
+            // If successful, save and set audioUrl
+            const filename = `audio-${id}.mp3`;
+            const outputPath = path.join(outputDir, filename);
+            fs.writeFileSync(outputPath, audioBuffer);
+            audioUrl = `/generated/${filename}`;
+            usedProvider = 'minimax';
+            console.log('[TTS] Minimax Audio Generated successfully:', audioUrl);
+          } catch (mErr: any) {
+            console.error(`[TTS] Minimax Failed for ${voiceId}:`, mErr.message);
+            // Log full error to file for debugging
+            import('fs').then(fs => {
+              fs.appendFileSync('minimax_debug.log', `[${new Date().toISOString()}] FAILED for ${voiceId}: ${mErr.message}\nStack: ${mErr.stack}\n`);
+            });
+            // Will fallback to OpenAI below if possible
+          }
         }
 
-      } else {
-        // Standard Voice (OpenAI TTS - Nova)
-        console.log(`[TTS] Using OpenAI Standard Voice (Nova HD)...`);
-        audioBuffer = await openAIService.generateSpeech(story);
+      }
 
-        // Save audio file
-        const fs = await import('fs');
-        const path = await import('path');
-        const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
-        if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
+      // Final Fallback: OpenAI (Nova HD) - If premium failed or was never selected
+      if (!audioUrl) {
+        console.log(`[TTS] Using OpenAI Standard Voice (Nova HD) as final fallback...`);
+        audioBuffer = await openAIService.generateSpeech(story);
 
         const filename = `audio-${id}.mp3`;
         const outputPath = path.join(outputDir, filename);
         fs.writeFileSync(outputPath, audioBuffer);
         audioUrl = `/generated/${filename}`;
-        console.log('[TTS] OpenAI Audio Generated:', audioUrl);
+        console.log('[TTS] OpenAI Fallback Audio Generated:', audioUrl);
       }
     } catch (ttsError: any) {
       console.error('TTS Implementation Failed (Soft Fail):', ttsError);
@@ -513,6 +506,7 @@ and user context: ${userVoiceText}.
       audioUrl,
       imageUrl: savedImageUrl,
       userId,
+      provider: usedProvider,
       createdAt: new Date().toISOString()
     });
   } catch (error: any) {
@@ -541,6 +535,11 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
     if (!userId) {
       return res.status(401).json({ error: 'User ID required', errorCode: 'AUTH_REQUIRED' });
     }
+
+    // Check VIP Status for Watermark
+    const userRecord = await databaseService.getUser(userId);
+    const isVIP = (userRecord?.plan as string) === 'pro' || (userRecord?.plan as string) === 'yearly_pro' || (userRecord?.plan as string) === 'admin';
+    const watermark = !isVIP;
 
     // 1. Points
     const action = 'generate_image';
@@ -635,12 +634,12 @@ Text: English only.`;
 
       if (base64Image) {
         console.log('Generating cartoon using Doubao Img2Img...');
-        // Use Doubao Service (prompt, image, size, seed, imageWeight)
+        // Use Doubao Service (prompt, image, size, seed, imageWeight, watermark)
         // Pass undefined for seed, imageStrength as imageWeight
-        cartoonImageUrl = await doubaoService.generateImageFromImage(finalPrompt, base64Image, '2K', undefined, imageStrength);
+        cartoonImageUrl = await doubaoService.generateImageFromImage(finalPrompt, base64Image, '2K', undefined, imageStrength, watermark);
       } else {
         console.log('No image file, falling back to Doubao Text-to-Image...');
-        cartoonImageUrl = await doubaoService.generateImage(finalPrompt, '2K');
+        cartoonImageUrl = await doubaoService.generateImage(finalPrompt, '2K', undefined, watermark);
       }
     } catch (genError) {
       console.error('Image generation failed, falling back to mock:', genError);
@@ -736,6 +735,11 @@ router.post('/image-to-video/task', (req, res, next) => {
     if (!userId) {
       return res.status(401).json({ error: 'User ID required', errorCode: 'AUTH_REQUIRED' });
     }
+
+    // Check VIP Status
+    const userRecord = await databaseService.getUser(userId);
+    const isVIP = (userRecord?.plan as string) === 'pro' || (userRecord?.plan as string) === 'yearly_pro' || (userRecord?.plan as string) === 'admin';
+    const watermark = !isVIP;
 
     if (!action) {
       return res.status(400).json({ error: 'Action parameter is required', errorCode: 'MISSING_ACTION' });
@@ -861,7 +865,9 @@ router.post('/image-to-video/task', (req, res, next) => {
         textInput: textInput,
         voiceStyle: voiceStyle,
         sceneMood: sceneMood,
-        videoPrompt: videoPrompt // Pass additional requirements
+
+        videoPrompt: videoPrompt, // Pass additional requirements
+        watermark: watermark
       });
     } else {
       // Otherwise use the Kids Version (action-based) but allow videoPrompt enrichment
@@ -872,7 +878,8 @@ router.post('/image-to-video/task', (req, res, next) => {
         effect: effect,           // Optional: 'sparkle', 'bubbles', etc.
         duration: duration,       // 5 | 8 | 10
         generateAudio: generateAudio,
-        extraPrompt: scene  // Pass scene as extraPrompt
+        extraPrompt: scene,  // Pass scene as extraPrompt
+        watermark: watermark
       });
     }
 
@@ -915,21 +922,99 @@ router.post('/image-to-video/task', (req, res, next) => {
 router.get('/image-to-video/status/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
-    // Updated to use Doubao Polling
-    const result = await doubaoService.getVideoTaskStatus(taskId);
 
-    // Auto-Save to Gallery on Success
+    // 1. Check for Delegation (Safe Mode Retry)
+    let currentTaskId = taskId;
+    const initialTask = await databaseService.getVideoTask(taskId);
+
+    if (initialTask && initialTask.retryTaskId) {
+      console.log(`[API] Task ${taskId} delegated to retryTask ${initialTask.retryTaskId}`);
+      currentTaskId = initialTask.retryTaskId;
+    }
+
+    // 2. Poll Status (Doubao)
+    const result = await doubaoService.getVideoTaskStatus(currentTaskId);
+    const localTask = currentTaskId === taskId ? initialTask : await databaseService.getVideoTask(currentTaskId);
+
+    // 3. Handle SAFETY FAILURES -> Trigger Automatic Safe Mode
+    if (result.status === 'FAILED' && localTask && !initialTask?.retryTaskId && !localTask.isSafeRetry && localTask.userId) {
+      const errorMsg = JSON.stringify(result).toLowerCase();
+      // Check for specific safety error codes or messages
+      if (errorMsg.includes('sensitive') || errorMsg.includes('safety') || errorMsg.includes('policy') || errorMsg.includes('filter')) {
+        console.log(`[API] 🛡️ Safety Filter triggered on ${currentTaskId}. Initiating Safe Mode Retry (Robot Style)...`);
+
+        try {
+          // Prepare Image for Retry
+          let imageUrl = localTask.meta?.originalImageUrl;
+          // If local path, convert to data URI
+          if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+            const fs = await import('fs');
+            const path = await import('path');
+            const diskPath = path.join(process.cwd(), 'client', 'public', imageUrl);
+            if (fs.existsSync(diskPath)) {
+              const buf = fs.readFileSync(diskPath);
+              imageUrl = `data:image/jpeg;base64,${buf.toString('base64')}`;
+            }
+          }
+
+          if (imageUrl) {
+            // Launch Safe Task (Kids Version - Robot Style)
+            const safeTaskId = await doubaoService.createSeedanceVideoTask(imageUrl, {
+              action: localTask.meta?.action || 'dance',
+              style: 'robot', // FORCE SAFE STYLE
+              duration: 5,
+              generateAudio: true,
+              extraPrompt: 'safe for kids, cute robot',
+              effect: 'sparkle',
+              watermark: true // Retry default safe
+            });
+
+            // Save Safe Task Record
+            await databaseService.saveVideoTask(safeTaskId, localTask.userId, 0, `Safe Mode Retry`, {
+              ...localTask.meta,
+              isSafeRetry: true,
+              originalTaskId: taskId,
+              style: 'robot',
+              voiceStyle: 'robot'
+            }, localTask.profileId);
+
+            // Link Original Task to Retry Task
+            await databaseService.updateVideoTask(taskId, {
+              retryTaskId: safeTaskId,
+              status: 'RETRYING'
+            });
+
+            console.log(`[API] 🛡️ Safe Mode Retry launched: ${safeTaskId}`);
+
+            // Return "PROCESSING" state to frontend to mask the failure
+            return res.json({
+              status: 'PROCESSING',
+              taskId: taskId,
+              message: "Optimizing content for safety..."
+            });
+          }
+        } catch (retryErr) {
+          console.error('[API] Safe Retry Failed:', retryErr);
+          // Fall through to return original failure
+        }
+      }
+    }
+
+
+    // 4. Auto-Save to Gallery on Success
     if (result.status === 'SUCCEEDED' && result.videoUrl) {
-      const localTask = await databaseService.getVideoTask(taskId);
-      // Only save if status is PENDING to avoid duplicates
-      if (localTask && localTask.status === 'PENDING') {
-        console.log(`[API] Video ${taskId} succeeded. Saving to gallery...`);
+      // Logic applies if EITHER original OR retry succeeded
+      const targetTask = localTask; // Task that actually succeeded
+
+      // Only process if status in DB is PENDING (avoid duplicates)
+      if (targetTask && targetTask.status === 'PENDING') {
+        console.log(`[API] Video ${currentTaskId} succeeded (Safe Mode: ${!!targetTask.meta?.isSafeRetry}). Saving...`);
 
         // Fix: Persist Video to Storage
         let permanentVideoUrl = result.videoUrl!;
         try {
-          console.log(`[API] Uploading video ${taskId} to storage...`);
-          const fetch = (await import('node-fetch')).default;
+          console.log(`[API] Uploading video ${currentTaskId} to storage...`);
+          // Use global fetch (Node 18+)
           const vidRes = await fetch(result.videoUrl!);
           if (vidRes.ok) {
             const ab = await vidRes.arrayBuffer();
@@ -941,44 +1026,64 @@ router.get('/image-to-video/status/:taskId', async (req, res) => {
         }
 
         try {
+          // Save Image Record
           await databaseService.saveImageRecord(
-            localTask.userId,
+            targetTask.userId,
             permanentVideoUrl,
             'animation',
-            localTask.prompt || "Animation",
-            { taskId, cost: localTask.cost, model: 'musesteamer-2.0', originalImageUrl: localTask.meta?.originalImageUrl }
+            targetTask.prompt || "Animation",
+            {
+              taskId: currentTaskId,
+              cost: targetTask.cost,
+              model: targetTask.meta?.isSafeRetry ? 'doubao-safe-robot' : 'musesteamer-2.0',
+              originalImageUrl: targetTask.meta?.originalImageUrl,
+              isSafeRetry: targetTask.meta?.isSafeRetry
+            },
+            targetTask.profileId
           );
         } catch (saveErr) {
           console.error('[API] Failed to save video record to DB:', saveErr);
         }
 
-        await databaseService.markTaskCompleted(taskId);
+        // Mark CURRENT task completed
+        await databaseService.markTaskCompleted(currentTaskId, permanentVideoUrl);
 
-        // Fix: Return the PERMANENT URL to the frontend immediately
-        // This solves the "Black Screen" issue if the Doubao URL is restricted/temporary
+        // If this was a retry, ALSO mark the ORIGINAL task completed (so frontend stops polling)
+        if (currentTaskId !== taskId) {
+          await databaseService.markTaskCompleted(taskId, permanentVideoUrl);
+        }
+
+        // Return Permanent URL
         result.videoUrl = permanentVideoUrl;
+      }
+
+      // If we are polling Original Task, but Retry Succeeded, return the URL
+      if (currentTaskId !== taskId && result.status === 'SUCCEEDED') {
+        // Ensure result reflects success for the originally requested Task ID perspective
+        // Frontend expects { status: 'SUCCEEDED', videoUrl: ... }
       }
     }
 
-    // Async Refund Handling
-    if (result.status === 'FAILED' || (result as any).error) {
-      const localTask = await databaseService.getVideoTask(taskId);
-      if (localTask && !localTask.refunded && localTask.status !== 'COMPLETED') {
-        console.log(`[Points] Video Task ${taskId} failed. Refunding ${localTask.userId}...`);
+    // Async Refund Handling (Only if REAL failure, i.e., Retry also failed or no retry triggered)
+    if (result.status === 'FAILED') {
+      const targetTask = localTask;
+      if (targetTask && !targetTask.refunded && targetTask.status !== 'COMPLETED' && !targetTask.meta?.isSafeRetry) {
+        // Only refund if we are NOT in the middle of a retry delegating sequence
+        // But if we are here, it means FAILED and NO RETRY TRIGGERED.
+        console.log(`[Points] Video Task ${currentTaskId} failed. Refunding...`);
+        const refundAmount = targetTask.cost || 30;
+        await pointsService.grantPoints(targetTask.userId, refundAmount, 'refund_video_fail', 'Async Generation Failed');
+        await databaseService.markTaskRefunded(currentTaskId);
 
-        // Refund exact cost
-        const refundAmount = localTask.cost || 30;
-        await pointsService.grantPoints(localTask.userId, refundAmount, 'refund_video_fail', 'Async Generation Failed');
-
-        await databaseService.markTaskRefunded(taskId);
+        if (currentTaskId !== taskId) {
+          await databaseService.markTaskRefunded(taskId);
+        }
       }
     }
 
     res.json(result);
   } catch (error: any) {
     console.error(`[API] /image-to-video/status/${req.params.taskId} error:`, error);
-    console.error('[API] Error stack:', error.stack);
-    console.error('[API] Error details:', { message: error.message, name: error.name });
     res.status(500).json({
       error: error.message || 'Status check failed',
       taskId: req.params.taskId
@@ -1912,6 +2017,11 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
 
     if (!userId) return res.status(401).json({ error: 'User ID required', errorCode: 'AUTH_REQUIRED' });
 
+    // Check VIP
+    const user = await databaseService.getUser(userId);
+    const isVIP = (user?.plan as string) === 'pro' || (user?.plan as string) === 'yearly_pro' || (user?.plan as string) === 'admin';
+    const watermark = !isVIP;
+
     // 1. Points (Cost: Comic Strip 10pts)
     const action = 'generate_comic_book';
     const cost = POINT_COSTS.COMIC_STRIP;
@@ -2040,9 +2150,9 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
     try {
       if (base64Reference) {
         // Use Img2Img with the reference
-        gridImageUrl = await doubaoService.generateImageFromImage(gridPrompt, base64Reference, '4K');
+        gridImageUrl = await doubaoService.generateImageFromImage(gridPrompt, base64Reference, '4K', undefined, 0.7, watermark);
       } else {
-        gridImageUrl = await doubaoService.generateImage(gridPrompt, '4K');
+        gridImageUrl = await doubaoService.generateImage(gridPrompt, '4K', undefined, watermark);
       }
     } catch (genErr) {
       console.error('[MagicComic] Image Gen Failed:', genErr);
@@ -2129,6 +2239,11 @@ router.post('/generate-magic-book', upload.single('cartoonImage'), async (req, r
     const id = uuidv4();
 
     if (!userId) return res.status(401).json({ error: 'Auth Required', errorCode: 'AUTH_REQUIRED' });
+
+    // Check VIP
+    const user = await databaseService.getUser(userId);
+    const isVIP = (user?.plan as string) === 'pro' || (user?.plan as string) === 'yearly_pro' || (user?.plan as string) === 'admin';
+    const watermark = !isVIP;
 
     // 1. Points
     const action = 'generate_comic_book';
@@ -2274,15 +2389,15 @@ router.post('/generate-magic-book', upload.single('cartoonImage'), async (req, r
         if (base64Reference) {
           try {
             // Reverting to 0.6 due to API validation error with 0.75
-            imgUrl = await doubaoService.generateImageFromImage(flowPrompt, base64Reference, '2K', seed, 0.6);
+            imgUrl = await doubaoService.generateImageFromImage(flowPrompt, base64Reference, '2K', seed, 0.6, watermark);
             if (!imgUrl) throw new Error("Doubao returned empty URL for Img2Img");
           } catch (imgErr) {
             console.warn(`[MagicBook] Img2Img failed for Page ${i + 1}, falling back to Text2Image. Reason:`, imgErr);
-            imgUrl = await doubaoService.generateImage(flowPrompt, '2K', seed);
+            imgUrl = await doubaoService.generateImage(flowPrompt, '2K', seed, watermark);
             if (!imgUrl) throw new Error("Doubao returned empty URL for Text2Image fallback");
           }
         } else {
-          imgUrl = await doubaoService.generateImage(flowPrompt, '2K', seed);
+          imgUrl = await doubaoService.generateImage(flowPrompt, '2K', seed, watermark);
         }
 
         let audioUrl = '';
@@ -2562,6 +2677,34 @@ router.post('/save-cartoon-book', async (req, res) => {
   } catch (error) {
     console.error('[Media] Save graphic novel error:', error);
     res.status(500).json({ error: 'Failed to save graphic novel' });
+  }
+});
+
+// Download Proxy Route (Fallback for CORS issues)
+router.get('/download', async (req, res) => {
+  const { url, filename, inline } = req.query;
+  if (!url || typeof url !== 'string') return res.status(400).send('Missing URL');
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    const disposition = inline === 'true' ? 'inline' : 'attachment';
+    res.setHeader('Content-Disposition', `${disposition}; filename="${filename || 'video.mp4'}"`);
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'video/mp4');
+
+    if (response.body) {
+      // Use buffer for max reliability
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      res.send(buffer);
+    } else {
+      res.status(500).send('No body');
+    }
+  } catch (e) {
+    console.error('Download proxy error:', e);
+    res.status(500).send('Proxy error');
   }
 });
 

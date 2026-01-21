@@ -66,7 +66,7 @@ export const FeedbackWidget: React.FC = () => {
     if (!isVisible) return null;
 
     return (
-        <div className="fixed bottom-24 right-6 z-[100] flex flex-col items-end">
+        <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 z-[100] flex flex-col items-end">
             <AnimatePresence>
                 {isOpen && (
                     <motion.div

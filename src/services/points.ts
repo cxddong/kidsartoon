@@ -98,6 +98,12 @@ export class PointsService {
 
         try {
             const result = await adminDb.runTransaction(async (transaction) => {
+                // TEST/DEMO ACCOUNT BYPASS - DO THIS BEFORE DB FETCH TO ALLOW NON-EXISTENT USERS
+                if (userId === 'demo' || userId.includes('test') || userId.includes('debug')) {
+                    console.log(`[Points] TEST ACCOUNT BYPASS: User ${userId}. Skipping deduction.`);
+                    return { success: true, before: 1000, after: 1000 };
+                }
+
                 const userRef = adminDb.collection('users').doc(userId);
                 const userDoc = await transaction.get(userRef);
 
@@ -114,12 +120,6 @@ export class PointsService {
 
                 if (currentPoints >= 10000 || isAdminEmail) {
                     console.log(`[Points] ADMIN BYPASS: User ${userId} (${userEmail}) - Points: ${currentPoints}, Admin Email: ${isAdminEmail}. Skipping deduction.`);
-                    return { success: true, before: currentPoints, after: currentPoints };
-                }
-
-                // TEST/DEMO ACCOUNT BYPASS
-                if (userId === 'demo' || userId.includes('test') || userId.includes('debug')) {
-                    console.log(`[Points] TEST ACCOUNT BYPASS: User ${userId}. Skipping deduction.`);
                     return { success: true, before: currentPoints, after: currentPoints };
                 }
 

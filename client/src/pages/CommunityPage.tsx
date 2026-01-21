@@ -4,8 +4,7 @@ import { HeaderBar } from '../components/home/HeaderBar';
 import { LogoArea } from '../components/home/LogoArea';
 import { FeatureButtonsRow } from '../components/home/FeatureButtonsRow';
 import { ContentGrid } from '../components/home/ContentGrid';
-import { DetailModal } from '../components/home/DetailModal';
-// import { BottomNav } from '../components/BottomNav';
+import ImageModal from '../components/history/ImageModal';
 import type { ImageRecord } from '../components/history/ImageModal';
 import { Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -260,7 +259,7 @@ export const CommunityPage: React.FC = () => {
             </div>
 
             {/* 3. Main Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto z-10 relative w-full scrollbar-hide">
+            <div className="flex-1 overflow-y-auto z-10 relative w-full scrollbar-none">
                 <div className="pb-24 pt-20">
                     {/* Dev Links - Only visible in development */}
                     {import.meta.env.DEV && (
@@ -318,11 +317,13 @@ export const CommunityPage: React.FC = () => {
                 </div>
             </div>
 
-            <DetailModal
-                item={publicItems.find(i => i.id === selectedId) || null}
-                onClose={() => setSelectedId(null)}
-                onToggleFavorite={handleToggleFavorite}
-            />
+            {selectedId && (
+                <ImageModal
+                    image={publicItems.find(i => i.id === selectedId) || null}
+                    onClose={() => setSelectedId(null)}
+                    onToggleFavorite={handleToggleFavorite}
+                />
+            )}
 
             {/* 4. Magic Floating Capsule Nav */}
             <MagicNavBar />

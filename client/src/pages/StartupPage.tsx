@@ -649,7 +649,7 @@ const StartupPage: React.FC = () => {
             {showCamera && (
                 <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
                     <div className="relative w-full max-w-sm aspect-[3/4] bg-black rounded-2xl overflow-hidden border-4 border-white/20">
-                        <video ref={videoRef} autoPlay playsInline disablePictureInPicture controlsList="nodownload noremoteplayback" className="w-full h-full object-cover transform -scale-x-100" />
+                        <video ref={videoRef} autoPlay muted={true} playsInline crossOrigin="anonymous" disablePictureInPicture controlsList="nodownload noremoteplayback" className="w-full h-full object-cover transform -scale-x-100" />
                         <canvas ref={canvasRef} className="hidden" />
 
                         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-8 items-center">

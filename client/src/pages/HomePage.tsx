@@ -1,428 +1,190 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { cn } from '../lib/utils';
-import { Globe, User, Home, Video, BookOpen, MessageCircle, Heart, Music, Sparkles, Palette, Film, Maximize, Minimize } from 'lucide-react';
+import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
-import { FeedbackWidget } from '../components/FeedbackWidget';
-import { useVideoAutoplay } from '../hooks/useVideoAutoplay';
-
-// Assets
-import homepageBg from '../assets/home (2).mp4';
+import { FanMenu } from '../components/home/FanMenu';
+import { MagicKatButton } from '../components/home/MagicKatButton';
 import mentorVideo from '../assets/mentor journey.mp4';
-import graphicNovelVideo from '../assets/graphicnovel.mp4';
-import bookVideo from '../assets/picturebook.mp4';
-import greetingCardVideo from '../assets/greeting_card1.mp4';
-import comicVideo from '../assets/comic.mp4';
-import audioVideo from '../assets/mic3.mp4';
-import cartoonVideo from '../assets/video.mp4';
-import magicVideo from '../assets/startmagic.mp4';
-import artStudioVideo from '../assets/art studio.mp4';
-import animationVideo from '../assets/cartoon.mp4';
-import mirrorVideo from '../assets/mirror.mp4';
-import mirrorBtnVideo from '../assets/mirrorbtn.mp4';
-import jumpIntoArtVideo from '../assets/jump into art.mp4';
+import creativeJourneyVid from '../assets/creative journey.mp4';
+import artStudioVid from '../assets/art studio.mp4';
+import magicLabVid from '../assets/magiclab.mp4';
+import graphicNovelVid from '../assets/graphicnovel.mp4';
+import cartoonBookVid from '../assets/cartoon book.mp4';
+import pictureBookVid from '../assets/picturebook.mp4';
+import cartoonVid from '../assets/cartoon.mp4';
+import videoVid from '../assets/video.mp4';
+import comicVid from '../assets/comic.mp4';
+import mirrorBtnVid from '../assets/mirrorbtn.mp4';
+import jumpVid from '../assets/jump into art.mp4';
+import cardVid from '../assets/greetingcard.mp4';
+import audioVid from '../assets/audio.mp4';
+import magicAcademyTxtImg from '../assets/magic_academy_text.png';
+import wonderStudioTxtImg from '../assets/wonder_studio_text.png';
+import sunshineValleyTxtImg from '../assets/sunshine_valley_text.png';
+import { FEATURES_TOOLTIPS } from '../data/featuresData';
 
-// Component for Floating Feature Islands
-const FloatingBubble = ({ to, icon, videoSrc, label, className, delay, activePreview, onPreview, alignBottom }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; className?: string; delay: number; activePreview: string | null; onPreview: (to: string | null) => void; alignBottom?: boolean }) => {
-    const navigate = useNavigate();
-    const isActive = activePreview === to;
-    const videoRef = useVideoAutoplay<HTMLVideoElement>();
-
-    return (
-        <motion.div
-            className={cn(
-                "relative cursor-pointer group",
-                isActive ? "z-[60]" : "z-30",
-                className
-            )}
-            initial={{ y: 0 }}
-            animate={{ y: [0, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: delay }}
-            whileHover={{ scale: 1.1 }}
-            onClick={(e) => {
-                e.stopPropagation();
-                navigate(to);
-            }}
-            onMouseEnter={() => onPreview(to)}
-            onMouseLeave={() => onPreview(null)}
-        >
-            <div className="w-20 h-20 md:w-24 md:h-24 bg-white/80 backdrop-blur-md rounded-full shadow-xl border-4 border-white/50 flex items-center justify-center text-3xl md:text-4xl overflow-hidden relative group-hover:border-white transition-all">
-                {videoSrc ? (
-                    <video ref={videoRef} src={videoSrc} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-90" />
-                ) : (
-                    icon
-                )}
-            </div>
-
-            {/* Preview Box */}
-            <AnimatePresence>
-                {isActive && (
-                    <FeaturePreviewBox to={to} onClose={() => onPreview(null)} showRight={true} alignBottom={alignBottom} />
-                )}
-            </AnimatePresence>
-
-            {/* Text Label Below Bubble - Mobile only */}
-            <span className="md:hidden text-[10px] text-white font-black uppercase tracking-tight truncate block text-center w-full drop-shadow-md group-hover:text-indigo-200 transition-colors mt-1">
-                {label}
-            </span>
-        </motion.div>
-    );
-};
-
-// Feature Preview Data
-const FEATURE_PREVIEWS: Record<string, { title: string; desc: string; video?: string; icon?: string }> = {
-    '/generate/audio': {
-        title: 'Magic Audio',
-        desc: 'Turn your drawing into a talking character with a magical voice!',
-        video: audioVideo
-    },
-    '/generate/comic': {
-        title: 'Comic Book',
-        desc: 'Step inside a superhero story! See how your photo becomes a comic.',
-        video: comicVideo
-    },
-    '/generate/picture': {
-        title: 'Picture Book',
-        desc: 'Write and illustrate your very own magical story book!',
-        video: bookVideo
-    },
-    '/generate/video': {
-        title: 'Animation',
-        desc: 'Bring your art to life! Watch your drawings move and groove.',
-        video: cartoonVideo
-    },
-    '/generate/greeting-card': {
-        title: 'Magic Card',
-        desc: 'Create a sparkling greeting card to send to someone special!',
-        video: greetingCardVideo
-    },
-    '/magic-art': {
-        title: 'Art Studio',
-        desc: 'Paint like a master! Use AI to turn your sketches into masterpieces.',
-        video: artStudioVideo
-    },
-    '/creative-journey': {
-        title: 'Art Coach',
-        desc: 'Get personalized AI coaching to improve your art skills and discover your style!',
-        video: mentorVideo
-    },
-    '/cartoon-book/builder': {
-        title: 'Cartoon Book',
-        desc: 'Create your own cartoon graphic novel with amazing characters and stories!',
-        video: graphicNovelVideo
-    },
-    '/magic-discovery': {
-        title: 'Magic Mirror',
-        desc: 'Transform your photos with magical AI effects and filters!',
-        video: mirrorBtnVideo
-    },
-    '/make-cartoon': {
-        title: 'Animation Studio',
-        desc: 'Turn your art into animated cartoons that move and dance!',
-        video: animationVideo
-    },
-    '/jump-into-art': {
-        title: 'Jump Into Art',
-        desc: 'Step into your artwork and become part of the masterpiece!',
-        video: jumpIntoArtVideo
-    }
-};
-
-// Component for Feature Preview Box
-const FeaturePreviewBox = ({ to, onClose, alignBottom, showRight }: { to: string; onClose: () => void; alignBottom?: boolean; showRight?: boolean }) => {
-    const navigate = useNavigate();
-    const preview = FEATURE_PREVIEWS[to];
-    if (!preview) return null;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, x: showRight ? -20 : 20, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: showRight ? -20 : 20, scale: 0.9 }}
-            className={cn(
-                "hidden lg:block absolute w-64 md:w-72 bg-white rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden z-50 pointer-events-auto",
-                showRight ? "left-[110%]" : "right-[110%]",
-                alignBottom ? "bottom-0" : "top-0"
-            )}
-        >
-            <div className="relative aspect-video w-full bg-slate-100">
-                {preview.video ? (
-                    <video src={preview.video} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl">{preview.icon}</div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            </div>
-            <div className="p-4 space-y-3">
-                <h3 className="text-lg font-black text-slate-800 leading-tight">{preview.title}</h3>
-                <p className="text-xs text-slate-500 font-bold leading-relaxed">{preview.desc}</p>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(to);
-                    }}
-                    className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-black text-sm shadow-lg hover:shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                    Let's Go! <Sparkles size={14} className="fill-white" />
-                </button>
-            </div>
-        </motion.div>
-    );
-};
-
-// Component for Dock Items
-const DockItem = ({ to, icon, videoSrc, label, badge, activePreview, onPreview, alignBottom }: { to: string; icon: React.ReactNode; videoSrc?: string; label: string; badge?: string; activePreview: string | null; onPreview: (to: string | null) => void; alignBottom?: boolean }) => {
-    const navigate = useNavigate();
-    const isActive = activePreview === to;
-
-    return (
-        <div
-            className={cn(
-                "relative flex justify-end gap-3 group cursor-pointer",
-                alignBottom ? "items-end" : "items-start"
-            )}
-            onMouseEnter={() => onPreview(to)}
-            onMouseLeave={() => onPreview(null)}
-            onClick={(e) => {
-                e.stopPropagation();
-                onPreview(to);
-            }}
-        >
-            {/* Text Label to the Left of Button */}
-            <span className="text-[10px] md:text-xs text-white font-black uppercase tracking-wider whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-indigo-200 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 hidden md:block absolute right-[4.5rem] md:right-20 top-1/2 -translate-y-1/2">
-                {label}
-            </span>
-
-            <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={cn(
-                    "w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center transition-all duration-300 border-2 overflow-hidden shadow-xl relative group-hover:border-white/60 shrink-0",
-                    isActive
-                        ? "bg-white border-indigo-400 scale-105 shadow-indigo-500/30"
-                        : "bg-white/20 backdrop-blur-md border-white/30"
-                )}
-            >
-                <div className="absolute inset-0 z-0 overflow-hidden rounded-inherit">
-                    {videoSrc ? (
-                        <video
-                            src={videoSrc}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className={cn("w-full h-full object-cover transition-opacity", isActive ? "opacity-100" : "opacity-80")}
-                        />
-                    ) : (
-                        <div className={cn("w-full h-full flex items-center justify-center transition-colors", isActive ? "text-indigo-600 bg-white" : "text-white")}>
-                            {icon}
-                        </div>
-                    )}
-                </div>
-
-                {badge && (
-                    <div className="absolute top-0 right-0 bg-gradient-to-br from-yellow-400 to-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-bl-lg shadow-sm z-20">
-                        {badge}
-                    </div>
-                )}
-            </motion.div>
+// Assets (Using placeholders/gradients if image is missing, but keeping the requested img tag)
+// Assuming the user will provide 'world_map_v2.jpg' or we use a gradient for now.
 
 
-            <AnimatePresence>
-                {isActive && (
-                    <FeaturePreviewBox to={to} onClose={() => onPreview(null)} alignBottom={alignBottom} />
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
 
 export const HomePage: React.FC = () => {
-    const navigate = useNavigate();
-    const [activePreview, setActivePreview] = React.useState<string | null>(null);
-    const [isFullscreen, setIsFullscreen] = React.useState(false);
-    const bgVideoRef = useVideoAutoplay<HTMLVideoElement>();
+    const [activeZone, setActiveZone] = useState<null | 'academy' | 'studio' | 'valley'>(null);
 
-    const toggleFullscreen = async () => {
-        try {
-            if (!document.fullscreenElement) {
-                await document.documentElement.requestFullscreen();
-                setIsFullscreen(true);
-            } else {
-                if (document.exitFullscreen) {
-                    await document.exitFullscreen();
-                    setIsFullscreen(false);
-                }
-            }
-        } catch (error: any) {
-            console.error('Fullscreen error:', error);
-            alert(`无法进入全屏模式: ${error.message}\n\n请尝试按 F11 键进入全屏。`);
-        }
+    // Helper to handle clicks on the background/empty space to close menus
+    const handleBackgroundClick = () => {
+        setActiveZone(null);
     };
-
-    React.useEffect(() => {
-        const handle = () => setIsFullscreen(!!document.fullscreenElement);
-        document.addEventListener('fullscreenchange', handle);
-        return () => document.removeEventListener('fullscreenchange', handle);
-    }, []);
 
     return (
         <div
-            className="relative min-h-screen overflow-hidden bg-black pb-20 lg:pb-24 font-sans selection:bg-indigo-500/30"
-            onClick={() => setActivePreview(null)}
+            className="relative w-full h-screen overflow-hidden bg-sky-100"
+            onClick={handleBackgroundClick} // Clicking anywhere resets, stopPropagation on buttons prevents this
         >
-            {/* 1. Background Layer */}
-            <div className="absolute inset-0 z-0 text-white flex items-center justify-center">
+
+            {/* 1. 地图背景层 (Map Background Layer) */}
+            <div className={`w-full h-full transition-transform duration-700 ease-in-out ${activeZone ? 'scale-110' : 'scale-100'}`}>
+                {/* 
+            Fallback to a gradient if image is missing/loading. 
+            In a real scenario, we'd use a real map image. 
+            For now, visual zones are approximated by the background.
+         */}
                 <video
-                    ref={bgVideoRef}
-                    src={homepageBg}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    src="/assets/HOME1.mp4"
                     autoPlay
                     loop
                     muted
                     playsInline
+                    className="absolute inset-0 w-full h-full object-cover z-0"
                 />
             </div>
 
-            {/* Fullscreen Toggle - Bottom Left */}
-            <div className="absolute bottom-6 left-6 z-50 flex flex-col items-start gap-3">
+            {/* 
+        Note: We use explicit localized click zones. 
+        stopPropagation is crucial so clicking the zone doesn't immediately trigger the background click.
+      */}
+
+            {/* 🏰 Zone A: Magic Academy (Top Left) */}
+            {/* Positioned roughly where the castle would be */}
+            {/* Positioned roughly where the castle would be */}
+            <div className="absolute top-[10%] left-[1%] w-[40%] h-[35%] z-10 pointer-events-none">
+                {/* The visual anchor/button */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); setActiveZone('academy'); }}
+                    className="w-full h-full pointer-events-auto group outline-none focus:outline-none"
+                >
+                    {/* Visual Placeholder for the Castle if not using bg image */}
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'academy' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
+                        {/* ICON REMOVED per user request */}
+                        {/* <div className="text-6xl md:text-8xl drop-shadow-2xl filter">🏰</div> */}
+                        <img
+                            src={magicAcademyTxtImg}
+                            alt="Magic Academy"
+                            className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                        />
+                    </div>
+                </button>
+
+                {/* Pop-up Menu */}
                 <AnimatePresence>
-                    {!isFullscreen && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                            animate={{ opacity: 1, y: [0, -8, 0], scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{
-                                y: { repeat: Infinity, duration: 2, ease: "easeInOut" },
-                                opacity: { duration: 0.3 }
-                            }}
-                            className="bg-indigo-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg shadow-indigo-500/20 whitespace-nowrap relative after:content-[''] after:absolute after:top-full after:left-4 after:border-8 after:border-transparent after:border-t-indigo-500"
-                        >
-                            Fullscreen for better magic! ✨
-                        </motion.div>
+                    {activeZone === 'academy' && (
+                        <FanMenu
+                            items={[
+                                { label: FEATURES_TOOLTIPS.art_coach.label, to: '/creative-journey', videoSrc: creativeJourneyVid, description: FEATURES_TOOLTIPS.art_coach.desc },
+                                { label: FEATURES_TOOLTIPS.art_class.label, to: '/art-class', videoSrc: artStudioVid, description: FEATURES_TOOLTIPS.art_class.desc },
+                                { label: FEATURES_TOOLTIPS.art_studio.label, to: '/magic-art', videoSrc: magicLabVid, description: FEATURES_TOOLTIPS.art_studio.desc }
+                            ]}
+                            position="flat-top"
+                            radius={110}
+                            spread={120}
+                        />
                     )}
                 </AnimatePresence>
+            </div>
 
+            {/* 🎡 Zone B: Wonder Studio (Top Right) */}
+            <div className="absolute top-[10%] right-0 w-[40%] h-[35%] z-10 pointer-events-none">
                 <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFullscreen();
-                    }}
-                    className="p-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl text-white hover:bg-white/30 transition-all shadow-xl group"
+                    onClick={(e) => { e.stopPropagation(); setActiveZone('studio'); }}
+                    className="w-full h-full pointer-events-auto group outline-none focus:outline-none"
                 >
-                    {isFullscreen ? <Minimize size={24} className="group-hover:scale-110 transition-transform" /> : <Maximize size={24} className="group-hover:scale-110 transition-transform" />}
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'studio' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
+                        {/* ICON REMOVED per user request */}
+                        {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🎡</div> */}
+                        <img
+                            src={wonderStudioTxtImg}
+                            alt="Wonder Studio"
+                            className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                        />
+                    </div>
                 </button>
+
+                <AnimatePresence>
+                    {activeZone === 'studio' && (
+                        <FanMenu
+                            items={[
+                                { label: FEATURES_TOOLTIPS.cartoon_book.label, to: '/cartoon-book/builder', videoSrc: cartoonBookVid, description: FEATURES_TOOLTIPS.cartoon_book.desc },
+                                { label: FEATURES_TOOLTIPS.picture_book.label, to: '/generate/picture', videoSrc: pictureBookVid, description: FEATURES_TOOLTIPS.picture_book.desc },
+                                { label: FEATURES_TOOLTIPS.animation_studio.label, to: '/make-cartoon', videoSrc: cartoonVid, description: FEATURES_TOOLTIPS.animation_studio.desc },
+                                { label: FEATURES_TOOLTIPS.video.label, to: '/generate/video', videoSrc: videoVid, description: FEATURES_TOOLTIPS.video.desc },
+                                { label: FEATURES_TOOLTIPS.comic.label, to: '/generate/comic', videoSrc: comicVid, description: FEATURES_TOOLTIPS.comic.desc }
+                            ]}
+                            position="surround"
+                            radius={90}
+                            spread={110}
+                        />
+                    )}
+                </AnimatePresence>
             </div>
 
-            {/* 2. Center Stage (Magic Kat) - Hidden on mobile and desktop */}
-            <div className="relative h-[80vh] flex flex-col items-start md:items-center justify-start pt-[10vh] md:pt-[5vh] pl-6 md:pl-0">
-
-                {/* Ask Magic Kat Button - Visible */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.8, duration: 0.8 }}
-                    whileHover={{ scale: 1.15 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="block absolute top-4 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
-                    onClick={() => navigate('/magic-lab')}
+            {/* 🌳 Zone C: Sunshine Valley (Bottom Center) */}
+            <div className="absolute bottom-[20%] left-[25%] w-[50%] h-[30%] z-10 pointer-events-none">
+                <button
+                    onClick={(e) => { e.stopPropagation(); setActiveZone('valley'); }}
+                    className="w-full h-full pointer-events-auto group outline-none focus:outline-none"
                 >
-                    {/* The Cat Avatar */}
-                    <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/80 backdrop-blur-md rounded-full shadow-2xl border-4 border-white/50 flex items-center justify-center overflow-hidden">
-                        <video
-                            src={mentorVideo}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover opacity-90"
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'valley' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
+                        {/* ICON REMOVED per user request */}
+                        {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🌳</div> */}
+                        <img
+                            src={sunshineValleyTxtImg}
+                            alt="Sunshine Valley"
+                            className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
                         />
                     </div>
+                </button>
 
-                    {/* Text Label Below Bubble - Matching FloatingBubble Style */}
-                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 group-hover:scale-105 transition-transform">
-                        <span className="text-[11px] md:text-[13px] text-white font-black uppercase tracking-[0.1em] whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            Ask Magic Kat
-                        </span>
-                    </div>
-                </motion.div>
+                <AnimatePresence>
+                    {activeZone === 'valley' && (
+                        <FanMenu
+                            items={[
+                                { label: FEATURES_TOOLTIPS.mirror.label, to: '/magic-discovery', videoSrc: mirrorBtnVid, description: FEATURES_TOOLTIPS.mirror.desc },
+                                { label: FEATURES_TOOLTIPS.jump_into_art.label, to: '/jump-into-art', videoSrc: jumpVid, description: FEATURES_TOOLTIPS.jump_into_art.desc },
+                                { label: FEATURES_TOOLTIPS.card.label, to: '/generate/greeting-card', videoSrc: cardVid, description: FEATURES_TOOLTIPS.card.desc },
+                                { label: FEATURES_TOOLTIPS.audio.label, to: '/generate/audio', videoSrc: audioVid, description: FEATURES_TOOLTIPS.audio.desc }
+                            ]}
+                            position="flat-bottom"
+                            radius={110}
+                            spread={110}
+                        />
+                    )}
+                </AnimatePresence>
+            </div>
 
-                {/* Feature Islands - Grid on Mobile, Absolute on Desktop */}
-                <div className="flex flex-col gap-4 p-4 pt-28 lg:pt-0 lg:absolute lg:inset-0 lg:pointer-events-none max-w-6xl mx-auto w-full lg:h-full">
-                    {/* Responsive Grid: 2x3 on mobile, absolute positioning on desktop */}
-                    <div className="grid grid-cols-2 gap-4 lg:contents">
-                        <FloatingBubble
-                            to="/creative-journey"
-                            icon="🎨"
-                            videoSrc={mentorVideo}
-                            label="Art Coach"
-                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[8%] lg:left-[5%] lg:md:top-[15%] lg:md:left-[10%]"
-                            delay={0}
-                            activePreview={activePreview}
-                            onPreview={setActivePreview}
-                        />
-                        <FloatingBubble
-                            to="/cartoon-book/builder"
-                            icon="📚"
-                            videoSrc={graphicNovelVideo}
-                            label="Cartoon Book"
-                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[26%] lg:left-[5%] lg:md:top-[35%] lg:md:left-[15%]"
-                            delay={1.5}
-                            activePreview={activePreview}
-                            onPreview={setActivePreview}
-                        />
-                        <FloatingBubble
-                            to="/magic-discovery"
-                            icon="🪞"
-                            videoSrc={mirrorBtnVideo}
-                            label="Mirror"
-                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[44%] lg:left-[5%] lg:md:top-[55%] lg:md:left-[10%]"
-                            delay={0.5}
-                            activePreview={activePreview}
-                            onPreview={setActivePreview}
-                        />
-                        <FloatingBubble
-                            to="/make-cartoon"
-                            icon={<Film />}
-                            videoSrc={animationVideo}
-                            label="Animation"
-                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[62%] lg:left-[5%] lg:md:top-[75%] lg:md:left-[15%]"
-                            delay={1}
-                            activePreview={activePreview}
-                            onPreview={setActivePreview}
-                            alignBottom={true}
-                        />
-                        <FloatingBubble
-                            to="/jump-into-art"
-                            icon="🖼️"
-                            videoSrc={jumpIntoArtVideo}
-                            label="Jump Into Art"
-                            className="pointer-events-auto justify-self-center lg:absolute lg:top-[80%] lg:left-[5%] lg:md:top-[95%] lg:md:left-[10%]"
-                            delay={2}
-                            activePreview={activePreview}
-                            onPreview={setActivePreview}
-                            alignBottom={true}
-                        />
-                    </div>
+            {/* 🐱 Magic Kat (Moved to Bottom Right) */}
+            <div
+                className="absolute bottom-24 right-4 z-20 pointer-events-auto"
+                onClick={(e) => e.stopPropagation()} // Prevent closing zones when clicking Kat? Or maybe it should close others?
+            >
+                <MagicKatButton videoSrc={mentorVideo} />
+            </div>
+
+            {/* 3. Bottom Navigation Bar */}
+            <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-none">
+                <div className="pointer-events-auto">
+                    <MagicNavBar />
                 </div>
             </div>
 
-            {/* Right-Side Dock - Horizontal on Mobile, Vertical on Desktop */}
-            <div className="fixed bottom-20 left-0 right-0 lg:right-6 lg:left-auto lg:top-1/2 lg:-translate-y-1/2 z-20 flex flex-row lg:flex-col justify-center lg:justify-center gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible px-4 lg:px-0 pb-2 lg:pb-0 lg:h-[70vh] lg:max-h-[600px]">
-                <div className="flex flex-row lg:flex-col justify-evenly items-center lg:items-end h-full overflow-visible scrollbar-hide lg:py-0">
-                    <DockItem to="/generate/audio" icon={<Music size={24} />} videoSrc={audioVideo} label="Audio" badge="FREE" activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/generate/comic" icon={<MessageCircle size={24} />} videoSrc={comicVideo} label="Comic" activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/generate/picture" icon={<BookOpen size={24} />} videoSrc={bookVideo} label="Book" activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/generate/video" icon={<Video size={24} />} videoSrc={cartoonVideo} label="Video" alignBottom activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/generate/greeting-card" icon={<Heart size={24} />} videoSrc={greetingCardVideo} label="Card" alignBottom activePreview={activePreview} onPreview={setActivePreview} />
-                    <DockItem to="/magic-art" icon={<Palette size={24} />} videoSrc={artStudioVideo} label="Art Studio" alignBottom activePreview={activePreview} onPreview={setActivePreview} />
-                </div>
-            </div>
-
-            <MagicNavBar />
-            <FeedbackWidget />
         </div>
     );
 };

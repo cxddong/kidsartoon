@@ -1,11 +1,18 @@
 import fetch from 'node-fetch';
 
-const API_KEY = process.env.OPENAI_API_KEY;
+const getOpenAIApiKey = () => process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || "";
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+
+// 🚀 Centralized Model Router for OpenAI
+const MODEL_ROUTER = {
+    chat: 'gpt-4o-mini',
+    vision: 'gpt-4o',
+    tts: 'tts-1-hd'
+};
 
 export class OpenAIService {
     constructor() {
-        if (!API_KEY) console.warn("OpenAIService: Missing API Key");
+        if (!getOpenAIApiKey()) console.warn("OpenAIService: Missing API Key in environment");
     }
 
     /**
@@ -13,7 +20,8 @@ export class OpenAIService {
      * Upgraded for clearer, more expressive voice
      */
     async generateSpeech(text: string): Promise<Buffer> {
-        if (!API_KEY) throw new Error("OpenAI API Key missing");
+        const apiKey = getOpenAIApiKey();
+        if (!apiKey) throw new Error("OpenAI API Key missing");
 
         const url = 'https://api.openai.com/v1/audio/speech';
         try {
@@ -21,13 +29,13 @@ export class OpenAIService {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
+                    'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: "tts-1-hd",  // 🚀 HD Model: clearer, more expressive
+                    model: MODEL_ROUTER.tts,  // 🚀 HD Model: clearer, more expressive
                     voice: "nova",       // V4.0: Energetic voice for naughty apprentice
                     input: text,
-                    speed: 1.15          // 🚀 15% faster: more fluid, less robotic
+                    speed: 1.0          // Default speed for clarity
                 })
             });
 
@@ -49,7 +57,8 @@ export class OpenAIService {
      * Extracts tags/keywords for image generation.
      */
     async chatWithSparkle(history: any[], imageBase64?: string, userProfile?: any, hasUploadedImage?: boolean): Promise<any> {
-        if (!API_KEY) throw new Error("OpenAI API Key missing");
+        const apiKey = getOpenAIApiKey();
+        if (!apiKey) throw new Error("OpenAI API Key missing");
 
         console.log("[OpenAI] Chat Request. History length:", history?.length, "Has Image:", !!imageBase64, "Session Has Image:", !!hasUploadedImage);
 
@@ -222,14 +231,14 @@ You must respond in JSON format. Always return a valid JSON object:
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY} `
+                    'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o', // Upgraded from mini for better intelligence
+                    model: MODEL_ROUTER.chat, // Cost reduction: gpt-4o -> gpt-4o-mini
                     messages: messages,
                     response_format: { type: "json_object" },
                     temperature: 0.7,
-                    max_tokens: 500 // Increased for complex conversations
+                    max_tokens: 500
                 })
             });
 
@@ -314,17 +323,18 @@ You must respond in JSON format. Always return a valid JSON object:
     }
 
     async generateJSON(prompt: string, systemPrompt: string = "You are a helpful assistant."): Promise<any> {
-        if (!API_KEY) throw new Error("OpenAI API Key missing");
+        const apiKey = getOpenAIApiKey();
+        if (!apiKey) throw new Error("OpenAI API Key missing");
 
         try {
             const response = await fetch(OPENAI_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
+                    'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o',
+                    model: MODEL_ROUTER.chat, // Cost reduction: gpt-4o -> gpt-4o-mini
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: prompt }
@@ -352,7 +362,8 @@ You must respond in JSON format. Always return a valid JSON object:
      * Detects sketches, art styles, and content connections.
      */
     async analyzeImageContext(base64Image: string): Promise<any> {
-        if (!API_KEY) throw new Error("OpenAI API Key missing");
+        const apiKey = getOpenAIApiKey();
+        if (!apiKey) throw new Error("OpenAI API Key missing");
 
         const SYSTEM_PROMPT = `
         You are an expert art critic and children's content guide. 
@@ -398,10 +409,10 @@ You must respond in JSON format. Always return a valid JSON object:
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
+                    'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o',
+                    model: MODEL_ROUTER.vision,
                     messages: messages,
                     response_format: { type: "json_object" },
                     temperature: 0.7,

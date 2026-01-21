@@ -139,12 +139,35 @@ const ContentCard = ({ item, onItemClick, user }: { item: ImageRecord, onItemCli
                             transition={{ duration: 0.8 }}
                             className="absolute inset-0 w-full h-full"
                         >
-                            <img
-                                src={item.imageUrl}
-                                alt="Creation"
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                loading="lazy"
-                            />
+                            {item.type === 'animation' ? (
+                                <video
+                                    src={item.imageUrl}
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    muted
+                                    loop
+                                    playsInline
+                                    poster={optionalSrc}
+                                    onMouseOver={e => {
+                                        const p = e.currentTarget.play();
+                                        if (p !== undefined) {
+                                            p.catch(error => {
+                                                // Auto-play prevented (expected user interaction behavior)
+                                            });
+                                        }
+                                    }}
+                                    onMouseOut={e => {
+                                        e.currentTarget.pause();
+                                        e.currentTarget.currentTime = 0;
+                                    }}
+                                />
+                            ) : (
+                                <img
+                                    src={item.imageUrl}
+                                    alt="Creation"
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    loading="lazy"
+                                />
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

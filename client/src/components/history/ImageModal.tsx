@@ -1,6 +1,7 @@
 ﻿import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart, Trash2, RefreshCw, Download, Share2 } from 'lucide-react';
+import { X, Heart, Trash2, RefreshCw, Download, Share2, Wand2, Video, Mail, Puzzle, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import html2canvas from 'html2canvas';
 import { PuzzleButton } from '../puzzle/PuzzleButton';
@@ -22,7 +23,7 @@ interface ImageModalProps {
     image: ImageRecord | null;
     onClose: () => void;
     onToggleFavorite: (id: string) => void;
-    onDelete: (id: string) => void;
+    onDelete?: (id: string) => void;
     onRegenerate?: (image: ImageRecord) => void;
     initialShowPuzzle?: boolean;
 }
@@ -34,6 +35,8 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
     const [isReviewPlaying, setIsReviewPlaying] = React.useState(false);
     const [showPuzzle, setShowPuzzle] = React.useState(initialShowPuzzle);
     const [showShare, setShowShare] = React.useState(false);
+    const [showMagicMenu, setShowMagicMenu] = React.useState(false);
+    const navigate = useNavigate();
     const comicRef = React.useRef<HTMLDivElement>(null);
 
     const handleDownload = async () => {
@@ -56,9 +59,25 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                 // Fallback
                 window.open(image.imageUrl, '_blank');
             }
-        } else {
-            // Standard download
-            window.open(image?.imageUrl, '_blank');
+        } else if (image?.imageUrl) {
+            // Standard download - Force file download to avoid opening in new tab/player
+            try {
+                const response = await fetch(image.imageUrl);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                // Determine extension based on type
+                const ext = (image.type === 'animation') ? 'mp4' : 'png';
+                link.download = `magic-creation-${image.id}.${ext}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error("Download failed, falling back to new tab", e);
+                window.open(image.imageUrl, '_blank');
+            }
         }
     };
 
@@ -471,7 +490,9 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
 
                                 {/* RIGHT: GENERATED PICTURE */}
                                 <div className="flex-[1.5] flex flex-col">
-                                    <h4 className="text-center font-bold text-slate-800 mb-2 tracking-wider text-xs uppercase">Generated Picture</h4>
+                                    <h4 className="text-center font-bold text-slate-800 mb-2 tracking-wider text-xs uppercase">
+                                        {image.type === 'animation' ? 'Generated Video' : 'Generated Picture'}
+                                    </h4>
                                     <div className="flex-1 bg-slate-100/50 rounded-2xl flex items-center justify-center p-2 overflow-auto">
                                         {/* Media Content */}
                                         {image.type === 'animation' ? (
@@ -564,24 +585,71 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                                 <Heart className={cn("w-5 h-5", image.favorite && "fill-current")} />
                             </button>
 
-                            {/* Regenerate Button */}
-                            {onRegenerate && (
+                            {/* Magic Create Menu */}
+                            <div className="relative">
                                 <button
-                                    onClick={() => onRegenerate(image)}
-                                    className="px-4 h-10 flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 border-0 transition-all shadow-sm font-bold text-sm"
-                                    title="Regenerate"
+                                    onClick={() => setShowMagicMenu(!showMagicMenu)}
+                                    className="px-4 h-10 flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:from-purple-700 hover:to-pink-600 border-0 transition-all shadow-sm font-bold text-sm animate-pulse hover:animate-none"
+                                    title="Create Magic with this"
                                 >
-                                    <RefreshCw size={16} />
-                                    <span className="hidden sm:inline">Regenerate</span>
+                                    <Wand2 size={16} />
+                                    <span className="hidden sm:inline">Create...</span>
+                                </button>
+
+                                {showMagicMenu && (
+                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in">
+                                        <div className="p-1">
+                                            {onRegenerate && (
+                                                <button
+                                                    onClick={() => { onRegenerate(image); setShowMagicMenu(false); }}
+                                                    className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
+                                                >
+                                                    <RefreshCw size={14} className="text-slate-400" />
+                                                    Remix This
+                                                </button>
+                                            )}
+                                            <div className="h-px bg-slate-100 my-1" />
+                                            <button
+                                                onClick={() => { navigate('/generate/video', { state: { remixImage: image.imageUrl } }); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
+                                            >
+                                                <Video size={14} className="text-blue-500" />
+                                                Magic Video
+                                            </button>
+                                            <button
+                                                onClick={() => { navigate('/generate/greeting-card', { state: { remixImage: image.imageUrl } }); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
+                                            >
+                                                <Mail size={14} className="text-pink-500" />
+                                                Greeting Card
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowPuzzle(true); setShowMagicMenu(false); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
+                                            >
+                                                <Puzzle size={14} className="text-amber-500" />
+                                                Puzzle Game
+                                            </button>
+                                            <button
+                                                onClick={() => { navigate('/generate/comic', { state: { remixImage: image.imageUrl } }); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
+                                            >
+                                                <BookOpen size={14} className="text-indigo-500" />
+                                                Comic Panel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {onDelete && (
+                                <button
+                                    onClick={() => onDelete(image.id)}
+                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 hover:text-red-500 border border-slate-200 transition-all shadow-sm"
+                                >
+                                    <Trash2 size={18} />
                                 </button>
                             )}
-
-                            <button
-                                onClick={() => onDelete(image.id)}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 hover:text-red-500 border border-slate-200 transition-all shadow-sm"
-                            >
-                                <Trash2 size={18} />
-                            </button>
                             {/* Download Button */}
                             <button
                                 onClick={handleDownload}

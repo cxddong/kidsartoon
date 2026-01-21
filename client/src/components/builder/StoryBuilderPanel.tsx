@@ -4,7 +4,7 @@ import {
     Smile, Flame, Rocket, Palette, PawPrint,
     Users, Cake, Music, Waves, Mic, MicOff, Check,
     Play, Pause, Volume2, Volume, Globe, Fish, Snowflake,
-    TreeDeciduous, Footprints, Hand, Gift
+    TreeDeciduous, Footprints, Hand, Gift, Lock, Brain
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion } from 'framer-motion';
@@ -51,12 +51,18 @@ export const VOICES = [
     { id: 'titi', label: 'Titi (Premium)', tier: 'premium', cost: 20, icon: Volume2, description: 'Senior male, captivating & cold', demoText: 'Hey! I\'m Titi, and I\'m super excited to tell your story!', demoUrl: '/assets/audio_demos/titi_preview.mp3' },
 ];
 
+export const MODELS = [
+    { id: 'standard', label: 'Standard', tier: 'standard', cost: 0, icon: Sparkles, description: 'Fast & fun stories' },
+    { id: 'gpt5', label: 'GPT-5.2 (Pro)', tier: 'premium', cost: 30, icon: Brain, description: 'Smartest storyteller' },
+];
+
 export interface StoryBuilderData {
     storyStyle: string;
     contentTags: string[];
     mood: string;
     voice: string;
     voiceTier: 'standard' | 'premium';
+    modelTier: 'standard' | 'premium';
     voiceNote: string;
 }
 
@@ -66,15 +72,17 @@ interface StoryBuilderPanelProps {
     userId?: string;
     isRecharging?: boolean;
     rechargeTime?: number;
+    userPlan?: string;
 }
 
-export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate, imageUploaded, userId, isRecharging, rechargeTime }) => {
+export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate, imageUploaded, userId, isRecharging, rechargeTime, userPlan }) => {
     // State
     const [storyStyle, setStoryStyle] = useState(STORY_STYLES[0].id);
     const [contentTags, setContentTags] = useState<string[]>([]);
     const [mood, setMood] = useState(MOODS[0].id);
     const [voice, setVoice] = useState('standard');
     const [voiceTier, setVoiceTier] = useState<'standard' | 'premium'>('standard');
+    const [modelTier, setModelTier] = useState<'standard' | 'premium'>('standard');
     const [voiceNote, setVoiceNote] = useState('');
     const [isListening, setIsListening] = useState(false);
     const [playingDemo, setPlayingDemo] = useState<string | null>(null);
@@ -82,7 +90,7 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
     const recognitionRef = useRef<any>(null);
 
     const handleSubmit = () => {
-        onGenerate({ storyStyle, contentTags, mood, voice, voiceTier, voiceNote });
+        onGenerate({ storyStyle, contentTags, mood, voice, voiceTier, modelTier, voiceNote });
     };
 
     // Voice Input Logic
@@ -134,14 +142,15 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                 }
             }
 
-            const response = await fetch(voiceTier === 'premium' ? '/api/sparkle/speak-premium' : '/api/sparkle/speak', {
+            // Use Minimax endpoint for premium voices, standard endpoint for others
+            const endpoint = voiceTier === 'premium' ? '/api/sparkle/speak-minimax' : '/api/sparkle/speak';
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     text: demoText,
-                    voiceId: voiceId === 'kiki' ? 'Nggzl2QAXh3OijoXD116' :
-                        voiceId === 'aiai' ? 'zrHiDhphv9ZnVXBqCLjf' :
-                            voiceId === 'titi' ? 'D38z5RcWu1voky8WS1ja' : undefined,
+                    voiceId: voiceId, // Pass the raw ID (kiki, aiai, titi), backend maps it
                     userId: userId || 'demo'
                 })
             });
@@ -169,6 +178,14 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
     };
 
     const isReady = imageUploaded;
+
+    // Helper to check if user is pro
+    const isProUser = () => {
+        const plan = userPlan || 'free';
+        return ['pro', 'yearly', 'yearly_pro', 'admin'].includes(plan);
+    };
+
+    const isPro = isProUser();
 
     return (
         <div className="w-full flex-1 flex flex-col gap-6">
@@ -272,31 +289,109 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                     Voice Actor 🎙️
                 </h3>
                 <div className="flex flex-col gap-2">
-                    {VOICES.map(item => (
-                        <div key={item.id} className="flex gap-2">
-                            <button onClick={() => { setVoice(item.id); setVoiceTier(item.tier as any); }}
+                    {VOICES.map(item => {
+                        const isPremium = item.tier === 'premium';
+                        const effectiveCost = isPro ? 0 : item.cost;
+
+                        return (
+                            <div key={item.id} className="relative flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        setVoice(item.id);
+                                        setVoiceTier(item.tier as any);
+                                    }}
+                                    className={cn(
+                                        "flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
+                                        voice === item.id
+                                            ? "border-green-500 bg-green-50 text-green-700"
+                                            : "border-transparent bg-white/50 text-slate-500 hover:bg-white/80"
+                                    )}
+                                >
+                                    <item.icon className="w-5 h-5" />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold block">{item.label}</span>
+                                        </div>
+                                        <span className="text-xs text-slate-400">{item.description}</span>
+                                    </div>
+
+                                    {/* Cost / Badge Display */}
+                                    {isPremium && (
+                                        <div className='flex items-center gap-1'>
+                                            {isPro ? (
+                                                <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">PRO FREE</span>
+                                            ) : (
+                                                <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold border border-slate-300">
+                                                    -{effectiveCost} ✨
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </button>
+                                <button onClick={() => playVoiceDemo(item)}
+                                    className={cn(
+                                        "p-3 rounded-xl border-2 transition-all",
+                                        playingDemo === item.id ? "bg-purple-100 border-purple-500 text-purple-600" : "bg-white/50 border-transparent text-slate-400"
+                                    )}>
+                                    {playingDemo === item.id ? <Volume className="w-5 h-5 animate-pulse" /> : <Play className="w-5 h-5" />}
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 5. Story Smarts (Model Selection) */}
+            <div className="p-5 bg-white/50 backdrop-blur-sm rounded-3xl shadow-lg border border-white/50">
+                <h3 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
+                    <span className="bg-purple-400 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">5</span>
+                    Story Smarts 🧠
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                    {MODELS.map(item => {
+                        const isSelected = modelTier === item.tier;
+                        const isPremium = item.tier === 'premium';
+                        const effectiveCost = isPro ? 0 : item.cost;
+
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => {
+                                    setModelTier(item.tier as any);
+                                }}
                                 className={cn(
-                                    "flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all",
-                                    voice === item.id ? "border-green-500 bg-green-50 text-green-700" : "border-transparent bg-white/50 text-slate-500"
-                                )}>
-                                <item.icon className="w-5 h-5" />
-                                <div className="flex-1 text-left">
-                                    <span className="text-sm font-bold block">{item.label}</span>
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
+                                    isSelected
+                                        ? "border-purple-500 bg-purple-50 text-purple-700"
+                                        : "border-transparent bg-white/50 text-slate-500 hover:bg-white/80"
+                                )}
+                            >
+                                <item.icon className={cn("w-5 h-5", isSelected && "animate-pulse")} />
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold block">{item.label}</span>
+                                    </div>
                                     <span className="text-xs text-slate-400">{item.description}</span>
                                 </div>
-                                {item.cost > 0 && (
-                                    <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-2 py-0.5 rounded-full font-bold">✨ {item.cost} Points</span>
+                                {isSelected && !isPremium && (
+                                    <Check className="w-5 h-5 text-purple-600" />
+                                )}
+
+                                {/* Cost / Badge Display for Models */}
+                                {isPremium && (
+                                    <div className='flex items-center gap-1'>
+                                        {isPro ? (
+                                            <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">PRO FREE</span>
+                                        ) : (
+                                            <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold border border-slate-300">
+                                                -{effectiveCost} ✨
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </button>
-                            <button onClick={() => playVoiceDemo(item)}
-                                className={cn(
-                                    "p-3 rounded-xl border-2 transition-all",
-                                    playingDemo === item.id ? "bg-purple-100 border-purple-500 text-purple-600" : "bg-white/50 border-transparent text-slate-400"
-                                )}>
-                                {playingDemo === item.id ? <Volume className="w-5 h-5 animate-pulse" /> : <Play className="w-5 h-5" />}
-                            </button>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 

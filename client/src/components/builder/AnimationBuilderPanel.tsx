@@ -198,7 +198,7 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
                             variants={popInVariants}
                             onClick={() => setAction(prev => prev === act.id ? undefined : act.id)}
                             className={cn(
-                                "aspect-square rounded-xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
                                 action === act.id
                                     ? "bg-blue-500/10 border-blue-500 scale-105 z-10"
                                     : "bg-white border-slate-100 hover:border-slate-300"
@@ -234,7 +234,7 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
                                 variants={popInVariants}
                                 onClick={() => setStyle(prev => prev === sty.id ? undefined : sty.id)}
                                 className={cn(
-                                    "aspect-square rounded-xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                    "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
                                     style === sty.id
                                         ? "bg-emerald-500/10 border-emerald-500 scale-105 z-10"
                                         : "bg-white border-slate-100 hover:border-slate-300"
@@ -269,7 +269,7 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
                                 variants={popInVariants}
                                 onClick={() => setEffect(prev => prev === eff.id ? undefined : eff.id)}
                                 className={cn(
-                                    "aspect-square rounded-xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
+                                    "aspect-square rounded-2xl border-4 flex flex-col items-center justify-center gap-1 transition-all overflow-hidden relative group",
                                     effect === eff.id
                                         ? "bg-amber-500/10 border-amber-500 scale-105 z-10"
                                         : "bg-white border-slate-100 hover:border-slate-300"
@@ -354,7 +354,7 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
                         <button
                             onClick={() => setAudioMode('talk')}
                             className={cn(
-                                "p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all",
+                                "p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all",
                                 audioMode === 'talk'
                                     ? "bg-slate-800 border-slate-800 text-white shadow-lg"
                                     : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
@@ -370,7 +370,7 @@ export const AnimationBuilderPanel: React.FC<Props> = ({ onGenerate, imageUpload
                         <button
                             onClick={() => setAudioMode('scene')}
                             className={cn(
-                                "p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all",
+                                "p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all",
                                 audioMode === 'scene'
                                     ? "bg-blue-600 border-blue-600 text-white shadow-lg"
                                     : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
