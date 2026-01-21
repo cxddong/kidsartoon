@@ -135,12 +135,19 @@ export const MagicArtClassPage: React.FC = () => {
     // --- Effect: Handle Transition (Ding -> Listen) ---
     useEffect(() => {
         if (turnState === 'transition') {
+            // In digital mode, don't auto-start listening (user uses manual mic button)
+            if (mode === 'digital') {
+                setTurnState('processing'); // Idle state, no auto-listen
+                return;
+            }
+
+            // In other modes (selection, mode-select), auto-start listening
             playDing();
             setTimeout(() => {
                 setTurnState('user_listening');
             }, 500);
         }
-    }, [turnState, playDing]);
+    }, [turnState, playDing, mode]);
 
     // --- Speech Recognition ---
     useEffect(() => {
