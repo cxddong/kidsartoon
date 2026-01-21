@@ -17,16 +17,8 @@ import starryMagicIcon from '../assets/magic_icons/starry_magic.jpg';
 import spectralIcon from '../assets/magic_icons/spectral.jpg';
 import biolumIcon from '../assets/magic_icons/biolum.jpg';
 import acidIcon from '../assets/magic_icons/acid.jpg';
-import jewelIcon from '../assets/magic_icons/jewel.jpg';
 import holoIcon from '../assets/magic_icons/holo.jpg';
 import artStudioBg from '../assets/artstudio.mp4';
-
-// Import Fluffy Friends PNG images for textures
-import fluffyFriends from '../assets/Fluffy Friends.png';
-import candyLand from '../assets/Candy Land.png';
-import toyKingdom from '../assets/Toy Kingdom.png';
-import neonGlow from '../assets/Neon Glow.png';
-import movieMagic from '../assets/Movie Magic.png';
 
 interface ArtMode {
     id: 'colorize' | 'style_transfer' | 'remix';
@@ -117,11 +109,11 @@ const COLOR_VIBES = [
 ];
 
 const MAGIC_TEXTURES = [
-    { id: 'brick', label: 'Toy Brick', icon: '🧱', image: toyKingdom },
-    { id: 'clay', label: 'Clay', icon: '🧸', image: fluffyFriends },
-    { id: '3d', label: 'Cute 3D', icon: '🦄', image: candyLand },
-    { id: 'voxel', label: 'Voxel Block', icon: '👾', image: neonGlow },
-    { id: 'paper', label: 'Paper Cut', icon: '✂️', image: movieMagic },
+    { id: 'brick', label: 'Toy Brick', icon: '🧱', image: playfulBricksIcon },  // playful_bricks matches brick
+    { id: 'clay', label: 'Clay', icon: '🧸', image: crayonDoodleIcon },  // crayon has clay-like texture
+    { id: '3d', label: 'Cute 3D', icon: '🦄', image: candyKingdomIcon },  // candy kingdom is 3D style
+    { id: 'voxel', label: 'Voxel Block', icon: '👾', image: spectralIcon },  // spectral/prism has blocky voxel feel
+    { id: 'paper', label: 'Paper Cut', icon: '✂️', image: oceanFriendsIcon },  // ocean friends has paper cut style
 ];
 
 const CanvasPreviewModal = ({ image, onClose }: { image: string, onClose: () => void }) => {
