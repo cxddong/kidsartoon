@@ -5,6 +5,7 @@ import { Layout } from './components/layout/Layout';
 import { ToastProvider } from './context/ToastContext';
 import { PointAnimationProvider } from './context/PointAnimationContext';
 import { SoundManager } from './components/SoundManager';
+import { LandscapePrompt } from './components/ui/LandscapePrompt';
 
 // Existing Pages
 import { SplashPage } from './pages/SplashPage';
@@ -164,6 +165,7 @@ function App() {
           <PointAnimationProvider>
             <ScreenTimeManager>
               <SoundManager />
+              <LandscapePrompt />
               <AppRoutes />
             </ScreenTimeManager>
           </PointAnimationProvider>
