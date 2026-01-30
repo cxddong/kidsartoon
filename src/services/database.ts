@@ -88,7 +88,7 @@ export interface WeeklyReport {
     id?: string;
     weekId: string; // e.g. "2024-W10"
     userId: string;
-    childProfileId?: string; // If specific to a child
+    childProfileId?: string;
     createdAt: number;
     stats: {
         uploadCount: number;
@@ -96,34 +96,49 @@ export interface WeeklyReport {
         storyCount?: number;
         comicCount?: number;
         magicImageCount?: number;
-        bookCount?: number; // Added
-        cardCount?: number; // Added
-        puzzleCount?: number; // Added
+        bookCount?: number;
+        cardCount?: number;
+        puzzleCount?: number;
         totalScreenTimeMinutes: number;
         chatMessages?: number;
     };
     artAnalysis: {
         dominantColors: string[];
         topSubjects: string[];
-        radarScores: {
+        // NEW V2.0 Professional Radar
+        scores: {
+            colorIQ: number;      // Color Perception
+            spatial: number;      // Composition/Perspective
+            motorSkill: number;   // Line control
+            creativity: number;   // Imagination
+            focus: number;        // Detail/Completion
+        };
+        // Legacy Support (Optional)
+        radarScores?: {
             composition: number;
             color: number;
             imagination: number;
             line: number;
             story: number;
         };
-        colorTrend?: string; // New
-        colorPsychologyText?: string; // New
-        careerSuggestion?: string; // New
-        adviceText?: string; // New
+        colorTrend: string;
+        colorPsychologyText: string;
+        careerSuggestion: string;
+        adviceText: string;
+        developmentStage: string;      // Lowenfeld Stage (e.g. Preschematic)
+        developmentEvidence: string;   // Why this stage?
     };
     aiCommentary: {
         strength: string;
-        weakness: string; // "Growth Area"
+        weakness: string;
         potentialCareer: string;
-        careerReason?: string; // Why this career?
-        learningStyle?: string; // e.g. "Visual Learner"
+        careerReason: string;
+        learningStyle: string;
+        psychologicalAnalysis: string; // Deep psychiatric insight
+        moodTrend: 'Improving' | 'Stable' | 'Fluctuating';
+        parentActionPlan: string[];    // Array of tips
     };
+    analyzedArtworks?: string[]; // IDs of 5 core works
     isFinal?: boolean;
 }
 
@@ -134,6 +149,39 @@ export interface UserFeedback {
     comment?: string;
     createdAt: string;
     meta?: any;
+}
+
+export interface PortfolioReport {
+    id: string;
+    userId: string;
+    childName?: string;
+    createdAt: number;
+    imageCount: number;
+    cost: number;
+    analyzedImages?: string[];
+    psychologicalProfile: {
+        colorTrends: string;
+        contentProjection: string;
+        emotionalState: string;
+    };
+    scores: {
+        colorIQ: number;
+        spatial: number;
+        motorSkill: number;
+        creativity: number;
+        focus: number;
+    };
+    topPicks: Array<{
+        imageId: string;
+        imageUrl: string;
+        strength: string;
+        reason: string;
+        recommendation: {
+            target: string;
+            label: string;
+            cta: string;
+        };
+    }>;
 }
 
 export class DatabaseService {
@@ -177,6 +225,24 @@ export class DatabaseService {
         const snap = await query.get();
         if (snap.empty) return null;
         return snap.docs[0].data() as WeeklyReport;
+    }
+
+    // --- Portfolio Scanner ---
+    public async savePortfolioReport(report: PortfolioReport): Promise<void> {
+        await adminDb.collection('portfolio_reports').doc(report.id).set(report);
+    }
+
+    public async getPortfolioReport(reportId: string): Promise<PortfolioReport | null> {
+        const snap = await adminDb.collection('portfolio_reports').doc(reportId).get();
+        return snap.exists ? snap.data() as PortfolioReport : null;
+    }
+
+    public async getUserPortfolioReports(userId: string): Promise<PortfolioReport[]> {
+        const snap = await adminDb.collection('portfolio_reports')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .get();
+        return snap.docs.map(doc => doc.data() as PortfolioReport);
     }
 
     // --- Storage ---

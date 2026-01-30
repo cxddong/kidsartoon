@@ -283,18 +283,20 @@ router.post('/image-to-voice', upload.single('image'), async (req, res) => {
           .jpeg({ quality: 80 })
           .toBuffer();
 
-        // Save Image for Step 2 (Video)
-        const fs = await import('fs');
-        const path = await import('path');
-        const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
-        if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
+        // Save Image for Step 2 (Video/Display) - Upload to Cloud Storage for persistence
         const imgFilename = `story-image-${id}.jpg`;
-        const imgOutputPath = path.join(outputDir, imgFilename);
-        fs.writeFileSync(imgOutputPath, compressedBuffer);
-        savedImageUrl = `/generated/${imgFilename}`;
+        console.log('[Media] Uploading original story image to storage...');
+
+        // Upload via Admin SDK
+        const publicUrl = await adminStorageService.uploadFile(
+          compressedBuffer,
+          'image/jpeg',
+          `story-inputs/${imgFilename}`
+        );
+        savedImageUrl = publicUrl;
 
         const base64Image = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
-        console.log(`[Media] Vision Input Optimized: ${imageBuffer.length} -> ${compressedBuffer.length} bytes`);
+        console.log(`[Media] Vision Input Optimized: ${imageBuffer.length} -> ${compressedBuffer.length} bytes. URL: ${savedImageUrl}`);
 
         // Vision Step: Try Doubao First
         try {
@@ -562,21 +564,21 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
     let savedOriginalUrl = '';
 
     if (req.file) {
-      base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-
-      // Save Original for History
+      // UPLOAD TO CLOUD STORAGE (Admin SDK)
       try {
-        const fs = await import('fs');
-        const path = await import('path');
-        const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
-        if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
-
         const ext = req.file.mimetype.split('/')[1] || 'png';
         const filename = `cartoon-input-${id}.${ext}`;
-        fs.writeFileSync(path.join(outputDir, filename), req.file.buffer);
-        savedOriginalUrl = `/generated/${filename}`;
+        console.log('[Media] Uploading cartoon input to storage...');
+
+        savedOriginalUrl = await adminStorageService.uploadFile(
+          req.file.buffer,
+          req.file.mimetype,
+          `cartoons/inputs/${filename}`
+        );
+        base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
       } catch (e) {
-        console.error("Failed to save original image for carton:", e);
+        console.error("Failed to upload original image for cartoon:", e);
       }
     }
 
@@ -779,25 +781,31 @@ router.post('/image-to-video/task', (req, res, next) => {
     let finalImageUrl = '';
     let originalImageUrl = '';
 
-    // Process image upload (same as before)
+    // Process image upload
     if (req.file) {
       try {
         const sharp = (await import('sharp')).default;
+        // Optimize for Video Gen (but keep reasonable quality)
         const compressedBuffer = await sharp(req.file.buffer)
           .resize({ width: 1024, withoutEnlargement: true })
           .jpeg({ quality: 90 })
           .toBuffer();
+
         finalImageUrl = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
 
-        const fs = await import('fs');
-        const path = await import('path');
-        const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
-        if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
+        // UPLOAD TO CLOUD STORAGE
         const filename = `anim-input-${Date.now()}.jpg`;
-        fs.writeFileSync(path.join(outputDir, filename), compressedBuffer);
-        originalImageUrl = `/generated/${filename}`;
+        console.log('[Media] Uploading animation input to storage...');
+
+        originalImageUrl = await adminStorageService.uploadFile(
+          compressedBuffer,
+          'image/jpeg',
+          `animations/inputs/${filename}`
+        );
+
       } catch (e) {
-        console.error('Sharp error:', e);
+        console.error('Image processing/upload error:', e);
+        // Fallback to base64 only if upload fails (but won't persist URL)
         finalImageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       }
     } else if (req.body.imageUrl) {
@@ -1130,22 +1138,17 @@ router.post('/image-to-video', upload.single('image'), async (req, res) => {
       }
     }
     else if (req.body.imageUrl) {
+      // If it is already a URL, we trust it or use it. 
+      // If it is a local path (old system), it will break.
+      // But new system uploads everything.
       let imgUrl = req.body.imageUrl;
-      // Fix: Convert local URL to Base64 for API
-      if (imgUrl.startsWith('/')) {
-        try {
-          const fs = await import('fs');
-          const path = await import('path');
-          const localPath = path.join(process.cwd(), 'client', 'public', imgUrl);
-          if (fs.existsSync(localPath)) {
-            const bitmap = fs.readFileSync(localPath);
-            const ext = path.extname(localPath).substring(1) || 'png';
-            imgUrl = `data:image/${ext};base64,${bitmap.toString('base64')}`;
-            console.log('[API Legacy] Converted local image to Base64 for API.');
-          }
-        } catch (e) { console.error("Failed to read local image:", e); }
+      finalImageUrl = imgUrl; // Assume URL is accessible to API
+
+      // If NOT a http/data url, it's likely broken local path from old system.
+      if (!imgUrl.startsWith('http') && !imgUrl.startsWith('data:')) {
+        console.warn('[Legacy Video] Local path detected, ignoring as it is likely inaccessible:', imgUrl);
+        // Try to upload?? No, we can't read it reliably. 
       }
-      finalImageUrl = imgUrl;
     }
 
     // Updated Video Generation Logic with Spell/AudioMode support
@@ -1183,7 +1186,7 @@ router.post('/image-to-video', upload.single('image'), async (req, res) => {
       try {
         // Pass originalImageUrl (local path or URL) to meta
         const originalImageUrl = req.body.imageUrl || '';
-        databaseService.saveImageRecord(userId || 'anonymous', videoUrl, 'animation', userPrompt, { originalImageUrl, videoUrl });
+        databaseService.saveImageRecord(userId || 'anonymous', videoUrl, 'animation', userPrompt, { originalImageUrl, videoUrl }, req.body.profileId);
         // if (userId) databaseService.awardPoints(userId, 20, 'animation'); // Deprecated by Cost System
       } catch (e) { }
     }
@@ -1236,25 +1239,28 @@ router.post('/generate-picture-book', upload.single('cartoonImage'), async (req,
 
     if (req.file) {
       cartoonImageBuffer = req.file.buffer;
-
-      // Save Original
       const ext = req.file.mimetype.split('/')[1] || 'png';
       const filename = `input-arc-${id}.${ext}`;
-      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
-      originalImageUrl = `/uploads/${filename}`;
+
+      console.log('[Media] Uploading book input to storage...');
+      originalImageUrl = await adminStorageService.uploadFile(
+        req.file.buffer,
+        req.file.mimetype,
+        `books/inputs/${filename}`
+      );
 
     } else if (req.body.cartoonImageUrl) {
+      // If URL provided, try to fetch and re-upload to ensure persistence if it was temp
+      // OR just use the URL if it is already persistent.
+      originalImageUrl = req.body.cartoonImageUrl;
+
+      // Fetch buffer for analysis
       try {
         const fetch = global.fetch;
         const resp = await fetch(req.body.cartoonImageUrl);
         if (resp.ok) {
           const arrayBuffer = await resp.arrayBuffer();
           cartoonImageBuffer = Buffer.from(arrayBuffer);
-
-          // Save Original
-          const filename = `input-arc-${id}.png`;
-          fs.writeFileSync(path.join(uploadDir, filename), cartoonImageBuffer);
-          originalImageUrl = `/uploads/${filename}`;
         }
       } catch (e) { console.error("URL Fetch failed", e); }
     }
@@ -1462,7 +1468,7 @@ router.post('/generate-picture-book', upload.single('cartoonImage'), async (req,
       gridImageUrl: gridImageUrl,
       bookData: bookData,
       isTextBurnedIn: true // NEW: Frontend knows text is already in image
-    });
+    }, req.body.profileId);
 
     if (userId) await databaseService.awardPoints(userId, 50, 'story-book');
 
@@ -1529,18 +1535,22 @@ router.post('/generate-picture-book', upload.single('cartoonImage'), async (req,
       cartoonImageBuffer = req.file.buffer;
       const ext = req.file.mimetype.split('/')[1] || 'png';
       const filename = `input-${id}.${ext}`;
-      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
-      originalImageUrl = `/uploads/${filename}`;
+
+      console.log('[Media] Uploading simple book input to storage...');
+      originalImageUrl = await adminStorageService.uploadFile(
+        req.file.buffer,
+        req.file.mimetype,
+        `books/inputs/${filename}`
+      );
     } else if (req.body.cartoonImageUrl) {
+      originalImageUrl = req.body.cartoonImageUrl;
+      // Fetch for buffer (analysis)
       try {
         const fetch = global.fetch;
         const resp = await fetch(req.body.cartoonImageUrl);
         if (resp.ok) {
           const arrayBuffer = await resp.arrayBuffer();
           cartoonImageBuffer = Buffer.from(arrayBuffer);
-          const filename = `input-${id}.png`;
-          fs.writeFileSync(path.join(uploadDir, filename), cartoonImageBuffer);
-          originalImageUrl = `/uploads/${filename}`;
         }
       } catch (e) { console.error("URL Fetch failed", e); }
     }
@@ -2149,8 +2159,14 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
 
     try {
       if (base64Reference) {
-        // Use Img2Img with the reference
-        gridImageUrl = await doubaoService.generateImageFromImage(gridPrompt, base64Reference, '4K', undefined, 0.7, watermark);
+        try {
+          // Use Img2Img with the reference
+          gridImageUrl = await doubaoService.generateImageFromImage(gridPrompt, base64Reference, '4K', undefined, 0.7, watermark);
+        } catch (i2iError) {
+          console.warn('[MagicComic] I2I Generation failed, falling back to Text-to-Image:', i2iError);
+          // Fallback to T2I using the same prompt (which already includes character description)
+          gridImageUrl = await doubaoService.generateImage(gridPrompt, '4K', undefined, watermark);
+        }
       } else {
         gridImageUrl = await doubaoService.generateImage(gridPrompt, '4K', undefined, watermark);
       }
@@ -2201,7 +2217,8 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
         isTextBurnedIn: false,
         tags: tags,
         originalImageUrl: originalImageUrl || '' // Ensure no undefined
-      }
+      },
+      req.body.profileId // Pass profileId
     );
 
     res.json({
@@ -2455,7 +2472,8 @@ router.post('/generate-magic-book', upload.single('cartoonImage'), async (req, r
           selectionTags
         },
         originalImageUrl: originalImageUrl || ''
-      }
+      },
+      req.body.profileId // Pass profileId
     );
 
     res.json({
@@ -2708,4 +2726,145 @@ router.get('/download', async (req, res) => {
   }
 });
 
-export default router;
+// Magic Art Studio (Image Generation / Enhancement / Colorization)
+router.post('/magic-art', async (req, res) => {
+  try {
+    // 1. JSON Payload Handling (Frontend sends JSON, so remove upload.single middleware)
+    const { userId, image, mode, stylePreset, colorVibe, targetStyle, prompt } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ error: 'Image is required for Magic Art' });
+    }
+
+    // 2. Cost Calculation
+    const COST = 25; // Standardized to 25
+    if (userId) {
+      const deduction = await pointsService.consumePoints(userId, 'magic_mirror_colorize', COST);
+      if (!deduction.success) {
+        if (deduction.error === 'NOT_ENOUGH_POINTS') {
+          return res.status(200).json({ success: false, error: 'Not enough magic credits!', errorCode: 'NOT_ENOUGH_POINTS' });
+        }
+        return res.status(500).json({ error: 'Points deduction failed' });
+      }
+    }
+
+    console.log(`[MagicArt] Generating for ${userId} mode=${mode}`);
+
+    // 3. Construct Prompt & Config based on Mode
+    let finalPrompt = "";
+    let strength = 0.7; // Default strength (0.0 - 1.0)
+    // Note: Doubao API 'image_weight' (0.0-1.0): Higher = stick to reference.
+    // For Colorization, we want High weight (keep lines).
+    // For Style Transfer, Medium.
+    // For Remix, Low.
+
+    if (mode === 'colorize') {
+      const vibe = req.body.stylePrompt || colorVibe || "vibrant colors";
+      finalPrompt = `Colorize this line art. Style: ${vibe}. High quality, professional coloring, detailed shading, stay true to the original lines.`;
+      strength = 0.8;
+    } else if (mode === 'style_transfer') {
+      const styleName = targetStyle || "3d render";
+      finalPrompt = `Transform into ${styleName} style. High quality, detailed, keeping the original composition.`;
+      strength = 0.6;
+    } else if (mode === 'remix') {
+      finalPrompt = prompt || "A magical remix";
+      strength = 0.4;
+    } else {
+      finalPrompt = prompt || "Enhance this image";
+      strength = 0.6;
+    }
+
+    // 4. Call Doubao Img2Img
+    // Use generic generateImageFromImage from DoubaoService
+    let imageUrl = "";
+    try {
+      imageUrl = await doubaoService.generateImageFromImage(finalPrompt, image, '2K', undefined, strength, true);
+    } catch (apiError: any) {
+      console.error('[MagicArt] API Error:', apiError);
+      // Refund
+      if (userId) await pointsService.grantPoints(userId, COST, 'refund_magic_fail', 'Magic Art Failed');
+      return res.status(500).json({ error: 'Magic creation failed due to API error' });
+    }
+
+    // 5. Save Record
+    if (imageUrl) {
+      await databaseService.saveImageRecord(
+        userId || 'anonymous',
+        imageUrl,
+        'generated',
+        `Magic Art (${mode}): ${prompt || colorVibe || targetStyle}`,
+        {
+          mode,
+          stylePreset,
+          originalPrompt: prompt,
+          source: 'magic-art-studio'
+        }
+      );
+    }
+
+    res.json({
+      success: true,
+      imageUrl: imageUrl,
+      record: { imageUrl } // Shim for frontend expecting record object
+    });
+
+  } catch (error: any) {
+    console.error('Magic Art Generation Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate magic art' });
+  }
+});
+
+
+
+// --- SYSTEM: CLEANUP PROFILE ---
+router.post('/cleanup-profile', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'UserId required' });
+
+    console.log(`[Cleanup] Starting profile cleanup for ${userId}...`);
+
+    // 1. Get all images
+    const images = await databaseService.getUserImages(userId);
+
+    let deletedCount = 0;
+    const deletedIds = [];
+
+    for (const img of images) {
+      let isBroken = false;
+
+      // Check Main Image URL
+      if (img.imageUrl && !img.imageUrl.startsWith('http') && !img.imageUrl.startsWith('data:')) {
+        // It is a local path (search for /generated or /uploads)
+        isBroken = true;
+      }
+
+      // Check Original Image URL (Input)
+      if (img.meta?.originalImageUrl) {
+        const orig = img.meta.originalImageUrl;
+        if (!orig.startsWith('http') && !orig.startsWith('data:') && orig.length > 0) {
+          // If the input is broken, is the main output broken?
+          // If main output is fine (cloud link), we might want to keep it but just nullify the input?
+          // User requested "Delete any without original image"
+          isBroken = true;
+        }
+      }
+
+      if (isBroken) {
+        console.log(`[Cleanup] Deleting broken record ${img.id} (Type: ${img.type}). URL: ${img.imageUrl}`);
+        await databaseService.deleteImage(img.id, userId);
+        deletedCount++;
+        deletedIds.push(img.id);
+      }
+    }
+
+    console.log(`[Cleanup] Complete. Deleted ${deletedCount} items.`);
+    res.json({ success: true, deletedCount, deletedIds });
+
+  } catch (error: any) {
+    console.error('[Cleanup] Failed:', error);
+    res.status(500).json({ error: 'Cleanup failed' });
+  }
+});
+
+

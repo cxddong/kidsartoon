@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import splashVideo from '../assets/splash.mp4';
-import { MagicBrandLogo } from '../components/ui/MagicBrandLogo';
 
 export const SplashPage: React.FC = () => {
     const navigate = useNavigate();
@@ -57,14 +56,6 @@ export const SplashPage: React.FC = () => {
             <AnimatePresence>
                 {showButton && (
                     <div className="absolute bottom-20 md:bottom-32 flex flex-col items-center gap-8 z-10 w-full">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5, y: 50 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                        >
-                            <MagicBrandLogo size="xl" />
-                        </motion.div>
-
                         <motion.button
                             initial={{ opacity: 0, scale: 0.5, y: 50 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}

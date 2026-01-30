@@ -26,12 +26,12 @@ router.post('/match', upload.single('image'), async (req, res) => {
 
         console.log(`[Masterpiece] Match request from user: ${userId}`);
 
-        // Consume points (5 points for masterpiece matching)
-        const pointsResult = await pointsService.consumePoints(userId, 'masterpiece_match', 5);
+        // Consume points (25 points for masterpiece matching)
+        const pointsResult = await pointsService.consumePoints(userId, 'masterpiece_match', 25);
         if (!pointsResult.success) {
-            return res.status(402).json({
-                error: 'Not enough points',
-                required: 5,
+            return res.status(403).json({
+                error: 'Not enough magic points! 🌟',
+                required: 25,
                 current: pointsResult.before || 0
             });
         }

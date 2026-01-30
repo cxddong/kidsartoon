@@ -30,11 +30,12 @@ const ART_STYLES = [
 
 
 const RECIPIENTS = [
-    { id: 'Mom', label: 'Mom' },
-    { id: 'Dad', label: 'Dad' },
-    { id: 'Grandma', label: 'Grandma' },
-    { id: 'Grandpa', label: 'Grandpa' },
-    { id: 'Others', label: 'Others ✏️' },
+    { id: 'Mom', label: 'Mom', image: '/assets/role_icons/role_mom.png' },
+    { id: 'Dad', label: 'Dad', image: '/assets/role_icons/role_dad.jpg' },
+    { id: 'Grandma', label: 'Grandma', image: '/assets/role_icons/role_grandma.png' },
+    { id: 'Grandpa', label: 'Grandpa', image: '/assets/role_icons/role_grandpa.jpg' },
+    { id: 'Teacher', label: 'Teacher', image: '/assets/role_icons/role_teacher.png' },
+    { id: 'Others', label: 'Others ✏️', icon: '👤' },
 ];
 
 // --- Smart Occasion System ---
@@ -153,20 +154,18 @@ const COMPOSITION_MODES = [
 ];
 
 export const GreetingCardPage = () => {
-    const { user } = useAuth();
+    const { user, activeProfile } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
     // Remix Handling
     useEffect(() => {
         // @ts-ignore
-        if (location.state && location.state.remixImage) {
+        if (location.state && (location.state.remixImage || location.state.autoUploadImage)) {
             // @ts-ignore
-            const remixUrl = location.state.remixImage;
-            console.log("GreetingCard received remix:", remixUrl);
+            const remixUrl = location.state.remixImage || location.state.autoUploadImage;
+            console.log("[GreetingCard] 📥 Received Auto-Fill Image. Length:", remixUrl?.length);
             setDrawing(remixUrl);
-            // Optional: Convert to blob if we wanted to allow 'Cropping' again, 
-            // but for now direct assignment works as 'drawing' state is just a string URL.
         }
     }, [location]);
 
@@ -212,7 +211,7 @@ export const GreetingCardPage = () => {
         });
 
         // Build occasion list: Seasonal + Growth Milestones + Base (Parent occasions are shown in the distinct 'More' section)
-        const merged = [...activeSeasonals, ...GROWTH_MILESTONES, ...BASE_OCCASIONS];
+        const merged = [...activeSeasonals, ...BASE_OCCASIONS, ...GROWTH_MILESTONES];
         setOccasions(merged);
 
         // Auto-select first seasonal if available
@@ -678,6 +677,7 @@ export const GreetingCardPage = () => {
             formData.append('prompt', prompt + " IMPORTANT: The final output image and any text inside it MUST be in ENGLISH only. Do NOT generate any Chinese characters.");
             formData.append('imageStrength', imageStrength.toString());
             formData.append('userId', user?.uid || 'anonymous');
+            if (activeProfile?.id) formData.append('profileId', activeProfile.id);
             formData.append('type', 'cards');
 
             // 3. API Call
@@ -836,14 +836,14 @@ export const GreetingCardPage = () => {
                                             <div className="bg-white p-3 rounded-full shadow-md group-hover:scale-110 transition-transform">
                                                 <Upload className="w-6 h-6 text-indigo-500" />
                                             </div>
-                                            <span className="text-xs font-bold text-indigo-600">Upload</span>
+                                            <span className="text-sm font-bold text-indigo-600">Upload</span>
                                         </label>
 
                                         <button onClick={() => startCamera('drawing')} className="flex flex-col items-center justify-center gap-2 group p-4 rounded-2xl hover:bg-pink-50 transition-colors">
                                             <div className="bg-white p-3 rounded-full shadow-md group-hover:scale-110 transition-transform">
                                                 <Camera className="w-6 h-6 text-pink-500" />
                                             </div>
-                                            <span className="text-xs font-bold text-pink-500">Camera</span>
+                                            <span className="text-sm font-bold text-pink-500">Camera</span>
                                         </button>
                                     </div>
                                 )}
@@ -867,9 +867,9 @@ export const GreetingCardPage = () => {
                                 ) : (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                                         <button onClick={() => startCamera('photo')} className="p-3 bg-pink-50 text-pink-500 rounded-2xl mb-2 hover:bg-pink-100">
-                                            <Camera className="w-5 h-5" />
+                                            <Camera className="w-6 h-6" />
                                         </button>
-                                        <span className="text-[10px] font-bold text-slate-400 text-center leading-tight">Take Selfie</span>
+                                        <span className="text-sm font-bold text-slate-400 text-center leading-tight">Take Selfie</span>
                                     </div>
                                 )}
                             </div>
@@ -1251,12 +1251,24 @@ export const GreetingCardPage = () => {
                                     key={rec.id}
                                     onClick={() => setRecipientSelection(rec.id)}
                                     className={cn(
-                                        "aspect-square p-2 rounded-2xl font-bold text-sm border transition-all flex flex-col items-center justify-center text-center gap-1",
-                                        recipientSelection === rec.id ? "bg-blue-100 text-blue-700 border-4 border-blue-500 ring-4 ring-blue-300 scale-105 shadow-lg" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                        "aspect-square p-2 rounded-2xl font-bold text-sm border transition-all flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden",
+                                        recipientSelection === rec.id
+                                            ? "bg-blue-100 text-blue-700 border-4 border-blue-500 ring-4 ring-blue-300 scale-105 shadow-lg"
+                                            : "bg-white text-slate-500 border-slate-200 hover:border-slate-300",
+                                        (rec as any).image ? "bg-cover bg-center" : ""
                                     )}
+                                    style={(rec as any).image ? { backgroundImage: `url(${(rec as any).image})` } : {}}
                                 >
-                                    <span className="text-2xl">👤</span>
-                                    {rec.label}
+                                    {(rec as any).image ? (
+                                        <span className="absolute inset-x-0 bottom-0 py-1 bg-black/40 text-white text-[10px] backdrop-blur-sm">
+                                            {rec.label}
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span className="text-2xl">{(rec as any).icon || '👤'}</span>
+                                            {rec.label}
+                                        </>
+                                    )}
                                 </button>
                             ))}
                         </div>

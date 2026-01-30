@@ -1,60 +1,73 @@
 
 export const FEATURES_TOOLTIPS = {
-    // --- 🌟 核心中枢 (Center) ---
+    // --- 🌟 Core Center ---
     ask_magic_kat: {
         label: "Ask Magic Kat",
+        shortDesc: "Chat & Create",
         desc: "Chat with your AI partner! Ask for help or start a new creative journey."
     },
 
-    // --- ☁️ 悬浮功能岛 (Floating Islands - 6 Items) ---
+    // --- ☁️ Floating Islands (6 Items) ---
     art_coach: {
         label: "Art Coach",
-        desc: "Get personal AI art advice to improve your skills and find your style."
+        shortDesc: "Learn to Draw",
+        desc: "Get advice from Magic Kat to make your drawings even better!"
     },
     cartoon_book: {
         label: "Cartoon Book",
-        desc: "Create your own multi-page Graphic Novel with cool characters and stories."
+        shortDesc: "Draw Cast, Make Series",
+        desc: "Build your own world! 🌍\nDraw your Hero, Friends or Rivals, and Scene separately. Then, combine them to create a long, epic adventure series!"
     },
     mirror: {
         label: "Magic Mirror",
-        desc: "Transform your selfies into magic characters using AI filters!"
+        shortDesc: "Face Change",
+        desc: "See yourself as a cartoon character or a lego toy!"
     },
     art_class: {
         label: "Art Class",
+        shortDesc: "Step-by-Step",
         desc: "Learn to draw step-by-step with an AI teacher on screen or real paper."
     },
     animation_studio: {
         label: "Animation",
+        shortDesc: "Pro Studio",
         desc: "Turn your static drawings into dancing cartoons in a pro studio."
     },
     jump_into_art: {
         label: "Jump Into Art",
+        shortDesc: "Teleport In",
         desc: "Teleport yourself inside a famous painting using magic photo blending."
     },
 
-    // --- ⚓ 底部停靠栏 (Dock - 6 Items) ---
+    // --- ⚓ Dock (6 Items) ---
     audio: {
-        label: "Magic Audio",
-        desc: "Give your art a voice! Make characters talk and tell stories."
+        label: "Magic Story",
+        shortDesc: "Voice & Tale",
+        desc: "Upload a picture! Magic Kat will call you and tell a story about it!"
     },
     comic: {
         label: "Comic Strip",
-        desc: "Turn photos into superhero comic strips instantly."
+        shortDesc: "Instant Comic Page",
+        desc: "Make it a comic page! 💥\nUpload a photo or drawing. Boom! It becomes a single page with cool comic panels and speech bubbles."
     },
     picture_book: {
         label: "Storybook",
-        desc: "Write and illustrate your own magical picture book."
+        shortDesc: "1 Pic ➔ Full Book",
+        desc: "Turn one picture into a book! 📖\nUpload just one drawing. Magic Kat will write a full 4-page story about it and read it to you!"
     },
     video: {
         label: "Magic Cinema",
-        desc: "Quickly bring your drawings to life with magic animation."
+        shortDesc: "Make it Move!",
+        desc: "Turn your still drawing into a 5s-10s animation movie!"
     },
     card: {
         label: "Magic Card",
+        shortDesc: "Greeting Cards",
         desc: "Design sparkling greeting cards for your friends and family."
     },
     art_studio: {
         label: "Art Studio",
+        shortDesc: "Sketch to Art",
         desc: "Turn simple sketches into artistic masterpieces like a pro."
     }
 };

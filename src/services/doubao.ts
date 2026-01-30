@@ -109,7 +109,11 @@ export class DoubaoService {
             }
 
             const data = await response.json();
-            return data.data?.[0]?.url || '';
+            const url = data.data?.[0]?.url;
+            if (!url) {
+                throw new Error(`Doubao T2I returned empty URL. Response: ${JSON.stringify(data)}`);
+            }
+            return url;
         } catch (error) {
             console.error('generateImage failed:', error);
             throw error;
@@ -126,7 +130,9 @@ export class DoubaoService {
             // Or we try to use it. Usually T2I models fail on I2I endpoints or inputs.
             // Leaving this as safe default for now, or user provided I2I model ID? No.
             // Assuming old model for I2I stability.
-            const model = process.env.DOUBAO_IMAGE_MODEL || 'ep-20251209124008-rp9n8';
+            // NOTE: Use specific I2I model or fallback to known good endpoint.
+            // Do NOT use generic DOUBAO_IMAGE_MODEL as it might be T2I only (e.g. Seedream).
+            const model = process.env.DOUBAO_I2I_MODEL || 'ep-20251209124008-rp9n8';
             const safeSeed = (seed !== undefined && !isNaN(seed)) ? Math.floor(Math.max(0, seed)) : undefined;
 
             const body: any = {
@@ -141,8 +147,25 @@ export class DoubaoService {
             };
 
             // Volcengine Seedream endpoint ID usually expects 'image' field for single reference
-            const cleanImage = this.normalizeBase64(imageUrl);
-            body.image = cleanImage.startsWith('http') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`;
+            let finalImage = imageUrl;
+
+            // Check if input has a mime type we can preserve
+            if (imageUrl.startsWith('data:')) {
+                // It's already a full data URL, use it as is (Doubao supports it)
+                // Just normalize if needed, but usually full string is safer if correct
+                finalImage = imageUrl;
+            } else if (imageUrl.startsWith('http')) {
+                finalImage = imageUrl;
+            } else {
+                // Raw base64 validation - assume jpeg if no header found, or try to detect?
+                // For safety, defaulting to jpeg is okay if we really only have raw bytes
+                // But better to assume frontend sends full DataURI.
+                // If it looks like raw base64 (no prefix), we add prefix.
+                // NOTE: Most of our app sends full Data URI.
+                finalImage = `data:image/jpeg;base64,${this.normalizeBase64(imageUrl)}`;
+            }
+
+            body.image = finalImage;
 
             const response = await fetch(`${this.baseUrl}/images/generations`, {
                 method: 'POST',
@@ -156,7 +179,11 @@ export class DoubaoService {
             }
 
             const data = await response.json();
-            return data.data?.[0]?.url || '';
+            const url = data.data?.[0]?.url;
+            if (!url) {
+                throw new Error(`Doubao I2I returned empty URL. Response: ${JSON.stringify(data)}`);
+            }
+            return url;
         } catch (error) {
             console.error('generateImageFromImage failed:', error);
             throw error;

@@ -378,7 +378,7 @@ export const CartoonBookBuilderPage: React.FC = () => {
                     {/* Header - Compact */}
                     <div className="flex items-center justify-between mb-3 sm:mb-4">
                         <button
-                            onClick={() => navigate(-1)}
+                            onClick={() => navigate('/home')}
                             className="flex items-center gap-2 text-white hover:text-white/80 transition-colors"
                         >
                             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />

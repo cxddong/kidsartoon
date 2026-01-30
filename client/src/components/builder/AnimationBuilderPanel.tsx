@@ -17,6 +17,16 @@ export const MAGIC_ACTIONS = [
     { id: 'wink', label: 'Wink', emoji: '😉', image: '/assets/actions/wink.jpg', prompt: 'winking one eye, cute smile', camera: 'zoom_in', focus: 'face' }
 ];
 
+// Magic Actions (Row 1 - Objects)
+export const OBJECT_ACTIONS = [
+    { id: 'grow_big', label: 'Grow Big', emoji: '🍄', image: '/assets/actions/grow_big.jpg', prompt: 'object growing bigger, scale up, magnifying effect', camera: 'zoom_in' },
+    { id: 'far_away', label: 'Far Away', emoji: '🎈', image: '/assets/actions/far_away.jpg', prompt: 'object getting smaller, receding into distance', camera: 'zoom_out' },
+    { id: 'go', label: 'Go!', emoji: '🚂', image: '/assets/actions/go.jpg', prompt: 'object moving forward fast, motion blur', camera: 'pan_right' },
+    { id: 'float', label: 'Float', emoji: '🍃', image: '/assets/actions/float.jpg', prompt: 'floating gently in air, weightless, zero gravity', motionScore: 0.5 },
+    { id: 'wiggle', label: 'Wiggle', emoji: '🍮', image: '/assets/actions/wiggle.jpg', prompt: 'shaking, wiggling, jelly physics, elastic', motionScore: 0.6 },
+    { id: 'shine', label: 'Shine', emoji: '💎', image: '/assets/actions/shine.jpg', prompt: 'static object with bright glowing magical light rays', motionScore: 0.2 }
+];
+
 // Magic Styles (Row 2)
 export const MAGIC_STYLES = [
     {

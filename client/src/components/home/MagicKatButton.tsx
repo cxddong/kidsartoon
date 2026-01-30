@@ -1,59 +1,152 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { MagicVideoButton } from '../ui/MagicVideoButton';
 import { Sparkles } from 'lucide-react';
-import { useVideoAutoplay } from '../../hooks/useVideoAutoplay';
+import { FEATURES_TOOLTIPS } from '../../data/featuresData';
+import { isTouchDevice } from '../../hooks/useTouchInteraction';
 
-// Assuming we want to pass the video source or hardcode it. 
-// For better reusability, I'll accept it as a prop or handle it if passed.
 interface MagicKatButtonProps {
     videoSrc: string;
 }
 
 export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
     const navigate = useNavigate();
-    const videoRef = useVideoAutoplay<HTMLVideoElement>();
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [touchedOnce, setTouchedOnce] = useState(false);
+    const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isTouch = isTouchDevice();
+
+    // 自动收起定时器清理
+    useEffect(() => {
+        return () => {
+            if (collapseTimerRef.current) {
+                clearTimeout(collapseTimerRef.current);
+            }
+        };
+    }, []);
+
+    // 触摸交互处理
+    const handleTouch = (e: React.TouchEvent) => {
+        e.stopPropagation();
+
+        if (!touchedOnce) {
+            // 第一次触摸：展开
+            setIsExpanded(true);
+            setTouchedOnce(true);
+
+            // 3秒后自动收起
+            if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+            collapseTimerRef.current = setTimeout(() => {
+                setIsExpanded(false);
+                setTouchedOnce(false);
+            }, 3000);
+        } else {
+            // 第二次触摸：跳转
+            if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+            navigate('/ask-magic-kat');
+        }
+    };
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-                duration: 1,
-                type: "spring",
-                bounce: 0.4
-            }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative cursor-pointer group"
-            onClick={() => navigate('/ask-magic-kat')}
+            className="flex flex-col items-center justify-center relative no-select"
+            onMouseEnter={() => !isTouch && setIsExpanded(true)}
+            onMouseLeave={() => !isTouch && setIsExpanded(false)}
+            onTouchStart={isTouch ? handleTouch : undefined}
         >
-            {/* Breathing Aura */}
-            <div className="absolute inset-0 rounded-full bg-indigo-500/30 blur-3xl animate-pulse group-hover:bg-purple-500/40 transition-colors" />
-
-            {/* Main Circle - Responsive sizing */}
-            <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 xl:w-56 xl:h-56 bg-white/20 backdrop-blur-xl rounded-full shadow-[0_0_50px_rgba(139,92,246,0.3)] border-[6px] border-white/40 flex items-center justify-center overflow-hidden z-20 group-hover:border-white/60 transition-all">
-                <video
-                    ref={videoRef}
-                    src={videoSrc}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    crossOrigin="anonymous"
-                    className="w-full h-full object-cover opacity-95 group-hover:opacity-100 transition-opacity transform scale-105"
+            {/* Main Circular Frame (Collapsible) */}
+            <motion.div
+                initial="collapsed"
+                animate={isExpanded ? "expanded" : ["collapsed", "wiggle"]}
+                variants={{
+                    collapsed: { width: "5rem", height: "5rem" }, // ~80px Thumbnail
+                    expanded: { width: "14rem", height: "14rem" }, // ~224px Full Size
+                    wiggle: {
+                        rotate: [0, -5, 5, -5, 5, 0],
+                        transition: {
+                            rotate: {
+                                delay: 3, // Wait 3 seconds
+                                duration: 0.5, // Wiggle for 0.5s
+                                repeat: Infinity,
+                                repeatDelay: 5 // Repeat every 5 seconds + 0.5 wiggle
+                            },
+                            scale: {
+                                duration: 2,
+                                repeat: Infinity,
+                                repeatType: "reverse",
+                                ease: "easeInOut"
+                            }
+                        },
+                        scale: [1, 1.05, 1]
+                    }
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="relative rounded-full shadow-[0_0_30px_rgba(124,58,237,0.4)] border-4 border-white bg-white overflow-hidden z-30 cursor-pointer group hover:shadow-[0_0_50px_rgba(124,58,237,0.6)] transition-shadow"
+                onClick={() => {
+                    // tap to expand if collapsed
+                    if (!isExpanded) setIsExpanded(true);
+                }}
+            >
+                <MagicVideoButton
+                    videoSrc={videoSrc}
+                    label="" // Hide internal label
+                    onClick={() => {
+                        if (isExpanded) {
+                            navigate('/ask-magic-kat');
+                        } else {
+                            setIsExpanded(true);
+                        }
+                    }}
+                    className="w-full h-full"
+                    enableMobileAutoPlay={true}
                 />
-            </div>
 
-            {/* Label - Responsive sizing */}
-            <div className="absolute -bottom-6 sm:-bottom-8 md:-bottom-10 left-1/2 -translate-x-1/2 z-30">
-                <div className="bg-white/10 backdrop-blur-md px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-full border border-white/20 flex items-center gap-1 sm:gap-2 shadow-lg group-hover:bg-white/20 transition-all">
-                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-300 fill-yellow-300 animate-spin-slow" />
-                    <span className="text-white font-bold text-xs sm:text-sm tracking-widest uppercase text-shadow-sm whitespace-nowrap">
-                        Ask Magic Kat
-                    </span>
-                </div>
-            </div>
+                {/* Overlay Hint on Thumbnail (Optional) */}
+                <AnimatePresence>
+                    {!isExpanded && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"
+                        >
+                            <Sparkles className="w-8 h-8 text-white drop-shadow-md animate-pulse" />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
+
+            {/* "Ask Magic Kat" Bubble - Only visible when Expanded */}
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                        transition={{ delay: 0.1 }}
+                        className="absolute bottom-[105%] right-0 w-48 z-40 pointer-events-none"
+                    >
+                        <div className="bg-white/95 backdrop-blur-xl p-4 rounded-2xl rounded-br-none shadow-2xl border-2 border-indigo-100 relative">
+                            <h3 className="font-black text-indigo-900 text-lg leading-none mb-1">
+                                {FEATURES_TOOLTIPS.ask_magic_kat.label}
+                            </h3>
+                            <p className="text-xs text-indigo-600 font-bold mb-2">
+                                {FEATURES_TOOLTIPS.ask_magic_kat.shortDesc}
+                            </p>
+                            <p className="text-xs text-slate-600 leading-snug">
+                                {FEATURES_TOOLTIPS.ask_magic_kat.desc}
+                            </p>
+
+                            {/* Decorative Sparkles */}
+                            <Sparkles className="absolute -top-3 -left-3 w-6 h-6 text-yellow-400 fill-yellow-400 animate-bounce" />
+
+                            {/* Speech Triangle */}
+                            <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white rotate-45 border-r-2 border-b-2 border-indigo-100"></div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

@@ -2,7 +2,7 @@
 export interface ContentMatch {
     id: string;
     title: string;
-    type: 'Movie' | 'Story' | 'Cartoon' | 'Book';
+    type: 'Movie' | 'Story' | 'Cartoon' | 'Book' | 'Novel' | 'TV Show';
     reason: string;
     keywords: string[];
     thumbnailUrl: string;
@@ -120,6 +120,116 @@ const MOCK_CONTENT_DB: ContentMatch[] = [
         thumbnailUrl: 'https://images.unsplash.com/photo-1629813959957-c5806e22c9a9?q=80&w=400',
         description: 'Two sisters meet a friendly forest spirit.',
         externalLink: 'https://www.youtube.com/watch?v=92a7Hj0ijLs'
+    },
+    {
+        id: 'harry_potter',
+        title: 'Harry Potter',
+        type: 'Novel',
+        reason: 'Matches magical school and wizardry',
+        keywords: ['wizard', 'magic', 'wand', 'owl', 'glasses', 'castle', 'broomstick', 'potion'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1547756536-cde3673fa2e5?q=80&w=400',
+        description: 'A young boy discovers he is a wizard.',
+        externalLink: 'https://www.google.com/search?q=Harry+Potter+magic'
+    },
+    {
+        id: 'kiki_delivery',
+        title: "Kiki's Delivery Service",
+        type: 'Movie',
+        reason: 'Matches a witch flying on a broom',
+        keywords: ['witch', 'broom', 'black cat', 'flying', 'delivery', 'bakery', 'anime', 'ghibli'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=400',
+        description: 'A young witch uses her flying skills for a delivery service.',
+        externalLink: 'https://www.google.com/search?q=Kiki%27s+Delivery+Service'
+    },
+    {
+        id: 'how_to_train_dragon',
+        title: 'How to Train Your Dragon',
+        type: 'Movie',
+        reason: 'Matches dragons and Vikings',
+        keywords: ['dragon', 'toothless', 'viking', 'flying', 'fire', 'scales', 'wings'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1508898578281-774ac4893c0c?q=80&w=400',
+        description: 'A young Viking befriends a deadly dragon.',
+        externalLink: 'https://www.youtube.com/watch?v=f37K9PzW3XU'
+    },
+    {
+        id: 'bluey_show',
+        title: 'Bluey',
+        type: 'TV Show',
+        reason: 'Matches playfulness and family',
+        keywords: ['dog', 'heeler', 'bluey', 'bingo', 'family', 'play', 'game', 'puppy'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400',
+        description: 'The adventures of a Blue Heeler puppy.',
+        externalLink: 'https://www.youtube.com/results?search_query=Bluey+official'
+    },
+    {
+        id: 'percy_jackson',
+        title: 'Percy Jackson',
+        type: 'Novel',
+        reason: 'Matches Greek mythology and heroes',
+        keywords: ['gods', 'mythology', 'sword', 'shield', 'hero', 'water', 'trident', 'olympus'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=400',
+        description: 'A boy discovers he is a demigod.',
+        externalLink: 'https://www.google.com/search?q=Percy+Jackson+books'
+    },
+    {
+        id: 'adventure_time',
+        title: 'Adventure Time',
+        type: 'Cartoon',
+        reason: 'Matches silly adventures and odd worlds',
+        keywords: ['finn', 'jake', 'dog', 'sword', 'candy', 'magic', 'princess bubblegum', 'silly'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1516062423079-7ca13cdc7f5a?q=80&w=400',
+        description: 'The adventures of Finn the human and Jake the dog.',
+        externalLink: 'https://www.youtube.com/results?search_query=Adventure+Time+clips'
+    },
+    {
+        id: 'minecraft_game',
+        title: 'Minecraft',
+        type: 'Cartoon',
+        reason: 'Matches blocky shapes and building',
+        keywords: ['blocks', 'pixel', 'build', 'craft', 'steve', 'creeper', 'sword', 'dig'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1614728263952-84ea256f9679?q=80&w=400',
+        description: 'Build and explore in a world of blocks.',
+        externalLink: 'https://www.google.com/search?q=Minecraft+artwork'
+    },
+    {
+        id: 'transformers_movie',
+        title: 'Transformers',
+        type: 'Movie',
+        reason: 'Matches robots, machines, and heroic transformation',
+        keywords: ['robot', 'machine', 'armor', 'metal', 'transform', 'optimus prime', 'hero', 'truck', 'car'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1593305841991-05c297ba4575?q=80&w=400',
+        description: 'Heroic Autobots battle the evil Decepticons.',
+        externalLink: 'https://www.google.com/search?q=Transformers+Optimus+Prime'
+    },
+    {
+        id: 'ironman_movie',
+        title: 'Iron Man',
+        type: 'Movie',
+        reason: 'Matches high-tech armor and gadgets',
+        keywords: ['armor', 'suit', 'tech', 'robot', 'iron man', 'stark', 'flying', 'red', 'gold'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1623939012331-9904ee016798?q=80&w=400',
+        description: 'Billionaire Tony Stark builds a high-tech suit of armor.',
+        externalLink: 'https://www.google.com/search?q=Iron+Man+Marvel'
+    },
+    {
+        id: 'star_wars',
+        title: 'Star Wars',
+        type: 'Movie',
+        reason: 'Matches space adventure and lightsabers',
+        keywords: ['space', 'robot', 'droid', 'jedi', 'sword', 'star', 'war', 'armor', 'hero'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1472457897821-70d3819a0e24?q=80&w=400',
+        description: 'A long time ago in a galaxy far, far away...',
+        externalLink: 'https://www.google.com/search?q=Star+Wars+kids'
+    },
+    {
+        id: 'ben10_show',
+        title: 'Ben 10',
+        type: 'Cartoon',
+        reason: 'Matches transformation and alien heroes',
+        keywords: ['alien', 'transform', 'watch', 'hero', 'green', 'monster', 'action'],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1560941001-d4b5ece9fa72?q=80&w=400',
+        description: 'A boy with a magical watch can turn into aliens.',
+        externalLink: 'https://www.google.com/search?q=Ben+10+aliens'
     }
 ];
 

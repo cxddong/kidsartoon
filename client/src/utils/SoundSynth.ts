@@ -56,3 +56,6 @@ export const playUiSound = (type: 'pop' | 'swoosh' | 'click') => {
         oscillator.stop(now + 0.05);
     }
 };
+
+export const playBubble = () => playUiSound('pop');
+export const playClick = () => playUiSound('click');

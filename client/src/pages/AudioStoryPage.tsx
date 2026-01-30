@@ -19,7 +19,7 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 export const AudioStoryPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuth();
+    const { user, activeProfile } = useAuth();
 
     // Steps: 1:Upload, 2:Audio/Story, 3:Result
     const [step, setStep] = useState(1);
@@ -64,9 +64,19 @@ export const AudioStoryPage: React.FC = () => {
 
     // Handle Remix / Incoming Data
     React.useEffect(() => {
-        if (location.state?.remixImage) {
-            const imgUrl = location.state.remixImage;
+        // Support regular state transfer OR robust session storage transfer
+        let imgUrl = location.state?.remixImage || location.state?.autoUploadImage;
+
+        if (sessionStorage.getItem('magic_art_handoff')) {
+            console.log("[AudioStory] 📦 Found image in Session Storage");
+            imgUrl = sessionStorage.getItem('magic_art_handoff');
+            // sessionStorage.removeItem('magic_art_handoff'); // Keep for robust re-mounts
+        }
+
+        if (imgUrl) {
+            console.log("[AudioStory] 📥 Received Auto-Fill Image");
             setImagePreview(imgUrl);
+            setStep(2); // Auto-advance if image found
         }
     }, [location]);
 
@@ -155,7 +165,7 @@ export const AudioStoryPage: React.FC = () => {
             if (!confirmed) return;
             setStep(prev => prev - 1);
         } else {
-            navigate('/generate');
+            navigate('/home');
         }
     };
 
@@ -223,6 +233,7 @@ export const AudioStoryPage: React.FC = () => {
             formData.append('voiceTier', builderData.voiceTier);
             formData.append('modelTier', builderData.modelTier);
             formData.append('userId', user?.uid || 'demo');
+            if (activeProfile?.id) formData.append('profileId', activeProfile.id);
 
             console.log('[Frontend] Sending Story Data:', {
                 voice: builderData.voice,
@@ -329,12 +340,15 @@ export const AudioStoryPage: React.FC = () => {
                             {step === 1 && (
                                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-row items-center justify-center gap-8">
                                     <div className={cn(
-                                        "rounded-[130px] flex flex-col items-center justify-center transition-all group cursor-pointer overflow-hidden relative transform hover:scale-95 duration-500 shrink-0",
+                                        "rounded-[130px] flex flex-col items-center justify-center transition-all group cursor-pointer overflow-hidden relative transform hover:scale-95 duration-500 shrink-0 bg-white border-4 border-dashed border-purple-200 shadow-xl",
                                         !imagePreview ? "w-64 h-64 rotate-3 hover:rotate-0" : "w-64 h-auto"
                                     )}
                                         onClick={() => document.getElementById('step1-upload')?.click()}>
 
                                         {/* Background Video (mic3.mp4) - Only show when no image */}
+                                        {!imagePreview && (
+                                            <video src={mic3Video} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />
+                                        )}
 
 
                                         <input type="file" id="step1-upload" className="hidden" accept="image/*" onChange={handleUpload} />
@@ -428,7 +442,7 @@ export const AudioStoryPage: React.FC = () => {
                                                     <RotateCw className="w-4 h-4" /> Try Again
                                                 </button>
                                                 <button
-                                                    onClick={() => navigate('/generate')}
+                                                    onClick={() => navigate('/home')}
                                                     className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-bold hover:bg-indigo-200 transition-colors"
                                                 >
                                                     Done (Go Home)
@@ -445,7 +459,7 @@ export const AudioStoryPage: React.FC = () => {
                             <div className="mt-auto pt-8 pb-12 flex justify-center">
                                 <GenerationCancelButton
                                     isGenerating={loading}
-                                    onCancel={() => navigate('/generate')}
+                                    onCancel={() => navigate('/home')}
                                 />
                             </div>
                         )}

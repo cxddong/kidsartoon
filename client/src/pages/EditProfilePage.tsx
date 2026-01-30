@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { ArrowLeft, Camera, User, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,9 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
+import maleVideo from '../assets/male.mp4';
+import femaleVideo from '../assets/female.mp4';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 
 const EditProfilePage: React.FC = () => {
     const navigate = useNavigate();
@@ -39,6 +42,9 @@ const EditProfilePage: React.FC = () => {
         { id: 'magic', label: '✨ Magic' },
     ];
 
+    const maleVidRef = useRef<HTMLVideoElement>(null);
+    const femaleVidRef = useRef<HTMLVideoElement>(null);
+
     useEffect(() => {
         if (!user) {
             navigate('/login');
@@ -62,6 +68,24 @@ const EditProfilePage: React.FC = () => {
             }
         }
     }, [user, activeProfile, navigate]);
+
+    // Play/Pause Gender Videos based on selection
+    useEffect(() => {
+        if (maleVidRef.current) {
+            if (gender === 'Boy') maleVidRef.current.play();
+            else {
+                maleVidRef.current.pause();
+                maleVidRef.current.currentTime = 0;
+            }
+        }
+        if (femaleVidRef.current) {
+            if (gender === 'Girl') femaleVidRef.current.play();
+            else {
+                femaleVidRef.current.pause();
+                femaleVidRef.current.currentTime = 0;
+            }
+        }
+    }, [gender]);
 
     // Helper: Compress Image
     const compressImage = (src: string): Promise<Blob> => {
@@ -106,6 +130,7 @@ const EditProfilePage: React.FC = () => {
     const handleSave = async () => {
         if (!user) return;
         if (!name.trim()) return alert("Name cannot be empty");
+        if (Number(age) <= 0) return alert("Age must be greater than 0");
         setIsSaving(true);
         setUploadError(null);
 
@@ -266,16 +291,56 @@ const EditProfilePage: React.FC = () => {
                     {/* Gender Selector */}
                     <div>
                         <label className="block text-sm font-bold text-slate-600 mb-2">Gender / Character</label>
-                        <div className="flex gap-4">
-                            {['Boy', 'Girl'].map(g => (
-                                <button
-                                    key={g}
-                                    onClick={() => setGender(g)}
-                                    className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${gender === g ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-white border-slate-200 text-slate-400'}`}
-                                >
-                                    {g}
-                                </button>
-                            ))}
+                        <div className="flex gap-4 justify-center">
+                            {/* Boy Option */}
+                            <button
+                                onClick={() => setGender('Boy')}
+                                className={`relative w-36 h-36 rounded-2xl overflow-hidden border-4 transition-all shadow-lg ${gender === 'Boy'
+                                    ? 'border-indigo-500 scale-105 ring-4 ring-indigo-200'
+                                    : 'border-slate-200 opacity-80'
+                                    }`}
+                            >
+                                <video
+                                    ref={maleVidRef}
+                                    src={maleVideo}
+                                    loop muted playsInline
+                                    controlsList="nodownload noremoteplayback"
+                                    disablePictureInPicture
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    className="w-full h-full object-cover"
+                                />
+                                {gender === 'Boy' && (
+                                    <div className="absolute top-2 right-2 bg-indigo-500 rounded-full p-1 shadow-md">
+                                        <Check className="w-4 h-4 text-white" />
+                                    </div>
+                                )}
+                                <span className="absolute bottom-0 inset-x-0 bg-black/40 text-white text-xs font-bold py-1 backdrop-blur-sm">Boy</span>
+                            </button>
+
+                            {/* Girl Option */}
+                            <button
+                                onClick={() => setGender('Girl')}
+                                className={`relative w-36 h-36 rounded-2xl overflow-hidden border-4 transition-all shadow-lg ${gender === 'Girl'
+                                    ? 'border-pink-500 scale-105 ring-4 ring-pink-200'
+                                    : 'border-slate-200 opacity-80'
+                                    }`}
+                            >
+                                <video
+                                    ref={femaleVidRef}
+                                    src={femaleVideo}
+                                    loop muted playsInline
+                                    controlsList="nodownload noremoteplayback"
+                                    disablePictureInPicture
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    className="w-full h-full object-cover"
+                                />
+                                {gender === 'Girl' && (
+                                    <div className="absolute top-2 right-2 bg-pink-500 rounded-full p-1 shadow-md">
+                                        <Check className="w-4 h-4 text-white" />
+                                    </div>
+                                )}
+                                <span className="absolute bottom-0 inset-x-0 bg-black/40 text-white text-xs font-bold py-1 backdrop-blur-sm">Girl</span>
+                            </button>
                         </div>
                     </div>
 
@@ -376,6 +441,11 @@ const EditProfilePage: React.FC = () => {
                     circular={true}
                 />
             )}
+
+            {/* Navigation Bar */}
+            <div className="fixed bottom-0 left-0 right-0 z-50">
+                <MagicNavBar />
+            </div>
         </div>
     );
 };

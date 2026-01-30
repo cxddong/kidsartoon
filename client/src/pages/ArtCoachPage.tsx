@@ -11,8 +11,10 @@ import { incrementUsage } from '../components/FeedbackWidget';
 import type { CreativeSeries, Chapter } from '../types/mentor';
 import { jsPDF } from 'jspdf';
 import { ImageCropperModal } from '../components/ImageCropperModal';
+import { BouncyButton } from '../components/ui/BouncyButton';
 import masterpieceVideo from '../assets/masterpiece.mp4';
 import creativeJourneyBg from '../assets/creative journey.mp4';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 
 export default function ArtCoachPage() {
     const navigate = useNavigate();
@@ -37,6 +39,7 @@ export default function ArtCoachPage() {
 
     // --- History State ---
     const [history, setHistory] = useState<CreativeSeries[]>([]);
+    const [selectedMasterpiece, setSelectedMasterpiece] = useState<any>(null);
     const [showHistory, setShowHistory] = useState(false);
 
     const fetchHistory = async () => {
@@ -74,12 +77,12 @@ export default function ArtCoachPage() {
 
         // Handle navigation from other pages (e.g., "Ask a Teacher" from Comic)
         // @ts-ignore
-        if (location.state && location.state.uploadedImage) {
-            console.log('[CreativeJourney] Received uploadedImage from navigation');
+        if (location.state && (location.state.uploadedImage || location.state.preloadedImage)) {
+            const preImg = location.state.uploadedImage || location.state.preloadedImage;
+            console.log('[CreativeJourney] Received preloaded image from navigation');
             // Reset to new series and pre-populate the image
             handleStartNew();
-            // @ts-ignore
-            setUploadedImage(location.state.uploadedImage);
+            setUploadedImage(preImg);
             setLoading(false);
             // Clear the navigation state
             window.history.replaceState({}, document.title);
@@ -482,16 +485,16 @@ export default function ArtCoachPage() {
     </div>;
 
     return (
-        <div className="min-h-screen relative overflow-hidden p-4 md:p-8">
+        <div className="min-h-[100dvh] relative overflow-hidden p-4 md:p-8 bg-slate-900">
             {/* Background Video */}
-            <div className="fixed inset-0 z-0 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+            <div className="fixed inset-0 z-0">
                 <video
                     src={creativeJourneyBg}
                     autoPlay
                     loop
                     muted
                     playsInline
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="bg-cover-fixed"
                 />
             </div>
 
@@ -564,6 +567,7 @@ export default function ArtCoachPage() {
                             onFinalize={handleFinalize}
                             showV2Challenge={showV2Challenge}
                             onToggleV2Challenge={() => setShowV2Challenge(!showV2Challenge)}
+                            onSelectMasterpiece={setSelectedMasterpiece}
                             key="flow"
                         />
                     )}
@@ -672,11 +676,101 @@ export default function ArtCoachPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* --- Masterpiece Zoom Modal --- */}
+            <AnimatePresence>
+                {selectedMasterpiece && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-xl"
+                        onClick={() => setSelectedMasterpiece(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[3rem] max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar relative"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="relative aspect-video bg-gray-100 flex items-center justify-center overflow-hidden rounded-t-[3rem]">
+                                <img
+                                    src={selectedMasterpiece.imagePath}
+                                    className="w-full h-full object-contain"
+                                    alt={selectedMasterpiece.title}
+                                />
+                                <button
+                                    onClick={() => setSelectedMasterpiece(null)}
+                                    className="absolute top-6 right-6 w-12 h-12 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div className="p-10 space-y-6">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                            Master Artwork
+                                        </div>
+                                    </div>
+                                    <h2 className="text-3xl font-black text-slate-900 leading-none tracking-tight">
+                                        {selectedMasterpiece.title}
+                                    </h2>
+                                    <p className="text-xl font-bold text-purple-600">by {selectedMasterpiece.artist}</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-6 bg-purple-50 rounded-3xl border border-purple-100">
+                                        <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">Fun Discovery</p>
+                                        <p className="text-slate-700 font-bold leading-relaxed">
+                                            {selectedMasterpiece.kidFriendlyFact}
+                                        </p>
+                                    </div>
+                                    <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                                        {selectedMasterpiece.biography}
+                                    </p>
+                                </div>
+
+                                <div className="pt-4 flex gap-4">
+                                    <BouncyButton
+                                        className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-100"
+                                        onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedMasterpiece.artist + ' ' + (selectedMasterpiece.title || ''))}`, '_blank')}
+                                    >
+                                        Learn More Secret
+                                    </BouncyButton>
+                                    <button
+                                        className="flex-1 py-5 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-colors"
+                                        onClick={() => setSelectedMasterpiece(null)}
+                                    >
+                                        Back to Coach
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <MagicNavBar />
         </div>
     );
 }
 
 function WelcomeSection({ onStart }: { onStart: () => void }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.play().catch(e => {
+                console.log("Autoplay blocked, falling back to muted", e);
+                if (videoRef.current) {
+                    videoRef.current.muted = true;
+                    videoRef.current.play();
+                }
+            });
+        }
+    }, []);
+
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -694,13 +788,24 @@ function WelcomeSection({ onStart }: { onStart: () => void }) {
                     transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
                     className="mb-6 inline-block"
                 >
-                    <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-indigo-100 shadow-xl mx-auto relative group">
+                    <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-indigo-100 shadow-xl mx-auto relative group cursor-pointer"
+                        onClick={() => {
+                            if (videoRef.current) {
+                                videoRef.current.currentTime = 0;
+                                videoRef.current.muted = false; // Unmute on click
+                                videoRef.current.play();
+                            }
+                        }}
+                    >
                         <video
+                            ref={videoRef}
                             src={masterpieceVideo}
-                            autoPlay
-                            controls
                             playsInline
                             className="w-full h-full object-cover"
+                            onEnded={(e) => {
+                                e.currentTarget.pause();
+                                e.currentTarget.currentTime = 0; // Reset to start frame
+                            }}
                         />
                         {/* Shine effect */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent opacity-50 pointer-events-none" />
@@ -741,7 +846,8 @@ function WelcomeSection({ onStart }: { onStart: () => void }) {
 function JourneyFlow({
     series, uploadedImage, analyzing, onUpload, onContinue, onResetUpload, error,
     v2UploadedImage, onV2Upload, onResetV2, improvementReport, analyzingImprovement,
-    onAnalyzeImprovement, onKeepImproving, onFinalize, showV2Challenge, onToggleV2Challenge
+    onAnalyzeImprovement, onKeepImproving, onFinalize, showV2Challenge, onToggleV2Challenge,
+    onSelectMasterpiece
 }: any) {
     const currentStep = series.currentStep + 1;
     const isStepDone = uploadedImage !== null;
@@ -751,7 +857,7 @@ function JourneyFlow({
     const coachingFeedback = lastIteration?.coachingFeedback;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-2">
             {/* Step Navigation Bar */}
             <div className="bg-white/40 backdrop-blur-md p-6 rounded-[2.5rem] border border-white/60 shadow-inner">
                 <div className="flex items-center justify-between max-w-2xl mx-auto relative px-4">
@@ -776,12 +882,12 @@ function JourneyFlow({
                                         backgroundColor: isCurrent || isCompleted ? 'rgb(79, 70, 229)' : 'rgb(255, 255, 255)',
                                         borderColor: isCurrent || isCompleted ? 'rgb(79, 70, 229)' : 'rgb(224, 231, 255)'
                                     }}
-                                    className={`w - 10 h - 10 rounded - full border - 2 flex items - center justify - center shadow - lg relative ${isCurrent ? 'ring-4 ring-indigo-200' : ''} `}
+                                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shadow-lg relative ${isCurrent ? 'ring-4 ring-indigo-200' : ''}`}
                                 >
                                     {isCompleted ? (
                                         <CheckCircle2 className="w-5 h-5 text-white" />
                                     ) : (
-                                        <span className={`text - sm font - black ${isCurrent ? 'text-white' : 'text-indigo-300'} `}>
+                                        <span className={`text-sm font-black ${isCurrent ? 'text-white' : 'text-indigo-400'}`}>
                                             {stepIdx + 1}
                                         </span>
                                     )}
@@ -808,7 +914,7 @@ function JourneyFlow({
                 key={series.currentStep}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-[2.5rem] shadow-2xl p-8 border-4 border-white overflow-hidden relative z-10"
+                className="bg-white rounded-[2.5rem] shadow-2xl p-4 md:p-6 pb-2 iphone-ls:p-4 ipad-ls:p-4 border-4 border-white overflow-hidden relative z-10"
             >
                 {/* Single Column Layout for Better Flow */}
                 <div className="max-w-3xl mx-auto space-y-6">
@@ -848,6 +954,11 @@ function JourneyFlow({
                                         />
                                     </div>
                                 </div>
+                            )}
+
+                            {/* Moved Audio Player Here */}
+                            {coachingFeedback && lastIteration?.audioUrl && (
+                                <AudioPlayer audioUrl={lastIteration.audioUrl} />
                             )}
 
                             {/* 2. User's Current Image Preview */}
@@ -902,7 +1013,16 @@ function JourneyFlow({
                                                 </div>
                                             );
                                             return (
-                                                <div className="relative group/master">
+                                                <div
+                                                    className="relative group/master cursor-pointer active:scale-95 transition-transform"
+                                                    onClick={() => onSelectMasterpiece({
+                                                        artist: coachingFeedback.masterConnection.artist,
+                                                        title: "Master Style",
+                                                        imagePath: masterImage,
+                                                        kidFriendlyFact: coachingFeedback.masterConnection.reason,
+                                                        biography: `This style is inspired by the legendary ${coachingFeedback.masterConnection.artist}.`
+                                                    })}
+                                                >
                                                     <div className="absolute inset-0 bg-purple-200 rounded-2xl blur-xl opacity-20 group-hover/master:opacity-40 transition-opacity" />
                                                     <img
                                                         src={masterImage}
@@ -910,7 +1030,7 @@ function JourneyFlow({
                                                         className="w-32 h-32 object-contain rounded-2xl border-4 border-white shadow-xl rotate-[-3deg] group-hover/master:rotate-0 transition-transform duration-500"
                                                     />
                                                     <div className="absolute -bottom-2 -right-2 bg-purple-600 text-white p-2 rounded-full shadow-lg border-2 border-white">
-                                                        <Palette className="w-4 h-4" />
+                                                        <Star className="w-4 h-4 fill-white animate-pulse" />
                                                     </div>
                                                 </div>
                                             );
@@ -932,33 +1052,33 @@ function JourneyFlow({
 
                                     {/* 5. Art Style Matches */}
                                     {lastIteration?.masterpieceMatches && lastIteration.masterpieceMatches.length > 0 && (
-                                        <div className="space-y-4 bg-white/50 backdrop-blur-sm p-6 rounded-[2rem] border-2 border-purple-100 shadow-sm">
+                                        <div className="space-y-4 bg-white/50 backdrop-blur-sm p-4 iphone-ls:p-3 ipad-ls:p-6 rounded-[2rem] border-2 border-purple-100 shadow-sm">
                                             <p className="text-[10px] font-black text-purple-600 uppercase tracking-widest text-center flex items-center justify-center gap-2">
                                                 <span className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center text-[10px]">✨</span>
                                                 ART STYLE MATCHES
                                             </p>
-                                            <div className="grid grid-cols-3 gap-2">
+                                            <div className="grid grid-cols-3 gap-3 iphone-ls:gap-2 ipad-ls:gap-6">
                                                 {lastIteration.masterpieceMatches.map((match: any) => (
                                                     <div
                                                         key={match.matchId}
-                                                        className="bg-white rounded-xl border border-purple-100 p-2 hover:shadow-md transition-all cursor-pointer group flex flex-col items-center"
-                                                        onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(match.artist + ' artist')}`, '_blank')}
+                                                        className="bg-white rounded-2xl border border-purple-100 p-3 iphone-ls:p-2 ipad-ls:p-4 hover:shadow-md transition-all cursor-pointer group flex flex-col items-center active:scale-95"
+                                                        onClick={() => onSelectMasterpiece(match)}
                                                     >
-                                                        <div className="relative mb-2">
+                                                        <div className="relative mb-2 w-full">
                                                             <img
                                                                 src={match.imagePath}
                                                                 alt={match.title}
-                                                                className="w-full h-16 object-contain rounded-lg bg-gray-50"
+                                                                className="w-full h-24 iphone-ls:h-20 ipad-ls:h-32 md:h-36 object-contain rounded-xl bg-gray-50 border border-gray-100 group-hover:bg-purple-50 transition-colors"
                                                             />
-                                                            <span className="absolute -top-2 -right-2 text-xs">
+                                                            <span className="absolute -top-2 -right-2 text-sm drop-shadow-sm">
                                                                 {match.rank === 1 ? '🥇' : match.rank === 2 ? '🥈' : '🥉'}
                                                             </span>
                                                         </div>
-                                                        <p className="text-[10px] font-black text-gray-800 truncate w-full text-center">{match.artist}</p>
+                                                        <p className="text-xs iphone-ls:text-[10px] ipad-ls:text-base font-black text-gray-800 truncate w-full text-center group-hover:text-purple-600 transition-colors">{match.artist}</p>
                                                     </div>
                                                 ))}
                                             </div>
-                                            <p className="text-[8px] text-center text-purple-400 font-bold uppercase tracking-tighter">Click to discover their secrets!</p>
+                                            <p className="text-[8px] iphone-ls:text-[7px] ipad-ls:text-xs text-center text-purple-400 font-bold uppercase tracking-tighter">Click to discover their secrets!</p>
                                         </div>
                                     )}
 
@@ -998,9 +1118,7 @@ function JourneyFlow({
                                     )}
 
                                     {/* 8. Audio Player */}
-                                    {lastIteration?.audioUrl && (
-                                        <AudioPlayer audioUrl={lastIteration.audioUrl} />
-                                    )}
+
                                 </>
                             )}
 
@@ -1025,14 +1143,14 @@ function JourneyFlow({
                             </AnimatePresence>
 
                             {/* 10. Continue Buttons */}
-                            {coachingFeedback && (
+                            {uploadedImage && (
                                 <div className="pt-2">
                                     <button
                                         disabled={!isStepDone}
                                         onClick={onContinue}
                                         className={`w-full py-5 rounded-[1.5rem] font-black text-lg transition-all flex items-center justify-center gap-3 shadow-lg ${isStepDone ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-xl hover:scale-[1.02] active:scale-95' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                                     >
-                                        <span>Next Level V{currentStep + 1}</span>
+                                        <span>{!coachingFeedback ? "Get Magic Feedback (25 Pts) ✨" : `Next Level V${currentStep + 1} (25 Pts)`}</span>
                                         <ChevronRight className="w-6 h-6" />
                                     </button>
 
@@ -1057,26 +1175,59 @@ function JourneyFlow({
                 )}
             </motion.div >
 
-            {/* V2 Improvement Challenge Section */}
+            {/* "Evolution" Gallery - Moved Up for tighter V1-V2 connection */}
+            {
+                series.chapters.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="px-2"
+                    >
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                            {series.chapters.map((chapter: Chapter, idx: number) => (
+                                <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    className="group relative"
+                                >
+                                    <img
+                                        src={chapter.userImageUrl}
+                                        alt={`Iteration ${chapter.step}`}
+                                        className="w-full aspect-square object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-105 transition-transform"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col justify-end p-2">
+                                        <p className="text-[8px] text-white line-clamp-3 italic font-black leading-tight">
+                                            "{chapter.coachingFeedback?.advice?.actionableTask || 'Keep creating!'}"
+                                        </p>
+                                    </div>
+                                    <div className="absolute -top-1 -left-1 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-black shadow-lg border-2 border-white">
+                                        V{chapter.step}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )
+            }
+
+            {/* V2 Improvement Challenge Section - Moved Down */}
             {
                 coachingFeedback && uploadedImage && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[2.5rem] shadow-xl p-8 border-4 border-dashed border-purple-200"
+                        className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[2.5rem] shadow-xl p-4 md:p-6 iphone-ls:p-4 ipad-ls:p-4 border-4 border-dashed border-purple-200"
                     >
                         {!showV2Challenge ? (
-                            <div className="text-center">
-                                <div className="text-6xl mb-4">🚀</div>
-                                <h3 className="text-2xl font-black text-purple-900 mb-3">Ready for the Improvement Challenge?</h3>
-                                <p className="text-purple-600 mb-6 text-lg">
-                                    Try following Magic Kat's suggestions and upload your improved drawing to see your progress!
-                                </p>
+                            <div className="text-center py-2">
+                                <h3 className="text-xl font-black text-purple-900 mb-2">Ready for the Improvement Challenge?</h3>
                                 <button
                                     onClick={onToggleV2Challenge}
-                                    className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-full hover:shadow-2xl transition-all hover:scale-105"
+                                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black rounded-full hover:shadow-xl transition-all hover:scale-105 text-sm"
                                 >
-                                    ✨ Start Improvement Challenge
+                                    ✨ Start Challenge
                                 </button>
                             </div>
                         ) : (
@@ -1206,52 +1357,6 @@ function JourneyFlow({
                 )
             }
 
-            {/* "Evolution" Gallery */}
-            {
-                series.chapters.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="space-y-6"
-                    >
-                        <div className="flex items-center gap-3 px-4">
-                            <div className="h-px flex-1 bg-gray-200" />
-                            <span className="text-sm font-black text-indigo-400 uppercase tracking-widest">Masterpiece Evolution</span>
-                            <div className="h-px flex-1 bg-gray-200" />
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            {series.chapters.map((chapter: Chapter, idx: number) => (
-                                <motion.div
-                                    key={idx}
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                    className="group relative"
-                                >
-                                    <img
-                                        src={chapter.userImageUrl}
-                                        alt={`Iteration ${chapter.step}`}
-                                        className="w-full aspect-square object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-105 transition-transform"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col justify-end p-4">
-                                        <p className="text-[8px] text-white line-clamp-3 italic font-black leading-tight">
-                                            "{chapter.coachingFeedback?.advice?.actionableTask || 'Keep creating!'}"
-                                        </p>
-                                    </div>
-                                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-black shadow-lg border-2 border-white">
-                                        V{chapter.step}
-                                    </div>
-                                    <div className="absolute -bottom-2 right-2 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-indigo-600 shadow-sm border border-indigo-100">
-                                        {chapter.coachingFeedback?.masterConnection?.artist || 'Artist'}
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-                )
-            }
-
         </div >
     );
 }
@@ -1344,7 +1449,7 @@ function FinaleSection({ series, onAction }: { series: CreativeSeries, onAction:
             </div>
 
             <button
-                onClick={() => navigate('/generate')}
+                onClick={() => navigate('/home')}
                 className="text-indigo-600 font-bold hover:underline"
             >
                 Back to Lab
@@ -1463,6 +1568,7 @@ function AnalysisProgress({ step }: { step: number }) {
                     className="h-full bg-gradient-to-r from-indigo-500 to-pink-500"
                 />
             </div>
+
         </div>
     );
 }

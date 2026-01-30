@@ -19,7 +19,7 @@ type Step = 'upload' | 'generating-book' | 'finished';
 export const PictureBookPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuth();
+    const { user, activeProfile } = useAuth();
 
     // Default to Picture Book mode
     const [step, setStep] = useState<Step>('upload');
@@ -43,19 +43,45 @@ export const PictureBookPage: React.FC = () => {
 
         // Handle Remix
         // @ts-ignore
-        if (location.state && location.state.remixImage) {
-            // @ts-ignore
-            const remixUrl = location.state.remixImage;
-            console.log("PictureBook received remix:", remixUrl);
+        // Handle Remix or Seamless Handoff
+        // @ts-ignore
+        let remixUrl = location.state?.remixImage || location.state?.autoUploadImage || sessionStorage.getItem('pending-art-upload');
+
+        if (sessionStorage.getItem('magic_art_handoff')) {
+            console.log("[PictureBook] 📦 Found image in Session Storage");
+            remixUrl = sessionStorage.getItem('magic_art_handoff');
+            // sessionStorage.removeItem('magic_art_handoff'); // Fix: Keep for strict mode re-mounts
+        }
+
+        if (remixUrl) {
+            console.log("[PictureBook] 📥 Received Auto-Fill Image. Length:", remixUrl?.length);
             setImagePreview(remixUrl);
 
+            // Robust DataURL handling
             fetch(remixUrl)
                 .then(res => res.blob())
                 .then(blob => {
+                    console.log("[PictureBook] ✅ Blob created. Size:", blob.size);
                     const file = new File([blob], "book-remix.jpg", { type: blob.type || "image/jpeg" });
                     setImageFile(file);
                 })
-                .catch(err => console.error("Failed to load remix file:", err));
+                .catch(err => {
+                    console.warn("[PictureBook] Fetch failed, trying direct DataURL conversion:", err);
+                    try {
+                        const arr = remixUrl.split(',');
+                        const mime = arr[0].match(/:(.*?);/)[1];
+                        const bstr = atob(arr[1]);
+                        let n = bstr.length;
+                        const u8arr = new Uint8Array(n);
+                        while (n--) {
+                            u8arr[n] = bstr.charCodeAt(n);
+                        }
+                        const file = new File([u8arr], "book-remix.jpg", { type: mime });
+                        setImageFile(file);
+                    } catch (e) {
+                        console.error("[PictureBook] ❌ Failed all conversion methods:", e);
+                    }
+                });
         }
 
     }, [location]);
@@ -144,7 +170,8 @@ export const PictureBookPage: React.FC = () => {
                     illustrationStyle: builderData.illustrationStyle,
                     vibe: builderData.vibe,
                     character: builderData.character,
-                    storyText: builderData.storyText
+                    storyText: builderData.storyText,
+                    profileId: activeProfile?.id
                 }),
             });
 
@@ -194,7 +221,7 @@ export const PictureBookPage: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 w-full h-full bg-black z-[60] overflow-y-auto">
+        <div className="fixed inset-0 w-full min-h-[100dvh] bg-slate-900 z-[60] overflow-y-auto">
             {/* Background Video */}
             <video
                 src={pictureBookBg}
@@ -202,7 +229,7 @@ export const PictureBookPage: React.FC = () => {
                 loop
                 muted
                 playsInline
-                className="fixed inset-0 w-full h-full object-cover z-0"
+                className="bg-cover-fixed"
             />
             {/* Dark Overlay for readability */}
             <div className="fixed inset-0 bg-black/30 z-0" />
@@ -211,7 +238,7 @@ export const PictureBookPage: React.FC = () => {
 
             {/* Header */}
             <header className="w-full relative z-50 flex items-center gap-4 p-4 pointer-events-none">
-                <button onClick={goBack} className="pointer-events-auto p-2 bg-white/20 backdrop-blur-sm rounded-full shadow-sm hover:bg-white/30 transition-colors">
+                <button onClick={() => navigate('/home')} className="pointer-events-auto p-2 bg-white/20 backdrop-blur-sm rounded-full shadow-sm hover:bg-white/30 transition-colors">
                     <ArrowRight className="w-6 h-6 text-white rotate-180" />
                 </button>
                 <div className="flex-1" />

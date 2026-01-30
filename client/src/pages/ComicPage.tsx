@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImagePlus, Wand2, ArrowLeft, ArrowRight, Save, Trash2, Sparkles, Layout, Type, Palette, Download, Share2, Music, Mic, Play, Pause, Square, Star, Loader2 } from 'lucide-react';
 import { incrementUsage } from '../components/FeedbackWidget';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { cn } from '../lib/utils';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
@@ -22,17 +22,55 @@ import magicBookVideo from '../assets/magicbook.mp4';
 export const ComicPage: React.FC = () => {
     // ... (existing hooks)
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const location = useLocation(); // V5 Fix: Proper location hook
+    const { user, activeProfile } = useAuth();
 
     const [step, setStep] = useState<'upload' | 'generating' | 'finished'>('upload');
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    // 🚀 V5.0 Core Fix: Sync Lazy Load
+    const [imagePreview, setImagePreview] = useState<string | null>(() => {
+        // 1. Priority: Route State
+        // @ts-ignore
+        if (location.state?.autoUploadImage || location.state?.remixImage) {
+            console.log("📦 [Comic] Sync Loaded from Route");
+            // @ts-ignore
+            return location.state.autoUploadImage || location.state.remixImage;
+        }
+
+        // 2. Fallback: Session Storage (Sync Read)
+        const cached = sessionStorage.getItem('magic_art_handoff');
+        if (cached) {
+            console.log("💾 [Comic] Sync Loaded from Storage (magic_art_handoff)");
+            // sessionStorage.removeItem('magic_art_handoff'); // Optional: Keep for safety
+            return cached;
+        }
+
+        return null; // Default
+    });
+
+    // V5: Auto-Convert Sync Loaded Preview to File
+    useEffect(() => {
+        if (imagePreview && !imageFile) {
+            console.log("[Comic] 🔄 Converting Sync Preview to File...");
+            fetch(imagePreview)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "handoff.jpg", { type: blob.type || "image/jpeg" });
+                    setImageFile(file);
+                    console.log("[Comic] ✅ Sync File Ready:", file.size);
+                })
+                .catch(err => console.error("[Comic] Sync conversion failed:", err));
+        }
+    }, [imagePreview]); // Depend only on imagePreview
+
     const [resultData, setResultData] = useState<any>(null);
     const [, setError] = useState<string | null>(null);
     const [progress, setProgress] = useState(0);
     const [expandedImage, setExpandedImage] = useState<ImageRecord | null>(null);
 
     const [editableCaptions, setEditableCaptions] = useState<string[]>([]);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Gallery for loading screen
     const [publicGallery, setPublicGallery] = useState<any[]>([]);
@@ -51,76 +89,77 @@ export const ComicPage: React.FC = () => {
 
     // Persistence: Restore state on mount
     React.useEffect(() => {
-        const saved = sessionStorage.getItem('comic-result');
-        const savedReview = sessionStorage.getItem('comic-review');
-        const savedPreview = sessionStorage.getItem('comic-preview'); // RESTORE PREVIEW
+        const navState = location.state as any; // Fix: Define navState for legacy support
+        // 1. Check if we have an incoming image (Sync Loaded)
+        const hasIncomingImage = !!imagePreview; // V5: State already has it
 
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                setResultData(data);
-                setStep('finished');
+        if (hasIncomingImage) {
+            console.log("[ComicPage] 🚀 Incoming Image Detected (Sync) - Bypassing Session Restore");
+            // Clear old session to prevent mixing
+            sessionStorage.removeItem('comic-result');
+            sessionStorage.removeItem('comic-review');
+            sessionStorage.removeItem('comic-preview');
+            setStep('upload'); // Force upload mode
+            setResultData(null);
 
-                if (savedReview) {
-                    const reviewData = JSON.parse(savedReview);
-                    setAiReview(prev => ({ ...prev, text: reviewData.text, shown: false }));
+            // Note: Blob conversion is handled by the V5 Selection Effect
+        } else {
+            // 2. Only Restore Session if NO incoming image
+            const saved = sessionStorage.getItem('comic-result');
+            const savedReview = sessionStorage.getItem('comic-review');
+            const savedPreview = sessionStorage.getItem('comic-preview');
+
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    setResultData(data);
+                    setStep('finished');
+
+                    if (savedReview) {
+                        const reviewData = JSON.parse(savedReview);
+                        setAiReview(prev => ({ ...prev, text: reviewData.text, shown: false }));
+                    }
+
+                    if (savedPreview) {
+                        setImagePreview(savedPreview);
+                    }
+
+                    // Restore editable captions
+                    if (data.panels && Array.isArray(data.panels) && data.panels.length === 4) {
+                        setEditableCaptions(data.panels.map((p: any) => p.caption || p.dialogue || ''));
+                    } else if (data.storyCaptions) {
+                        setEditableCaptions(data.storyCaptions);
+                    } else if (data.pages) {
+                        setEditableCaptions(data.pages.map((p: any) => p.text || p.text_overlay || p.narrativeText));
+                    }
+                } catch (e) {
+                    console.error("Failed to restore comic state", e);
+                    sessionStorage.removeItem('comic-result');
                 }
-
-                if (savedPreview) {
-                    setImagePreview(savedPreview); // Restore the image persistence
-                }
-
-                // Restore editable captions if available
-                // PRIORITY: Use panels data (new format with emotion/bubble metadata)
-                if (data.panels && Array.isArray(data.panels) && data.panels.length === 4) {
-                    setEditableCaptions(data.panels.map((p: any) => p.caption || p.dialogue || ''));
-                } else if (data.storyCaptions) {
-                    setEditableCaptions(data.storyCaptions);
-                } else if (data.pages) {
-                    setEditableCaptions(data.pages.map((p: any) => p.text || p.text_overlay || p.narrativeText));
-                }
-            } catch (e) {
-                console.error("Failed to restore comic state", e);
-                sessionStorage.removeItem('comic-result');
-                sessionStorage.removeItem('comic-review');
-                sessionStorage.removeItem('comic-preview');
             }
         }
 
-        // Handle Sparkle Tags from Navigation
+        // Handle Sparkle Tags
         // @ts-ignore
-        if (location.state && location.state.sparkleTags) {
+        if (navState && navState.sparkleTags) {
             // @ts-ignore
-            console.log("ComicPage received tags from nav:", location.state.sparkleTags);
-            // Dispatch with a small delay to ensure listeners are mounted
+            console.log("ComicPage received tags from nav:", navState.sparkleTags);
             setTimeout(() => {
                 // @ts-ignore
-                window.dispatchEvent(new CustomEvent('sparkle-update', { detail: location.state.sparkleTags }));
+                window.dispatchEvent(new CustomEvent('sparkle-update', { detail: navState.sparkleTags }));
             }, 800);
         }
 
-        // Handle remix image from navigation (e.g., from Creative Journey or ImageModal)
-        // @ts-ignore
-        if (location.state && location.state.remixImage) {
-            // @ts-ignore
-            const remixImageUrl = location.state.remixImage;
-            console.log("ComicPage received remixImage from nav:", remixImageUrl);
-            setImagePreview(remixImageUrl);
-            sessionStorage.setItem('comic-preview', remixImageUrl);
+        // Handle preloaded image loading: REMOVED (V5 handles this)
 
-            // Fetch info to create file object for generator
-            fetch(remixImageUrl)
-                .then(res => res.blob())
-                .then(blob => {
-                    const file = new File([blob], "remix-input.jpg", { type: blob.type || "image/jpeg" });
-                    setImageFile(file);
-                })
-                .catch(err => console.error("Failed to load remix image file:", err));
-        }
-
-        // Cleanup: Clear session storage when user leaves the page
+        // Cleanup
         return () => {
-            // Clear session storage to reset the page on next visit
+            // Optional: Don't clear session on unmount if we want persistence across refresh
+            // But existing code did, so we keep behavior or improve it?
+            // Existing: return () => { sessionStorage.removeItem... }
+            // This clears it when user LEAVES page.
+            // We'll keep existing behavior for now or it breaks consistency?
+            // The existing return clears it.
             sessionStorage.removeItem('comic-result');
             sessionStorage.removeItem('comic-review');
             sessionStorage.removeItem('comic-preview');
@@ -312,6 +351,7 @@ export const ComicPage: React.FC = () => {
             // Previous code used generate-picture-book.
             formData.append('prompt', compositePrompt);
             formData.append('userId', user?.uid || 'demo-user');
+            if (activeProfile?.id) formData.append('profileId', activeProfile.id);
             formData.append('pageCount', '4');
 
             const res = await fetch('/api/media/generate-magic-comic', {
@@ -486,7 +526,7 @@ export const ComicPage: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 w-full h-full bg-[#121826] z-[60] overflow-y-auto">
+        <div className="fixed inset-0 w-full min-h-[100dvh] bg-slate-900 z-[60] overflow-y-auto">
             {/* Background - Restored looping video */}
             <video
                 src={comicVideo}
@@ -494,7 +534,7 @@ export const ComicPage: React.FC = () => {
                 loop
                 muted
                 playsInline
-                className="fixed inset-0 w-full h-full object-cover z-0"
+                className="bg-cover-fixed"
             />
             {/* Removed gradient overlay to show original video */}
 
@@ -571,6 +611,32 @@ export const ComicPage: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Drag Hint Notification - Moved Outside (Right Side) */}
+                            {editableCaptions.length > 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, x: 50 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 1 }}
+                                    className="fixed right-8 top-1/2 -translate-y-1/2 z-50 pointer-events-none max-w-[200px] hidden md:block" // Fixed ensures it stays on right regardless of container
+                                >
+                                    <div className="bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-2xl border-4 border-indigo-200">
+                                        <div className="flex flex-col items-center gap-2 text-center">
+                                            <div className="text-4xl animate-bounce-horizontal">
+                                                👈
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-indigo-800 leading-tight">
+                                                    Need to move the text?
+                                                </p>
+                                                <p className="text-xs font-bold text-indigo-600 mt-1">
+                                                    Just drag it to the right spot!
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
                             <div className="grid grid-cols-2 lg:flex gap-3 mt-6 pointer-events-auto w-full max-w-lg lg:max-w-none justify-center">
                                 <button
                                     onClick={(e) => {
@@ -585,13 +651,7 @@ export const ComicPage: React.FC = () => {
                                 >
                                     <span>🔄</span> Make Another
                                 </button>
-                                <button
-                                    onClick={handleExportPDF}
-                                    className="col-span-1 bg-green-600 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:bg-green-700 transition-colors text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2"
-                                >
-                                    <Download className="w-5 h-5" />
-                                    <span>Save PDF</span>
-                                </button>
+
                                 <button
                                     onClick={() => setShowShareDialog(true)}
                                     className="col-span-1 bg-blue-600 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2"
@@ -690,13 +750,13 @@ export const ComicPage: React.FC = () => {
                                 <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
                                 <h3 className="text-xl font-bold text-slate-800">Drawing... {Math.round(progress)}%</h3>
                                 <div className="w-48 h-3 bg-slate-200 rounded-full mt-4 overflow-hidden relative">
-                                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.round(progress)}%` }} />
+                                    <div className="h-full bg-purple-600 transition-all duration-300" style={{ width: `${Math.round(progress)}%` }} />
                                 </div>
 
                                 <div className="mt-8">
                                     <GenerationCancelButton
                                         isGenerating={true}
-                                        onCancel={() => navigate('/generate')}
+                                        onCancel={() => navigate('/home')}
                                     />
                                 </div>
                             </motion.div>
@@ -734,12 +794,27 @@ export const ComicPage: React.FC = () => {
                                 imageUploaded={!!imageFile}
                                 onGenerate={handleGenerate}
                             >
-                                <div className="w-full h-full flex items-center justify-center p-4">
-                                    <div className="relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden hover:scale-[1.02] transition-all group cursor-pointer border-4 border-dashed border-white/60 rounded-3xl bg-white/10 shadow-lg"
-                                        onClick={() => document.getElementById('comic-upload')?.click()}
-                                    >
-
-                                        <input type="file" id="comic-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                <div className="w-full h-full flex flex-col items-center justify-center p-4 gap-2">
+                                    {/* V5 Fallback Button */}
+                                    {!imagePreview && sessionStorage.getItem('magic_art_handoff') && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const cached = sessionStorage.getItem('magic_art_handoff');
+                                                if (cached) setImagePreview(cached);
+                                            }}
+                                            className="w-full max-w-xs py-2 bg-yellow-300 text-yellow-900 rounded-xl text-sm font-black border-4 border-white shadow-xl animate-pulse z-50 hover:scale-105 transition-transform"
+                                        >
+                                            📂 FOUND YOUR DRAWING! LOAD IT!
+                                        </button>
+                                    )}
+                                    <div className="relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden hover:scale-[1.02] transition-all group cursor-pointer border-4 border-dashed border-white/60 rounded-3xl bg-white/10 shadow-lg">
+                                        <input
+                                            type="file"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                        />
                                         {imagePreview ? (
                                             <img src={imagePreview} className="relative z-10 w-full h-full object-contain" />
                                         ) : (

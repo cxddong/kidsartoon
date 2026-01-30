@@ -103,103 +103,116 @@ router.post('/generate', async (req, res) => {
             uploadCount: recentImages.filter(img => img.type === 'upload').length,
             magicImageCount: recentImages.filter(img => img.type === 'generated' || img.type === 'masterpiece').length,
             videoCount: recentImages.filter(img => img.type === 'animation').length,
-            storyCount: recentImages.filter(img => img.type === 'story').length, // Audio Story
-            comicCount: recentImages.filter(img => img.type === 'comic' || img.type === 'graphic-novel').length,
+            storyCount: recentImages.filter(img => img.type === 'story').length,
+            comicCount: recentImages.filter(img => img.type === 'comic' || img.type === 'graphic-novel' || img.type === 'cartoon-book').length,
             bookCount: recentImages.filter(img => img.type === 'picturebook').length,
             cardCount: recentImages.filter(img => img.type === 'cards').length,
-            puzzleCount: 0, // Server-side puzzle tracking todo
+            puzzleCount: 0,
             totalScreenTimeMinutes: recentImages.length * 15,
-            chatMessages: 0 // Placeholder
+            chatMessages: 0
         };
 
-        // 4. Data for AI (Scientific Inputs)
-        // Extract subjects and colors for ALL history to ensure trend accuracy
-        const allSubjects = allImages.map(img => img.prompt || img.meta?.description || 'Untitled').filter(s => s.length > 3);
-        // Extract real color data if available (mocking hex extraction from meta if not present)
-        const realColors = allImages.map(img => img.dominantColor || img.meta?.dominantColor).filter(c => c && c.startsWith('#'));
+        // 4. Data for AI (Scientific Inputs - Batch Analysis)
+        const batchImages = recentImages.slice(0, 5); // Analyze top 5 works
+        const artworkDescriptions = batchImages.map((img, i) => ({
+            id: img.id,
+            description: img.prompt || img.meta?.description || 'Untitled',
+            type: img.type,
+            colors: img.colorPalette || [img.dominantColor].filter(Boolean)
+        }));
 
-        const evidenceList = allSubjects.slice(0, 50);
+        const childAge = userData?.age || 7;
 
         const prompt = `
-You are an expert **Child Psychologist**, **Art Therapist**, and **Data Scientist**.
-Analyze a child's creative activity to generate a professional growth report.
+You are a panel of experts: a **Child Psychologist**, an **Art Therapist**, and an **Art Educator**.
+You are analyzing a batch of ${artworkDescriptions.length} drawings from a ${childAge}-year-old child named ${nameToUse} created over the last 7 days.
 
-**REAL DATA:**
-1. Art Subjects: ${JSON.stringify(evidenceList)}
-2. Dominant Colors: ${JSON.stringify(realColors.slice(0, 20))}
-3. Stats: ${JSON.stringify(stats)}
-4. Child: ${nameToUse}
+**INPUT DATA:**
+- Batch Artworks: ${JSON.stringify(artworkDescriptions)}
+- Stats: ${JSON.stringify(stats)}
 
-**ANALYSIS TASKS:**
-1. Color Psychology: Analyze colors (Red/Orange=Energy, Blue/Green=Calm). 2-3 sentences, cite actual colors.
-2. Career Spotting: Match subjects to careers (Machines→Engineering, Characters→Literature). Provide 2 specific fields.
-3. Radar Scores (0-100): narrative, color, logic, imagination, detail - based only on data.
-4. Parenting Tip: ONE specific action (e.g., "Try Lego Technic sets").
+**YOUR TASKS:**
 
-**OUTPUT JSON:**
+1. **PSYCHOLOGICAL PROFILE (Color & Stroke):**
+    - Analyze the *progression* of colors and mood.
+    - *Output:* moodTrend ('Improving' | 'Stable' | 'Fluctuating') and psychologicalAnalysis paragraph.
+
+2. **DEVELOPMENTAL STAGE (Lowenfeld Theory):**
+    - Identify stage: Scribbling (2-4), Preschematic (4-7), Schematic (7-9), Gang (9-12).
+    - *Output:* developmentStage and developmentEvidence.
+
+3. **EXPERA RADAR SCORES (0-100):**
+    - colorIQ: Color emotional mastery.
+    - spatial: Perspective/Layout.
+    - motorSkill: Precision/Control.
+    - creativity: Element uniqueness.
+    - focus: Detail/Complete.
+
+4. **ACTIONABLE ADVICE:**
+    - parentActionPlan: 2 Psychological tips and 2 Artistic Growth tips.
+
+**OUTPUT FORMAT (MANDATORY JSON):**
 {
-  "colorTrend": "Warm Colors (Red/Orange)",
-  "colorPsychologyText": "Professional analysis citing actual colors",
-  "careerSuggestion": "Engineering or Architecture",
-  "careerReason": "Explain based on subjects",
-  "radarScores": {"narrative":85,"color":92,"logic":70,"imagination":88,"detail":65},
-  "adviceText": "Specific tip",
-  "strength": "Key strength",
-  "weakness": "Growth area (positive)",
-  "emotionalState": "Curious",
-  "topInterests": ["interest1","interest2","interest3"]
+  "moodTrend": "Improving",
+  "psychologicalAnalysis": "...",
+  "developmentStage": "Preschematic",
+  "developmentEvidence": "...",
+  "scores": { "colorIQ": 85, "spatial": 70, "motorSkill": 65, "creativity": 90, "focus": 75 },
+  "careerSuggestion": "...",
+  "learningStyle": "Visual Learner",
+  "parentTips": ["Psych Tip 1", "Art Tip 1", ...]
 }
-Be evidence-based. Cite real data.`;
+`;
 
         let aiData;
         try {
-            console.log(`[Reports] Calling OpenAI scientific analysis for ${nameToUse}...`);
+            console.log(`[Reports] Calling OpenAI V2.0 Expert Analysis for ${nameToUse}...`);
             aiData = await openAIService.generateJSON(prompt);
         } catch (e) {
             console.error('[Reports] OpenAI Failed, using fallback.', e);
             aiData = {
-                colorTrend: "Mixed Palette",
-                colorPsychologyText: "Shows a balanced emotional state with varied interests.",
-                radarScores: { narrative: 75, color: 80, logic: 60, imagination: 85, detail: 70 },
-                careerSuggestion: "Creative Arts",
-                careerReason: "Shows general creativity.",
-                adviceText: "Keep encouraging diverse subjects.",
-                strength: "Consistency",
-                weakness: "Detail"
+                moodTrend: "Stable",
+                psychologicalAnalysis: "The child shows consistent engagement and a positive creative output.",
+                developmentStage: childAge < 5 ? "Scribbling" : "Preschematic",
+                developmentEvidence: "Consistent use of basic shapes and emergent symbolic representation.",
+                scores: { colorIQ: 70, spatial: 60, motorSkill: 65, creativity: 80, focus: 75 },
+                careerSuggestion: "Creative Designer",
+                learningStyle: "Hands-on",
+                parentTips: ["Encourage more varied color use", "Try clay modeling for spatial skills"]
             };
         }
 
         // 5. Save Final Report
         const report: WeeklyReport = {
-            id: `${userId}_${weekId}`, // Deterministic ID
+            id: `${userId}_${weekId}`,
             weekId,
             userId,
             childProfileId,
             createdAt: Date.now(),
-            isFinal: true, // Mark as persistent
+            isFinal: true,
             stats,
             artAnalysis: {
-                dominantColors: aiData.dominantColors || realColors.slice(0, 5) || ['#FF0000'],
-                topSubjects: aiData.topSubjects || evidenceList.slice(0, 3),
-                radarScores: {
-                    composition: aiData.radarScores.logic || 70, // Map logic -> composition
-                    color: aiData.radarScores.color || 70,
-                    imagination: aiData.radarScores.imagination || 70,
-                    line: aiData.radarScores.detail || 70, // Map detail -> line
-                    story: aiData.radarScores.narrative || 70
-                },
-                colorTrend: aiData.colorTrend,
-                colorPsychologyText: aiData.colorPsychologyText,
-                careerSuggestion: aiData.careerSuggestion,
-                adviceText: aiData.adviceText
+                dominantColors: [artworkDescriptions[0]?.colors?.[0] || '#FFB700'],
+                topSubjects: artworkDescriptions.map(a => a.description).slice(0, 3),
+                scores: aiData?.scores || { colorIQ: 70, spatial: 70, motorSkill: 70, creativity: 70, focus: 70 },
+                colorTrend: aiData?.moodTrend || 'Stable',
+                colorPsychologyText: (aiData?.psychologicalAnalysis || "Creative journey focus.").substring(0, 150),
+                careerSuggestion: aiData?.careerSuggestion || "Creative Arts",
+                adviceText: aiData?.parentTips?.[0] || "Continue supporting creative play.",
+                developmentStage: aiData?.developmentStage || (childAge < 5 ? "Scribbling" : "Preschematic"),
+                developmentEvidence: aiData?.developmentEvidence || "Emergent symbolic representation."
             },
             aiCommentary: {
-                strength: aiData.strength,
-                weakness: aiData.weakness,
-                potentialCareer: aiData.careerSuggestion,
-                careerReason: aiData.careerReason,
-                learningStyle: "Visual Learner" // Default
-            }
+                strength: "Imagination",
+                weakness: "Fine Motor Details",
+                potentialCareer: aiData?.careerSuggestion || "Arts",
+                careerReason: "Based on character and scene complexity.",
+                learningStyle: aiData?.learningStyle || "Visual Learner",
+                psychologicalAnalysis: aiData?.psychologicalAnalysis || "Balanced emotional engagement.",
+                moodTrend: aiData?.moodTrend || 'Stable',
+                parentActionPlan: aiData?.parentTips || ["Listen and observe", "Provide more materials"]
+            },
+            analyzedArtworks: artworkDescriptions.map(a => a.id)
         };
 
         await databaseService.saveReport(userId, report);

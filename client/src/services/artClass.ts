@@ -11,6 +11,7 @@ export interface ArtLessonStep {
 export interface ArtLesson {
     id: string;
     title: string;
+    welcomeMessage: string;
     steps: ArtLessonStep[];
 }
 
@@ -35,6 +36,7 @@ const createTriangle = (p1: { x: number, y: number }, p2: { x: number, y: number
 export const CAT_LESSON: ArtLesson = {
     id: 'draw_cat',
     title: 'Draw a Cute Cat',
+    welcomeMessage: "Meow! Welcome to Art Class! I'm Kat, and I'll be your teacher today. What should we draw?",
     steps: [
         {
             id: 'intro',

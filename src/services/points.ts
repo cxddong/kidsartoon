@@ -29,12 +29,19 @@ export const POINTS_COSTS: Record<string, number> = {
     'graphic_novel_4': 100,   // 4 pages, short story
     'graphic_novel_8': 180,   // 8 pages, epic tale  
     'graphic_novel_12': 250,  // 12 pages, masterpiece
+    'cartoon_book_4': 100,
+    'cartoon_book_8': 180,
+    'cartoon_book_12': 250,
 
     // Legacy mapping support
     'generate_audio_story': 25, // Standard story with OpenAI TTS
     'generate_audio_story_premium': 25 + POINT_COSTS.PREMIUM_VOICE_ADDITIONAL, // Story with ElevenLabs
     'generate_comic_book': POINT_COSTS.PICTURE_BOOK_4,
-    'magic_mentor_video': POINT_COSTS.CREATIVE_JOURNEY_VIDEO
+    'magic_mentor_video': POINT_COSTS.CREATIVE_JOURNEY_VIDEO,
+    'magic_mirror_scan': 25,
+    'magic_mirror_colorize': 25, // Standardized cost for colorization
+    'magic_mentor_step': 25,      // Point cost for each step in Art Coach
+    'masterpiece_match': 25
 };
 
 export interface PointLog {

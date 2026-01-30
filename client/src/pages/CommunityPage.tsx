@@ -11,7 +11,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { magicFloatVariants } from '../lib/animations';
 import { DailyTreasureMap } from '../components/dashboard/DailyTreasureMap';
-import { MagicNavBar } from '../components/ui/MagicNavBar'; // IMPORTED
+import { RippleEffect } from '../components/ui/RippleEffect';
+
+import { MagicNavBar } from '../components/ui/MagicNavBar';
+
 
 const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
     { id: '1', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: false, prompt: 'Space Adventure' },
@@ -246,11 +249,17 @@ export const CommunityPage: React.FC = () => {
     return (
         <div className="h-screen w-full flex flex-col relative overflow-hidden bg-[#FAFAFA]">
             {/* 1. Global Background (Fixed) */}
-            <div
-                className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: "url('/main_bg.jpg')" }}
-            >
-                <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px]" />
+            {/* 1. Global Background (Fixed) - WITH RIPPLE */}
+            <div className="fixed inset-0 z-0">
+                <RippleEffect
+                    image="/main_bg.jpg"
+                    intensity={4}
+                    rippleCount={3}
+                    rippleInterval={3000}
+                    rippleSize={40}
+                    className="w-full h-full"
+                />
+                <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] pointer-events-none" />
             </div>
 
             {/* 2. Header (Relative) */}

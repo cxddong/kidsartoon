@@ -16,8 +16,26 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
-        timeout: 300000,
-        proxyTimeout: 300000,
+      },
+      '/uploads': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/generated': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/mentor': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/tts': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/masterpiece_audio': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
       },
     },
   },

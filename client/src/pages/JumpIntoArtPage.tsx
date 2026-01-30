@@ -138,6 +138,8 @@ export const JumpIntoArtPage: React.FC = () => {
         });
     };
 
+
+
     const handleGenerate = async () => {
         if (!photoFile || !artFile || !selectedMode || !user) return;
 

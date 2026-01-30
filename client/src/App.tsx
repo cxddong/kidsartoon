@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { ToastProvider } from './context/ToastContext';
 import { PointAnimationProvider } from './context/PointAnimationContext';
-// import { SoundManager } from './components/SoundManager'; // SUSPECT 1
+import { SoundManager } from './components/SoundManager';
 
 // Existing Pages
 import { SplashPage } from './pages/SplashPage';
@@ -13,6 +13,7 @@ import { HomePage } from './pages/HomePage'; // Was GeneratePage
 import { PictureBookPage } from './pages/PictureBookPage';
 import { ComicPage } from './pages/ComicPage';
 import { CameraPage } from './pages/CameraPage';
+import { useMobileOrientation } from './hooks/useMobileOrientation';
 import { ProfilePage } from './pages/ProfilePage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AudioStoryPage } from './pages/AudioStoryPage';
@@ -49,6 +50,10 @@ import { ImageAdjustDebugPage } from './pages/ImageAdjustDebugPage';
 import { JumpIntoArtPage } from './pages/JumpIntoArtPage';
 import { AuditViewPage } from './pages/AuditViewPage';
 import { MagicKatLoader } from './components/ui/MagicKatLoader';
+import { MagicArtScannerPage } from './pages/MagicArtScannerPage';
+import { PortfolioReportPage } from './pages/PortfolioReportPage';
+import JourneyWorld from './components/world/JourneyWorld'; // Import V14 Test Page
+import { StoryFormatSelectionPage } from './pages/StoryFormatSelectionPage';
 
 
 
@@ -85,8 +90,9 @@ const AppRoutes = () => {
       <Route path="/audit-view" element={<AuditViewPage />} />
 
       {/* New Routing Structure */}
-      <Route path="/home" element={<HomePage />} /> {/* Formerly GeneratePage */}
+      <Route path="/home" element={<JourneyWorld />} /> {/* New Main Home: V17 Level Map */}
       <Route path="/community" element={<CommunityPage />} /> {/* Formerly HomePage */}
+      <Route path="/test-world" element={<HomePage />} /> {/* Legacy Dashboard - Moved to Test */}
 
       {/* Legacy Redirects or Aliases */}
       <Route path="/generate" element={<Navigate to="/home" replace />} />
@@ -98,6 +104,7 @@ const AppRoutes = () => {
         <Route path="/comic" element={<ComicPage />} />
         <Route path="/generate/comic" element={<ComicPage />} />
         <Route path="/make-cartoon" element={<MakeCartoonPage />} />
+        <Route path="/story-selection" element={<StoryFormatSelectionPage />} />
 
         {/* Fullscreen Generation Pages */}
         <Route path="/generate/picture" element={<PictureBookPage />} />
@@ -122,7 +129,8 @@ const AppRoutes = () => {
         <Route path="/ask-magic-kat" element={<MagicLabPage />} />
         <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
         <Route path="/jump-into-art" element={<JumpIntoArtPage />} />
-        <Route path="/magic-art" element={<MagicArtStudioPage />} />
+        <Route path="/magic-art" element={<MagicMirrorPage />} />
+        <Route path="/magic-studio" element={<MagicArtStudioPage />} />
         <Route path="/art-class" element={<MagicArtClassPage />} />
 
         {/* Debug Routes */}
@@ -134,6 +142,8 @@ const AppRoutes = () => {
         <Route path="/magic-discovery" element={<MagicMirrorPage />} />
         <Route path="/parent" element={<ParentDashboardPage />} />
         <Route path="/parent/report" element={<ParentReportPage />} />
+        <Route path="/parent/scanner" element={<MagicArtScannerPage />} />
+        <Route path="/parent/portfolio-report/:reportId" element={<PortfolioReportPage />} />
         <Route path="/press" element={<MagicPressPage />} />
 
 
@@ -145,6 +155,7 @@ const AppRoutes = () => {
 };
 
 function App() {
+  useMobileOrientation(); // Enforce Landscape on Mobile
   console.log('App component rendering...');
   return (
     <BrowserRouter>
@@ -152,7 +163,7 @@ function App() {
         <ToastProvider>
           <PointAnimationProvider>
             <ScreenTimeManager>
-              {/* <SoundManager /> */}
+              <SoundManager />
               <AppRoutes />
             </ScreenTimeManager>
           </PointAnimationProvider>

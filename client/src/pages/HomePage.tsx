@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
-import { FanMenu } from '../components/home/FanMenu';
+import { FanMenuV2 } from '../components/home/FanMenuV2';
 import { MagicKatButton } from '../components/home/MagicKatButton';
 import mentorVideo from '../assets/mentor journey.mp4';
+import backgroundVideo from '../assets/backgournd.mp4'; // Typo preserved
 import creativeJourneyVid from '../assets/creative journey.mp4';
 import artStudioVid from '../assets/art studio.mp4';
 import magicLabVid from '../assets/magiclab.mp4';
@@ -21,41 +23,138 @@ import magicAcademyTxtImg from '../assets/magic_academy_text.png';
 import wonderStudioTxtImg from '../assets/wonder_studio_text.png';
 import sunshineValleyTxtImg from '../assets/sunshine_valley_text.png';
 import { FEATURES_TOOLTIPS } from '../data/featuresData';
-
-// Assets (Using placeholders/gradients if image is missing, but keeping the requested img tag)
-// Assuming the user will provide 'world_map_v2.jpg' or we use a gradient for now.
-
-
+import { DailyTreasureMap } from '../components/dashboard/DailyTreasureMap';
+import { Trophy } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
     const [activeZone, setActiveZone] = useState<null | 'academy' | 'studio' | 'valley'>(null);
+    const [showTreasure, setShowTreasure] = useState(false);
+    const [isIpadLandscape, setIsIpadLandscape] = useState(false);
+
+    // Background Video Ref
+    const bgVideoRef = useRef<HTMLVideoElement>(null);
+
+    // Smart Background Logic: Play Audio Only Once Per Hour
+    useEffect(() => {
+        const video = bgVideoRef.current;
+        if (!video) return;
+
+        const COOLDOWN_MS = 60 * 60 * 1000; // 1 Hour
+        const now = Date.now();
+        const lastPlayedStr = localStorage.getItem('home_audio_last_played');
+        const lastPlayed = lastPlayedStr ? parseInt(lastPlayedStr, 10) : 0;
+
+        const shouldPlayAudio = !lastPlayed || (now - lastPlayed > COOLDOWN_MS);
+
+        if (shouldPlayAudio) {
+            console.log("🔊 [HomePage] Starting with Audio (First time/After cooldown)");
+            // Mark as played immediately
+            localStorage.setItem('home_audio_last_played', now.toString());
+
+            // 1. Play with Sound
+            video.muted = false;
+            video.loop = false;
+
+            // 2. Switch to Muted Loop on End
+            const handleEnded = () => {
+                console.log("🔊 -> 🔇 Audio finished. Switching to muted loop.");
+                video.muted = true;
+                video.loop = true;
+                video.play().catch(e => console.log("Loop play failed", e));
+            };
+            video.addEventListener('ended', handleEnded);
+
+            video.play().catch(err => {
+                console.warn("Autoplay with sound blocked:", err);
+                // Fallback
+                video.muted = true;
+                video.loop = true;
+                video.play();
+            });
+
+            return () => video.removeEventListener('ended', handleEnded);
+
+        } else {
+            console.log("🔇 [HomePage] Audio cooldown active. Starting muted.");
+            // 3. Play Muted Loop Immediately
+            video.muted = true;
+            video.loop = true;
+            video.play().catch(e => console.log("Muted autoplay failed", e));
+        }
+    }, [isIpadLandscape]); // Re-run if we switch back from iPad mode to ensure video plays
+
+    // iPad Landscape Detection Logic
+    useEffect(() => {
+        const checkIpadLandscape = () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const isLandscape = width > height;
+            // iPad range is typically 1024 to 1366. 
+            // We removed hasTouch check to allow easier testing on desktop resizing.
+            const isIpadSize = width >= 1024 && width <= 1366;
+
+            if (isIpadSize && isLandscape) {
+                console.log("📱 iPad Landscape Mode Detected: Using static background");
+            }
+
+            setIsIpadLandscape(isIpadSize && isLandscape);
+        };
+
+        checkIpadLandscape();
+        window.addEventListener('resize', checkIpadLandscape);
+        return () => window.removeEventListener('resize', checkIpadLandscape);
+    }, []);
 
     // Helper to handle clicks on the background/empty space to close menus
     const handleBackgroundClick = () => {
         setActiveZone(null);
     };
 
+    // DEBUG: Window Dimensions
+    const [dim, setDim] = useState({ w: window.innerWidth, h: window.innerHeight });
+    useEffect(() => {
+        const handleResize = () => setDim({ w: window.innerWidth, h: window.innerHeight });
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
         <div
-            className="relative w-full h-screen overflow-hidden bg-sky-100"
+            className="relative w-full min-h-[100dvh] overflow-hidden bg-slate-900"
             onClick={handleBackgroundClick} // Clicking anywhere resets, stopPropagation on buttons prevents this
         >
 
-            {/* 1. 地图背景层 (Map Background Layer) */}
-            <div className={`w-full h-full transition-transform duration-700 ease-in-out ${activeZone ? 'scale-110' : 'scale-100'}`}>
-                {/* 
-            Fallback to a gradient if image is missing/loading. 
-            In a real scenario, we'd use a real map image. 
-            For now, visual zones are approximated by the background.
-         */}
-                <video
-                    src="/assets/HOME1.mp4"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover z-0"
-                />
+            {/* 1. 地图背景层 (Map Background Layer) - Fixed full screen coverage */}
+            <div className={`fixed inset-0 transition-transform duration-700 ease-in-out ${activeZone && !isIpadLandscape ? 'scale-110' : 'scale-100'}`}>
+
+                {/* DEBUG OVERLAY - REMOVE LATER */}
+                <div className="fixed top-0 left-0 bg-black/50 text-white p-2 z-[9999] text-xs pointer-events-none">
+                    W: {dim.w} | H: {dim.h} | iPad: {isIpadLandscape ? 'YES' : 'NO'} | V: Tile
+                </div>
+
+                {isIpadLandscape ? (
+                    <div
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundImage: 'url(/assets/bg1.png?v=tile_mode)',
+                            backgroundRepeat: 'repeat', // "平铺" = Tile
+                            backgroundPosition: 'top left',
+                            backgroundSize: 'auto', // Original size, no stretch
+                            backgroundColor: 'red' // Fallback to see if div is there
+                        }}
+                    />
+                ) : (
+                    <video
+                        src={backgroundVideo}
+                        playsInline
+                        disablePictureInPicture
+                        disableRemotePlayback
+                        onContextMenu={(e) => e.preventDefault()}
+                        className="bg-cover-fixed"
+                        style={{ userSelect: 'none' }}
+                    />
+                )}
             </div>
 
             {/* 
@@ -65,7 +164,6 @@ export const HomePage: React.FC = () => {
 
             {/* 🏰 Zone A: Magic Academy (Top Left) */}
             {/* Positioned roughly where the castle would be */}
-            {/* Positioned roughly where the castle would be */}
             <div className="absolute top-[10%] left-[1%] w-[40%] h-[35%] z-10 pointer-events-none">
                 {/* The visual anchor/button */}
                 <button
@@ -73,30 +171,78 @@ export const HomePage: React.FC = () => {
                     className="w-full h-full pointer-events-auto group outline-none focus:outline-none"
                 >
                     {/* Visual Placeholder for the Castle if not using bg image */}
-                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'academy' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
-                        {/* ICON REMOVED per user request */}
-                        {/* <div className="text-6xl md:text-8xl drop-shadow-2xl filter">🏰</div> */}
-                        <div className="inline-block bg-white/12 backdrop-blur-[2px] rounded-xl px-1.5 py-0.5 border border-white/15">
+                    <motion.div
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                        animate={{
+                            y: activeZone === 'academy' ? ["-50%", "-55%", "-50%"] : ["-50%", "-55%", "-50%"],
+                            scale: activeZone === 'academy' ? 1.1 : [0.98, 1.02, 0.98]
+                        }}
+                        whileHover={{ scale: 1.15, rotate: [0, -2, 2, 0] }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{
+                            y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                            scale: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
+                            rotate: { duration: 0.6, ease: "easeInOut" }
+                        }}
+                    >
+                        <motion.div
+                            className="inline-block bg-white/40 rounded-3xl px-3 py-1.5 border-4 border-white transition-all duration-300 group-hover:border-white/90"
+                            animate={{
+                                boxShadow: [
+                                    "0 0 25px rgba(255,255,255,0.6)",
+                                    "0 0 45px rgba(255,255,255,0.9)",
+                                    "0 0 25px rgba(255,255,255,0.6)"
+                                ]
+                            }}
+                            transition={{
+                                boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
+                            }}
+                        >
                             <img
                                 src={magicAcademyTxtImg}
                                 alt="Magic Academy"
-                                className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                                className="w-32 md:w-44 object-contain drop-shadow-2xl opacity-100 transition-opacity"
                             />
-                        </div>
-                    </div>
+                            {/* DEBUG BADGE */}
+                            <div className="absolute -top-4 -right-4 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full z-50 animate-bounce">
+                                V2 DEBUG
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 </button>
 
                 {/* Pop-up Menu */}
                 <AnimatePresence>
                     {activeZone === 'academy' && (
-                        <FanMenu
+                        <FanMenuV2
                             items={[
-                                { label: FEATURES_TOOLTIPS.art_coach.label, to: '/creative-journey', videoSrc: creativeJourneyVid, description: FEATURES_TOOLTIPS.art_coach.desc },
-                                { label: FEATURES_TOOLTIPS.art_class.label, to: '/art-class', videoSrc: artStudioVid, description: FEATURES_TOOLTIPS.art_class.desc },
-                                { label: FEATURES_TOOLTIPS.art_studio.label, to: '/magic-art', videoSrc: magicLabVid, description: FEATURES_TOOLTIPS.art_studio.desc }
+                                {
+                                    label: FEATURES_TOOLTIPS.art_coach.label,
+                                    shortDesc: FEATURES_TOOLTIPS.art_coach.shortDesc,
+                                    to: '/creative-journey',
+                                    videoSrc: creativeJourneyVid,
+                                    description: FEATURES_TOOLTIPS.art_coach.desc,
+                                    icon: "🎨"
+                                },
+                                {
+                                    label: FEATURES_TOOLTIPS.art_class.label,
+                                    shortDesc: FEATURES_TOOLTIPS.art_class.shortDesc,
+                                    to: '/art-class',
+                                    videoSrc: artStudioVid,
+                                    description: FEATURES_TOOLTIPS.art_class.desc,
+                                    icon: "🏫"
+                                },
+                                {
+                                    label: FEATURES_TOOLTIPS.art_studio.label,
+                                    shortDesc: FEATURES_TOOLTIPS.art_studio.shortDesc,
+                                    to: '/magic-studio',
+                                    videoSrc: magicLabVid,
+                                    description: FEATURES_TOOLTIPS.art_studio.desc,
+                                    icon: "🖌️"
+                                }
                             ]}
-                            position="flat-top"
-                            radius={110}
+                            position="flat-bottom"
+                            radius={85}
                             spread={120}
                         />
                     )}
@@ -104,73 +250,140 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* 🎡 Zone B: Wonder Studio (Top Right) */}
-            <div className="absolute top-[10%] right-0 w-[40%] h-[35%] z-10 pointer-events-none">
+            <div className="absolute top-[26%] right-0 w-[40%] h-[35%] z-10 pointer-events-none">
                 <button
                     onClick={(e) => { e.stopPropagation(); setActiveZone('studio'); }}
                     className="w-full h-full pointer-events-auto group outline-none focus:outline-none"
                 >
-                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'studio' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
-                        {/* ICON REMOVED per user request */}
-                        {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🎡</div> */}
-                        <div className="inline-block bg-white/12 backdrop-blur-[2px] rounded-xl px-1.5 py-0.5 border border-white/15">
+                    <motion.div
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                        animate={{
+                            y: activeZone === 'studio' ? ["-50%", "-55%", "-50%"] : ["-50%", "-56%", "-50%"],
+                            scale: activeZone === 'studio' ? 1.1 : [0.98, 1.02, 0.98]
+                        }}
+                        whileHover={{ scale: 1.15, rotate: [0, 2, -2, 0] }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{
+                            y: { duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 },
+                            scale: { duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 },
+                            rotate: { duration: 0.6, ease: "easeInOut" }
+                        }}
+                    >
+                        <motion.div
+                            className="inline-block bg-white/40 rounded-3xl px-3 py-1.5 border-4 border-white transition-all duration-300 group-hover:border-white/90"
+                            animate={{
+                                boxShadow: [
+                                    "0 0 25px rgba(255,255,255,0.6)",
+                                    "0 0 50px rgba(139,92,246,0.8)",
+                                    "0 0 25px rgba(255,255,255,0.6)"
+                                ]
+                            }}
+                            transition={{
+                                boxShadow: { duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }
+                            }}
+                        >
                             <img
                                 src={wonderStudioTxtImg}
                                 alt="Wonder Studio"
-                                className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                                className="w-32 md:w-44 object-contain drop-shadow-2xl opacity-100 transition-opacity"
                             />
-                        </div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 </button>
 
                 <AnimatePresence>
                     {activeZone === 'studio' && (
-                        <FanMenu
+                        <FanMenuV2
                             items={[
-                                { label: FEATURES_TOOLTIPS.cartoon_book.label, to: '/cartoon-book/builder', videoSrc: cartoonBookVid, description: FEATURES_TOOLTIPS.cartoon_book.desc },
-                                { label: FEATURES_TOOLTIPS.picture_book.label, to: '/generate/picture', videoSrc: pictureBookVid, description: FEATURES_TOOLTIPS.picture_book.desc },
-                                { label: FEATURES_TOOLTIPS.animation_studio.label, to: '/make-cartoon', videoSrc: cartoonVid, description: FEATURES_TOOLTIPS.animation_studio.desc },
-                                { label: FEATURES_TOOLTIPS.video.label, to: '/generate/video', videoSrc: videoVid, description: FEATURES_TOOLTIPS.video.desc },
-                                { label: FEATURES_TOOLTIPS.comic.label, to: '/generate/comic', videoSrc: comicVid, description: FEATURES_TOOLTIPS.comic.desc }
+                                { label: FEATURES_TOOLTIPS.cartoon_book.label, shortDesc: FEATURES_TOOLTIPS.cartoon_book.shortDesc, to: '/cartoon-book/builder', videoSrc: cartoonBookVid, description: FEATURES_TOOLTIPS.cartoon_book.desc },
+                                { label: FEATURES_TOOLTIPS.picture_book.label, shortDesc: FEATURES_TOOLTIPS.picture_book.shortDesc, to: '/generate/picture', videoSrc: pictureBookVid, description: FEATURES_TOOLTIPS.picture_book.desc },
+                                { label: FEATURES_TOOLTIPS.animation_studio.label, shortDesc: FEATURES_TOOLTIPS.animation_studio.shortDesc, to: '/make-cartoon', videoSrc: cartoonVid, description: FEATURES_TOOLTIPS.animation_studio.desc },
+                                { label: FEATURES_TOOLTIPS.video.label, shortDesc: FEATURES_TOOLTIPS.video.shortDesc, to: '/generate/video', videoSrc: videoVid, description: FEATURES_TOOLTIPS.video.desc },
+                                { label: FEATURES_TOOLTIPS.comic.label, shortDesc: FEATURES_TOOLTIPS.comic.shortDesc, to: '/generate/comic', videoSrc: comicVid, description: FEATURES_TOOLTIPS.comic.desc },
+                                { label: FEATURES_TOOLTIPS.audio.label, shortDesc: FEATURES_TOOLTIPS.audio.shortDesc, to: '/generate/audio', videoSrc: audioVid, description: FEATURES_TOOLTIPS.audio.desc, isFree: true }
                             ]}
                             position="surround"
-                            radius={90}
-                            spread={110}
+                            radius={150}
+                            spread={130}
                         />
                     )}
                 </AnimatePresence>
             </div>
 
-            {/* 🌳 Zone C: Sunshine Valley (Bottom Center) */}
-            <div className="absolute bottom-[20%] left-[25%] w-[50%] h-[30%] z-10 pointer-events-none">
+            {/* 🌳 Zone C: Sunshine Valley (Bottom Left) */}
+            <div className="absolute bottom-[20%] left-[8%] w-[45%] h-[30%] z-10 pointer-events-none">
                 <button
                     onClick={(e) => { e.stopPropagation(); setActiveZone('valley'); }}
                     className="w-full h-full pointer-events-auto group outline-none focus:outline-none"
                 >
-                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ${activeZone === 'valley' ? 'scale-110 brightness-110' : 'scale-100 hover:scale-105'}`}>
-                        {/* ICON REMOVED per user request */}
-                        {/* <div className="text-6xl md:text-8xl drop-shadow-2xl">🌳</div> */}
-                        <div className="inline-block bg-white/12 backdrop-blur-[2px] rounded-xl px-1.5 py-0.5 border border-white/15">
+                    <motion.div
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                        animate={{
+                            y: activeZone === 'valley' ? ["-50%", "-55%", "-50%"] : ["-50%", "-54%", "-50%"],
+                            scale: activeZone === 'valley' ? 1.1 : [0.98, 1.02, 0.98]
+                        }}
+                        whileHover={{ scale: 1.15, rotate: [0, -2, 2, 0] }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{
+                            y: { duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 },
+                            scale: { duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1 },
+                            rotate: { duration: 0.6, ease: "easeInOut" }
+                        }}
+                    >
+                        <motion.div
+                            className="inline-block bg-white/40 rounded-3xl px-3 py-1.5 border-4 border-white transition-all duration-300 group-hover:border-white/90"
+                            animate={{
+                                boxShadow: [
+                                    "0 0 25px rgba(255,255,255,0.6)",
+                                    "0 0 50px rgba(34,197,94,0.8)",
+                                    "0 0 25px rgba(255,255,255,0.6)"
+                                ]
+                            }}
+                            transition={{
+                                boxShadow: { duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1 }
+                            }}
+                        >
                             <img
                                 src={sunshineValleyTxtImg}
                                 alt="Sunshine Valley"
-                                className="w-48 md:w-64 object-contain drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-opacity"
+                                className="w-32 md:w-44 object-contain drop-shadow-2xl opacity-100 transition-opacity"
                             />
-                        </div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 </button>
 
                 <AnimatePresence>
                     {activeZone === 'valley' && (
-                        <FanMenu
+                        <FanMenuV2
                             items={[
-                                { label: FEATURES_TOOLTIPS.mirror.label, to: '/magic-discovery', videoSrc: mirrorBtnVid, description: FEATURES_TOOLTIPS.mirror.desc },
-                                { label: FEATURES_TOOLTIPS.jump_into_art.label, to: '/jump-into-art', videoSrc: jumpVid, description: FEATURES_TOOLTIPS.jump_into_art.desc },
-                                { label: FEATURES_TOOLTIPS.card.label, to: '/generate/greeting-card', videoSrc: cardVid, description: FEATURES_TOOLTIPS.card.desc },
-                                { label: FEATURES_TOOLTIPS.audio.label, to: '/generate/audio', videoSrc: audioVid, description: FEATURES_TOOLTIPS.audio.desc }
+                                {
+                                    label: FEATURES_TOOLTIPS.mirror.label,
+                                    shortDesc: FEATURES_TOOLTIPS.mirror.shortDesc,
+                                    to: '/magic-art',
+                                    videoSrc: mirrorBtnVid,
+                                    description: FEATURES_TOOLTIPS.mirror.desc,
+                                    icon: "🪞"
+                                },
+                                {
+                                    label: FEATURES_TOOLTIPS.jump_into_art.label,
+                                    shortDesc: FEATURES_TOOLTIPS.jump_into_art.shortDesc,
+                                    to: '/jump-into-art',
+                                    videoSrc: jumpVid,
+                                    description: FEATURES_TOOLTIPS.jump_into_art.desc,
+                                    icon: "🕺"
+                                },
+                                {
+                                    label: FEATURES_TOOLTIPS.card.label,
+                                    shortDesc: FEATURES_TOOLTIPS.card.shortDesc,
+                                    to: '/generate/greeting-card',
+                                    videoSrc: cardVid,
+                                    description: FEATURES_TOOLTIPS.card.desc,
+                                    icon: "💌"
+                                }
                             ]}
-                            position="flat-bottom"
-                            radius={110}
-                            spread={110}
+                            position="flat-top"
+                            radius={130}
+                            spread={100}
                         />
                     )}
                 </AnimatePresence>
@@ -191,6 +404,43 @@ export const HomePage: React.FC = () => {
                 </div>
             </div>
 
+
+
+            {/* 🗺️ Daily Treasure Map Overlay */}
+            <AnimatePresence>
+                {showTreasure && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                        onClick={() => setShowTreasure(false)}
+                    >
+                        <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
+                            <DailyTreasureMap />
+                            <button
+                                onClick={() => setShowTreasure(false)}
+                                className="mt-4 w-full py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-2xl border border-white/10 transition-colors"
+                            >
+                                Close Map
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 🏆 Treasure Toggle Button */}
+            <div className="absolute top-24 right-5 z-20">
+                <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => { e.stopPropagation(); setShowTreasure(true); }}
+                    className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white group relative"
+                >
+                    <Trophy className="w-7 h-7 text-slate-900 group-hover:rotate-12 transition-transform" />
+                    {/* Pulsing indicator if unclaimed? (Future enhancement) */}
+                </motion.button>
+            </div>
         </div>
     );
 };

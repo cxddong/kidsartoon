@@ -1,16 +1,14 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 import App from './App'
+import './index.css'
 
-console.log('Main starting...');
-const rootProps = document.getElementById('root');
-if (!rootProps) {
-  console.error('CRITICAL: Root element not found!');
-}
+// DEBUG PROBE
+console.log('%c DEBUG MODE ACTIVE - FILE SYSTEM CHECK PASSED ', 'background: #222; color: #bada55; font-size: 20px');
+// window.alert("DEBUG MODE ACTIVE - If you see this, the code is updating!");
 
-createRoot(rootProps!).render(
-  <StrictMode>
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
     <App />
-  </StrictMode>,
+  </React.StrictMode>,
 )

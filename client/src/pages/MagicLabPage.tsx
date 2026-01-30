@@ -9,6 +9,7 @@ import magicLabBg from '../assets/magiclab.mp4';
 interface Message {
     role: 'user' | 'assistant';
     content: string;
+    actionRoute?: string;
 }
 
 const QUICK_ACTIONS = [
@@ -132,6 +133,28 @@ export const MagicLabPage: React.FC = () => {
     /**
      * 🎵 Sequential Audio Player
      */
+    const stopAudio = () => {
+        // Clear queue
+        audioQueue.current = [];
+        // Stop current audio
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        // Stop AI generation stream if active
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        // Reset states
+        isPlayingRef.current = false;
+        setIsPlaying(false);
+        setIsLoading(false);
+    };
+
+    /**
+     * 🎵 Sequential Audio Player
+     */
     const playAudioQueue = () => {
         if (isPlayingRef.current || audioQueue.current.length === 0) return;
 
@@ -144,16 +167,21 @@ export const MagicLabPage: React.FC = () => {
 
         audio.onended = () => {
             isPlayingRef.current = false;
-            setIsPlaying(false);
-            audioRef.current = null;
-            playAudioQueue(); // Play next in line
+            setIsPlaying(false); // Briefly false between segments? Maybe keep true if queue has items? 
+            // Better: Check queue
+            if (audioQueue.current.length > 0) {
+                playAudioQueue();
+            } else {
+                setIsPlaying(false);
+                audioRef.current = null;
+            }
         };
 
         audio.play().catch(err => {
             console.error('[MagicLab] Audio playback failed:', err);
             isPlayingRef.current = false;
             setIsPlaying(false);
-            playAudioQueue();
+            if (audioQueue.current.length > 0) playAudioQueue();
         });
     };
 
@@ -266,15 +294,47 @@ export const MagicLabPage: React.FC = () => {
                             fullTextRef.current += data.content;
                             // Trigger typewriter to catch up to fullTextRef.current
                             startTypewriter(fullTextRef.current, aiMsgIndex);
+
+                            // FAIL-SAFE: Check for ACTION in text locally if backend event missed
+                            const localActionMatch = fullTextRef.current.match(/ACTION:\s*navigate:\s*([\w\-/]+)/i);
+                            if (localActionMatch) {
+                                const matchedRoute = localActionMatch[1];
+                                setMessages(prev => {
+                                    const newMessages = [...prev];
+                                    const lastMsg = newMessages[newMessages.length - 1];
+                                    if (lastMsg && lastMsg.role === 'assistant' && !lastMsg.actionRoute) {
+                                        newMessages[newMessages.length - 1] = {
+                                            ...lastMsg,
+                                            actionRoute: matchedRoute
+                                        };
+                                        // Also trigger pending nav for floating button
+                                        setPendingNavigation({ route: matchedRoute });
+                                    }
+                                    return newMessages;
+                                });
+                            }
                         } else if (data.type === 'audio') {
                             console.log(`[MagicLab] Received audio segment, queueing...`);
                             // Push to audio queue and trigger playback
                             audioQueue.current.push(data.audio);
                             playAudioQueue();
                         } else if (data.type === 'action') {
+                            setMessages(prev => {
+                                const newMessages = [...prev];
+                                const lastMsg = newMessages[newMessages.length - 1];
+                                if (lastMsg && lastMsg.role === 'assistant') {
+                                    newMessages[newMessages.length - 1] = {
+                                        ...lastMsg,
+                                        actionRoute: data.action.route
+                                    };
+                                }
+                                return newMessages;
+                            });
+                            // Also set pending for floating button (optional, can remove later)
                             setPendingNavigation({ route: data.action.route });
                         } else if (data.type === 'done') {
-                            setConversationHistory(data.conversationHistory);
+                            // Don't overwrite locally typed messages with history to prevent flickering
+                            // Just ensure the action is preserved if it exists
                         }
                     } catch (e) {
                         console.warn("[MagicLab] SSE Parse Error:", e);
@@ -412,7 +472,7 @@ export const MagicLabPage: React.FC = () => {
             </div>
 
             {/* Header */}
-            <header className="p-4 flex items-center justify-between gap-4 z-10">
+            <header className="p-4 landscape:p-2 flex items-center justify-between gap-4 z-10">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/home')}
@@ -421,10 +481,10 @@ export const MagicLabPage: React.FC = () => {
                         <ArrowLeft className="w-6 h-6 text-white" />
                     </button>
                     <div className="flex flex-col">
-                        <h1 className="text-2xl md:text-3xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                        <h1 className="text-2xl md:text-3xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] landscape:text-xl">
                             Magic Kat Guide ✨
                         </h1>
-                        <p className="text-white/80 text-sm font-bold">Your Creative Assistant</p>
+                        <p className="text-white/80 text-sm font-bold landscape:hidden">Your Creative Assistant</p>
                     </div>
                 </div>
                 <button
@@ -437,8 +497,9 @@ export const MagicLabPage: React.FC = () => {
             </header >
 
             {/* Chat Messages */}
-            < div className="flex-1 overflow-y-auto px-4 py-6 z-10 pb-32" >
+            < div className="flex-1 overflow-y-auto px-4 py-6 z-10 pb-32 landscape:pb-24" >
                 <div className="max-w-3xl mx-auto space-y-4">
+                    {/* ... (messages mapped here) ... */}
                     <AnimatePresence>
                         {messages.map((msg, index) => (
                             <motion.div
@@ -448,7 +509,7 @@ export const MagicLabPage: React.FC = () => {
                                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div
-                                    className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user'
+                                    className={`max-w-[80%] landscape:max-w-[60%] rounded-2xl p-4 ${msg.role === 'user'
                                         ? 'bg-purple-600 text-white'
                                         : 'bg-white/90 backdrop-blur-md text-gray-900 border-2 border-purple-200'
                                         }`}
@@ -461,7 +522,22 @@ export const MagicLabPage: React.FC = () => {
                                             <span className="text-xs font-bold text-purple-600">Magic Kat</span>
                                         </div>
                                     )}
-                                    <p className="text-sm md:text-base whitespace-pre-wrap">{msg.content}</p>
+                                    <p className="text-sm md:text-base whitespace-pre-wrap">
+                                        {msg.content.replace(/ACTION:navigate:[^\s]+/i, '').trim()}
+                                    </p>
+
+                                    {/* Inline Navigation Button */}
+                                    {msg.actionRoute && (
+                                        <motion.button
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="mt-3 w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-3 rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 hover:from-purple-600 hover:to-indigo-700 transition-all hover:scale-[1.02]"
+                                            onClick={() => navigate(msg.actionRoute!)}
+                                        >
+                                            <Sparkles className="w-4 h-4" />
+                                            Go to Page
+                                        </motion.button>
+                                    )}
                                 </div>
                             </motion.div>
                         ))}
@@ -602,11 +678,18 @@ export const MagicLabPage: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Speaker Indicator (when AI is speaking) */}
-                        {isPlaying && (
-                            <div className="p-4 bg-green-500 rounded-full shadow-xl">
-                                <Volume2 className="w-6 h-6 text-white animate-pulse" />
-                            </div>
+                        {/* Stop Button (Replaces Speaker Indicator) */}
+                        {(isPlaying || isLoading) && (
+                            <button
+                                type="button"
+                                onClick={stopAudio}
+                                className="p-4 bg-red-500 rounded-full shadow-xl hover:bg-red-600 transition-all active:scale-95 group"
+                                title="Stop Magic Kat"
+                            >
+                                <div className="w-6 h-6 flex items-center justify-center">
+                                    <div className="w-3 h-3 bg-white rounded-sm group-hover:w-4 group-hover:h-4 transition-all" />
+                                </div>
+                            </button>
                         )}
                     </div>
                 </form>

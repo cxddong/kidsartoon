@@ -376,10 +376,13 @@ You must respond in JSON format. Always return a valid JSON object:
              * AVOID "Generic Cartoon". 
              * TRY: "Tim Burton Style", "Studio Ghibli Vibes", "Picasso Abstract", "Whimsical Doodle", "Royal Sketch", "Action Manga".
            - "reason": "Why it matches" (e.g. "The big eyes and flowy lines look like anime!").
-        4. **contentKeywords**: (string[]) A list of 8 specific keywords describing the SUBJECT MATTER (e.g. "mermaid", "princess", "crown", "braid", "fish", "tail", "ocean", "star").
-        5. **magicConnections**: (object[]) Identify specific Movies, Books, or Cartoons that this image reminds you of.
-           Format: [{ "title": "Title", "type": "Movie/Book", "reason": "Why it connects" }]
-           Example: Drawing of a fish -> Finding Nemo. Drawing of a toy -> Toy Story.
+           - "vibe": "Describe the emotional vibe (e.g. Brave, Cozy, Epic, Silly)".
+        4. **contentKeywords**: (string[]) A list of 8-10 specific keywords describing the SUBJECT MATTER, SHAPES, and COLORS (e.g. "dragon", "armor", "mecha", "sword").
+           * IMPORTANT: Check for any TEXT or NAMES written in the image (e.g. "Optimus Prime", "Elsa") and include them as keywords!
+        5. **magicConnections**: (object[]) Identify specific Movies, TV Shows, Novels, or Cartoons that this image reminds you of.
+           * CRITICAL: If you recognize a famous character (e.g. Optimus Prime, Spider-Man, Elsa, Pikachu), you MUST include that specific franchise as the top connection.
+           * Be creative! Think beyond Disney: Transformers, Studio Ghibli, Harry Potter, Pokémon, classic children's novels, popular kids TV series.
+           * Format: [{ "title": "Title", "type": "Movie/TV Show/Novel/Cartoon", "reason": "Why it connects (e.g. It's clearly a drawing of Optimus Prime from Transformers!)" }]
         
         Return STRICT JSON format.
         `;

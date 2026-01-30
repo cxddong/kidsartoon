@@ -28,6 +28,40 @@ router.get('/public', async (req, res) => {
     }
 });
 
+// GET /api/images/proxy?url=...
+router.get('/proxy', async (req, res) => {
+    try {
+        const imageUrl = req.query.url as string;
+        if (!imageUrl) {
+            return res.status(400).json({ error: 'url query parameter is required' });
+        }
+
+        console.log(`[Proxy] Fetching: ${imageUrl}`);
+
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+            console.error(`[Proxy] Failed to fetch image: ${response.status} ${response.statusText}`);
+            return res.status(response.status).send(`Failed to fetch image: ${response.statusText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+            res.setHeader('Content-Type', contentType);
+        }
+
+        // Add aggressive caching for proxied images
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+        // Convert Response to Buffer for sending
+        const arrayBuffer = await response.arrayBuffer();
+        res.send(Buffer.from(arrayBuffer));
+
+    } catch (error) {
+        console.error("[Proxy] Error:", error);
+        res.status(500).json({ error: 'Internal proxy error' });
+    }
+});
+
 // GET /api/images/:userId
 router.get('/:userId', async (req, res) => {
     try {

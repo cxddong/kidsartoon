@@ -6,7 +6,7 @@ import GenerationCancelButton from '../components/GenerationCancelButton';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { AuthButton } from '../components/auth/AuthButton';
 import { useAuth } from '../context/AuthContext';
-import { MAGIC_ACTIONS, MAGIC_STYLES, MAGIC_EFFECTS, VIDEO_DURATION_OPTIONS } from '../components/builder/AnimationBuilderPanel';
+import { MAGIC_ACTIONS, OBJECT_ACTIONS, MAGIC_STYLES, MAGIC_EFFECTS, VIDEO_DURATION_OPTIONS } from '../components/builder/AnimationBuilderPanel';
 import { PureVideoPlayer } from '../components/PureVideoPlayer';
 import { PuzzleButton } from '../components/puzzle/PuzzleButton';
 import { PuzzleGame } from '../components/puzzle/PuzzleGame';
@@ -21,8 +21,12 @@ import spellCinemaIcon from '../assets/spells/cinema.png';
 import audioTalkIcon from '../assets/audio/talk.png';
 import audioSceneIcon from '../assets/audio/scene.png';
 import voiceCuteIcon from '../assets/voices/cute.png';
-import voiceRobotIcon from '../assets/voices/robot.png';
-import voiceMonsterIcon from '../assets/voices/monster.png';
+import voiceRobotIcon from '../assets/voices/robot.jpg';
+import voiceMonsterIcon from '../assets/voices/monster.jpg';
+import voiceGirlIcon from '../assets/voices/girl.jpg';
+import voiceBoyIcon from '../assets/voices/boy.jpg';
+import voiceWomanIcon from '../assets/voices/woman.jpg';
+import voiceManIcon from '../assets/voices/man.png';
 import moodHappyIcon from '../assets/moods/happy.png';
 import moodMysteryIcon from '../assets/moods/mystery.png';
 import moodActionIcon from '../assets/moods/action.png';
@@ -110,7 +114,6 @@ const MemoVideoPlayer = memo(({ url, poster, initialMuted = true }: { url: strin
                 muted={isMuted} // Controlled by state
                 loop
                 playsInline
-                crossOrigin="anonymous"
                 preload="auto"
                 className="w-full max-h-[70vh] aspect-square md:aspect-video bg-black"
                 onLoadedData={handleAutoPlay}
@@ -150,41 +153,6 @@ const MemoVideoPlayer = memo(({ url, poster, initialMuted = true }: { url: strin
     );
 });
 
-// Mock Lock Overlay for VIP Early Access
-const LockOverlay = ({ onUnlock }: { onUnlock: () => void }) => (
-    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-6 text-center">
-        <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-gradient-to-br from-slate-900 to-black border border-purple-500/30 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
-        >
-            {/* Background Glow */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-purple-500/20 blur-3xl rounded-full pointer-events-none" />
-
-            <div className="relative z-10 flex flex-col items-center">
-                <div className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/30">
-                    <Sparkles className="w-8 h-8 text-purple-400" />
-                </div>
-
-                <h2 className="text-2xl font-black text-white mb-2">VIP Early Access</h2>
-                <p className="text-indigo-200 text-sm mb-8 leading-relaxed">
-                    Magic Video is currently in exclusive beta for our VIP members. Join the waitlist or upgrade to start creating movies today!
-                </p>
-
-                <div className="space-y-3 w-full">
-                    <button onClick={() => window.location.href = '/pricing'} className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-white hover:scale-105 transition-transform shadow-lg flex items-center justify-center gap-2">
-                        <span>Get VIP Access</span>
-                        <ArrowRight className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => alert("Added to waitlist! We'll notify you soon.")} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl font-bold text-white/60 hover:bg-white/10 transition-colors text-sm">
-                        Join Waitlist
-                    </button>
-                </div>
-            </div>
-        </motion.div>
-    </div>
-);
-
 export const MagicMoviePage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -192,6 +160,9 @@ export const MagicMoviePage: React.FC = () => {
     const [step, setStep] = useState<Step>('upload');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    // Subject Type (New V4.0)
+    const [subjectType, setSubjectType] = useState<'character' | 'object'>('character');
 
     // Params
     const [action, setAction] = useState<string | undefined>(MAGIC_ACTIONS[0].id);
@@ -218,11 +189,6 @@ export const MagicMoviePage: React.FC = () => {
     // Puzzle State
     const [showPuzzle, setShowPuzzle] = useState(false);
 
-    // VIP Check
-    const isVIP = useMemo(() => {
-        if (!user) return false;
-        return user.plan === 'pro' || user.plan === 'yearly_pro' || user.plan === 'admin';
-    }, [user]);
     const [renderId] = useState(() => Date.now().toString()); // Persistent ID for the current session
 
     const memoizedVideoUrl = useMemo(() => {
@@ -241,17 +207,54 @@ export const MagicMoviePage: React.FC = () => {
     };
 
     React.useEffect(() => {
-        const remixUrl = location.state?.remixImage;
+        // Handle Remix or Seamless Handoff
+        // @ts-ignore
+        let remixUrl = location.state?.remixImage || location.state?.preloadedImage || location.state?.autoUploadImage || sessionStorage.getItem('pending-art-upload');
+
+        // V3 Fix: Timeout for stability
+        setTimeout(() => {
+            let foundUrl = sessionStorage.getItem('magic_art_handoff');
+            console.log("🔍 [MagicMovie] Checking SessionStorage (V3). Found:", foundUrl ? "YES" : "NO");
+
+            if (foundUrl) {
+                remixUrl = foundUrl;
+                setImagePreview(remixUrl);
+                setStep('params');
+
+                // Fetch Blob
+                fetch(remixUrl)
+                    .then(res => res.blob())
+                    .then(blob => setImageFile(new File([blob], "remix.png", { type: blob.type })))
+                    .catch(e => console.error("Blob failed", e));
+            }
+        }, 100);
+
+        // Handle Navigation State immediately (if exists)
         if (remixUrl) {
-            setImagePreview(remixUrl);
-            setStep('params'); // Jump to params if remixing
             fetch(remixUrl)
                 .then(res => res.blob())
                 .then(blob => {
+                    console.log("[MagicMovie] ✅ Blob created. Size:", blob.size);
                     const file = new File([blob], "remix.png", { type: blob.type });
                     setImageFile(file);
                 })
-                .catch(err => console.error("Failed to load remix image:", err));
+                .catch(err => {
+                    console.warn("[MagicMovie] Fetch failed, trying direct DataURL conversion:", err);
+                    try {
+                        const arr = remixUrl.split(',');
+                        const mime = arr[0].match(/:(.*?);/)[1];
+                        const bstr = atob(arr[1]);
+                        let n = bstr.length;
+                        const u8arr = new Uint8Array(n);
+                        while (n--) {
+                            u8arr[n] = bstr.charCodeAt(n);
+                        }
+                        const file = new File([u8arr], "remix.png", { type: mime });
+                        setImageFile(file);
+                    } catch (e) {
+                        console.error("[MagicMovie] ❌ Failed all file conversion methods:", e);
+                    }
+                });
         }
     }, [location.state]);
 
@@ -321,20 +324,27 @@ export const MagicMoviePage: React.FC = () => {
         formData.append('sceneMood', sceneMood); // 'happy', 'mysterious', 'action'
 
         // Construct Detailed Prompt from Action/Style/Effect selections
+        // Construct Detailed Prompt from Action/Style/Effect selections
         // Backend (Seedance 1.5) ignores raw IDs, so we must send text descriptions
-        const actionPrompt = MAGIC_ACTIONS.find(a => a.id === action)?.prompt || '';
+        const allActions = [...MAGIC_ACTIONS, ...OBJECT_ACTIONS];
+        const selectedActionObj = allActions.find(a => a.id === action);
+        const actionPrompt = selectedActionObj?.prompt || '';
+
+        // NEW: Handle Camera Movement (for Object Magic)
+        if (selectedActionObj && (selectedActionObj as any).camera) {
+            formData.append('camera_movement', (selectedActionObj as any).camera);
+        }
+
         const stylePrompt = MAGIC_STYLES.find(s => s.id === style)?.prompt || '';
         const effectPrompt = MAGIC_EFFECTS.find(e => e.id === effect)?.prompt || '';
 
         // Combine with any manual videoPrompt (tags)
-        const fullPrompt = [
-            actionPrompt,
-            stylePrompt,
-            effectPrompt,
-            videoPrompt // Includes tags added via addTag
-        ].filter(Boolean).join('. ');
+        // Combine with any manual videoPrompt (tags)
+        // V4.0 Prompt Structure: Subject -> Action -> Style -> Mood
+        const fullPrompt = `subject: ${subjectType}, action: ${actionPrompt}, style: ${stylePrompt}, effect: ${effectPrompt}, scene: ${sceneMood} mood, ${textInput || ''} ${videoPrompt}`.trim();
 
         formData.append('videoPrompt', fullPrompt);
+        formData.append('subjectType', subjectType);
 
         if (textInput.trim()) {
             formData.append('textInput', textInput.trim()); // User's speech/scene description
@@ -342,7 +352,7 @@ export const MagicMoviePage: React.FC = () => {
 
 
         try {
-            setStatusMessage('Sending to AI...');
+            setStatusMessage('Sending to Magic Kat...');
             const response = await fetch('/api/media/image-to-video/task', {
                 method: 'POST',
                 body: formData,
@@ -382,7 +392,7 @@ export const MagicMoviePage: React.FC = () => {
                 throw new Error('No taskId received from server');
             }
 
-            setStatusMessage('AI is generating video...');
+            setStatusMessage('Magic Kat is generating video...');
 
             // Simulated progress (since backend doesn't provide real progress)
             let simulatedProgress = 0;
@@ -638,10 +648,7 @@ export const MagicMoviePage: React.FC = () => {
 
 
             <div className="flex-1 w-full overflow-y-auto custom-scrollbar relative z-10">
-                {/* VIP LOCK OVERLAY */}
-                {!isVIP && <LockOverlay onUnlock={() => { }} />}
-
-                <div className={cn("w-full max-w-7xl mx-auto px-4 py-6", !isVIP && "filter blur-sm pointer-events-none select-none")}>
+                <div className="w-full max-w-7xl mx-auto px-4 py-6">
 
                     {/* STEP 1: UPLOAD */}
                     {step === 'upload' && (
@@ -739,6 +746,54 @@ export const MagicMoviePage: React.FC = () => {
                             {/* STYLE & EFFECT - Stacked Rows */}
                             <div className="space-y-6 max-w-2xl mx-auto">
 
+                                {/* SUBJECT TYPE SELECTOR (New Requirement) */}
+                                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-slate-900/60 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
+                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">❓ What did you draw?</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => { setSubjectType('character'); setAction(MAGIC_ACTIONS[0].id); }}
+                                            className={cn(
+                                                "relative p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all overflow-hidden group",
+                                                subjectType === 'character'
+                                                    ? "bg-indigo-500/20 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)] ring-1 ring-indigo-400"
+                                                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <span className="text-4xl group-hover:scale-110 transition-transform">🦁</span>
+                                            <div className="text-center">
+                                                <div className="text-white font-bold text-lg">It's Alive!</div>
+                                                <div className="text-[10px] text-white/50">Person, Animal, Robot</div>
+                                            </div>
+                                            {subjectType === 'character' && (
+                                                <div className="absolute top-2 right-2 text-indigo-400">
+                                                    <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                                                </div>
+                                            )}
+                                        </button>
+
+                                        <button
+                                            onClick={() => { setSubjectType('object'); setAction(OBJECT_ACTIONS[0].id); setAudioMode('scene'); }}
+                                            className={cn(
+                                                "relative p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all overflow-hidden group",
+                                                subjectType === 'object'
+                                                    ? "bg-emerald-500/20 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)] ring-1 ring-emerald-400"
+                                                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <span className="text-4xl group-hover:scale-110 transition-transform">🏰</span>
+                                            <div className="text-center">
+                                                <div className="text-white font-bold text-lg">It's an Object!</div>
+                                                <div className="text-[10px] text-white/50">Toy, Building, Car</div>
+                                            </div>
+                                            {subjectType === 'object' && (
+                                                <div className="absolute top-2 right-2 text-emerald-400">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    </div>
+                                </motion.div>
+
                                 {/* STYLE ROW */}
                                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 bg-slate-900/60 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
                                     <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎨 Style</h3>
@@ -787,9 +842,11 @@ export const MagicMoviePage: React.FC = () => {
                             {/* ACTION ROW */}
                             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
                                 <div className="space-y-3 bg-slate-900/60 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
-                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">🎬 Action</h3>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 w-full">
-                                        {MAGIC_ACTIONS.map(act => (
+                                    <h3 className="text-white/90 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                                        🎬 {subjectType === 'character' ? 'Character Action' : 'Object Magic'}
+                                    </h3>
+                                    <div className="grid grid-cols-3 gap-2 w-full">
+                                        {(subjectType === 'character' ? MAGIC_ACTIONS : OBJECT_ACTIONS).map(act => (
                                             <button
                                                 key={act.id}
                                                 onClick={() => setAction(prev => prev === act.id ? undefined : act.id)}
@@ -885,19 +942,21 @@ export const MagicMoviePage: React.FC = () => {
 
                                     <div className={cn("transition-opacity duration-300", !isSoundOn && "opacity-50 pointer-events-none grayscale")}>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <button
-                                                onClick={() => setAudioMode('talk')}
-                                                className={cn(
-                                                    "flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden aspect-square",
-                                                    audioMode === 'talk' ? "ring-2 ring-pink-400 bg-pink-500/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
-                                                )}
-                                            >
-                                                <img src={audioTalkIcon} alt="Talk" className="absolute inset-0 w-full h-full object-cover" />
-                                                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1.5">
-                                                    <div className="text-sm font-bold text-white drop-shadow-lg text-center">Talk</div>
-                                                    <div className="text-[10px] text-slate-200 drop-shadow-md text-center">Character speaks</div>
-                                                </div>
-                                            </button>
+                                            {subjectType === 'character' && (
+                                                <button
+                                                    onClick={() => setAudioMode('talk')}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-3 rounded-xl border transition-all relative overflow-hidden aspect-square",
+                                                        audioMode === 'talk' ? "ring-2 ring-pink-400 bg-pink-500/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    <img src={audioTalkIcon} alt="Talk" className="absolute inset-0 w-full h-full object-cover" />
+                                                    <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1.5">
+                                                        <div className="text-sm font-bold text-white drop-shadow-lg text-center">Talk</div>
+                                                        <div className="text-[10px] text-slate-200 drop-shadow-md text-center">Character speaks</div>
+                                                    </div>
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => setAudioMode('scene')}
                                                 className={cn(
@@ -964,28 +1023,25 @@ export const MagicMoviePage: React.FC = () => {
                                                 <h4 className="text-white/70 text-xs font-bold uppercase tracking-wider mb-2">Voice Style</h4>
                                                 <div className="grid grid-cols-4 gap-2">
                                                     {[
-                                                        { id: 'girl', label: 'Girl', icon: '👧' },
-                                                        { id: 'boy', label: 'Boy', icon: '👦' },
-                                                        { id: 'woman', label: 'Lady', icon: '👩' },
-                                                        { id: 'man', label: 'Man', icon: '👨' },
-                                                        { id: 'cute', label: 'Cute', icon: '👶' },
-                                                        { id: 'robot', label: 'Robot', icon: '🤖' },
-                                                        { id: 'monster', label: 'Monster', icon: '👹' },
+                                                        { id: 'girl', label: 'Girl', icon: voiceGirlIcon },
+                                                        { id: 'boy', label: 'Boy', icon: voiceBoyIcon },
+                                                        { id: 'woman', label: 'Lady', icon: voiceWomanIcon },
+                                                        { id: 'man', label: 'Man', icon: voiceManIcon },
+                                                        { id: 'cute', label: 'Cute', icon: voiceCuteIcon },
+                                                        { id: 'robot', label: 'Robot', icon: voiceRobotIcon },
+                                                        { id: 'monster', label: 'Monster', icon: voiceMonsterIcon },
                                                     ].map(v => (
                                                         <button
                                                             key={v.id}
                                                             onClick={() => setVoiceStyle(v.id as any)}
                                                             className={cn(
-                                                                "flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all relative overflow-hidden aspect-square",
-                                                                voiceStyle === v.id ? "ring-2 ring-pink-300 bg-pink-400/20 border-transparent" : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                                "flex flex-col items-center justify-center p-0 rounded-xl border-2 transition-all relative overflow-hidden aspect-square group",
+                                                                voiceStyle === v.id ? "border-pink-400 ring-2 ring-pink-300 ring-offset-2 ring-offset-slate-900 scale-105 z-10" : "border-transparent bg-white/5 hover:bg-white/10 hover:border-white/20"
                                                             )}
                                                         >
-                                                            <div className="absolute inset-0 flex items-center justify-center opacity-20 text-4xl grayscale brightness-50">
-                                                                {/* Optional Background visual if needed */}
-                                                            </div>
-                                                            <div className="relative z-10 flex flex-col items-center">
-                                                                <div className="text-2xl mb-1 drop-shadow-md filter">{v.icon}</div>
-                                                                <div className="text-[9px] font-bold text-white text-center leading-tight">{v.label}</div>
+                                                            <img src={v.icon} alt={v.label} className="w-full h-full object-cover" />
+                                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm py-1">
+                                                                <div className="text-[10px] font-bold text-white text-center leading-tight">{v.label}</div>
                                                             </div>
                                                         </button>
                                                     ))}
@@ -1085,7 +1141,7 @@ export const MagicMoviePage: React.FC = () => {
                                 {step === 'generating' ? (
                                     <div className="w-full max-w-md bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl flex flex-col items-center text-center">
                                         <Loader2 className="w-12 h-12 text-purple-400 animate-spin mb-4" />
-                                        <h3 className="text-xl font-bold text-white mb-2">{statusMessage || "AI is casting magic..."}</h3>
+                                        <h3 className="text-xl font-bold text-white mb-2">{statusMessage || "Magic Kat is casting magic..."}</h3>
                                         <div className="w-full h-4 bg-black/30 rounded-full overflow-hidden mt-4">
                                             <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300" style={{ width: `${progress}%` }} />
                                         </div>
@@ -1223,5 +1279,6 @@ export const MagicMoviePage: React.FC = () => {
                 <MagicNavBar />
             </div>
         </div >
+
     );
 };

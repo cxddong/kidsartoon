@@ -4,7 +4,8 @@ import { Play, BookOpen, Image as ImageIcon, Share2, Heart, Wand2, Star, Faceboo
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import type { ImageRecord } from '../history/ImageModal';
-import { cn } from '../../lib/utils'; // Ensure we use utility
+import { cn } from '../../lib/utils';
+import { MagicVideoButton } from '../ui/MagicVideoButton'; // Ensure we use utility
 
 interface ContentGridProps {
     items: ImageRecord[];
@@ -140,25 +141,12 @@ const ContentCard = ({ item, onItemClick, user }: { item: ImageRecord, onItemCli
                             className="absolute inset-0 w-full h-full"
                         >
                             {item.type === 'animation' ? (
-                                <video
-                                    src={item.imageUrl}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                    muted
-                                    loop
-                                    playsInline
-                                    poster={optionalSrc}
-                                    onMouseOver={e => {
-                                        const p = e.currentTarget.play();
-                                        if (p !== undefined) {
-                                            p.catch(error => {
-                                                // Auto-play prevented (expected user interaction behavior)
-                                            });
-                                        }
-                                    }}
-                                    onMouseOut={e => {
-                                        e.currentTarget.pause();
-                                        e.currentTarget.currentTime = 0;
-                                    }}
+                                <MagicVideoButton
+                                    videoSrc={item.imageUrl}
+                                    posterSrc={optionalSrc}
+                                    onClick={() => onItemClick(item)}
+                                    className="w-full h-full"
+                                    enableMobileAutoPlay={true}
                                 />
                             ) : (
                                 <img

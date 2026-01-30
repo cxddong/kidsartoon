@@ -76,7 +76,12 @@ export default function MasterpieceMatchPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Analysis failed');
+                if (response.status === 403) {
+                    setError("Not enough magic points! 🌟\nMatching requires 50 points.");
+                } else {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+                return;
             }
 
             setResults(data.matches || []);
@@ -187,39 +192,45 @@ function UploadSection({ onImageUpload }: { onImageUpload: (e: React.ChangeEvent
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-12 border-4 border-dashed border-purple-200"
+            className="bg-white rounded-[2.5rem] shadow-2xl p-8 landscape:p-6 border-4 border-dashed border-purple-200"
         >
-            <div className="text-center max-w-2xl mx-auto">
-                <div className="mb-6">
-                    <Upload className="w-24 h-24 mx-auto text-purple-300" />
+            <div className="flex flex-col landscape:flex-row items-center gap-10 landscape:gap-8 max-w-5xl mx-auto">
+                {/* Left side in landscape: Icon & Info */}
+                <div className="w-full landscape:w-1/2 text-center landscape:text-left">
+                    <div className="mb-6 landscape:mb-4">
+                        <div className="w-24 h-24 landscape:w-16 landscape:h-16 bg-purple-50 rounded-full flex items-center justify-center mx-auto landscape:mx-0">
+                            <Upload className="w-12 h-12 landscape:w-8 landscape:h-8 text-purple-400" />
+                        </div>
+                    </div>
+                    <h2 className="text-3xl landscape:text-xl font-black text-gray-800 mb-4 landscape:mb-2">
+                        Upload Your Artwork
+                    </h2>
+                    <p className="text-gray-500 font-medium mb-8 landscape:mb-4 landscape:text-sm">
+                        Draw something and let Magic Kat find which famous artist you are like!
+                    </p>
+                    <div className="hidden landscape:block w-full max-w-xs bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="w-1/3 h-full bg-purple-500 rounded-full" />
+                    </div>
+                    <p className="hidden landscape:block text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Step 1 of 3: Upload</p>
                 </div>
-                <h2 className="text-3xl font-black text-gray-800 mb-4">
-                    Upload Your Artwork
-                </h2>
-                <p className="text-gray-500 font-medium mb-8">
-                    Draw something and let Magic Kat find which famous artist you are like!
-                </p>
 
-                <div className="flex flex-col items-center gap-6">
-                    <label className="inline-block relative group cursor-pointer">
+                {/* Right side in landscape: Upload button */}
+                <div className="w-full landscape:w-1/2 flex flex-col items-center justify-center bg-purple-50/50 rounded-3xl p-8 landscape:p-6 border-2 border-purple-100">
+                    <label className="inline-block relative group cursor-pointer w-full">
                         <input
                             type="file"
                             accept="image/*"
                             onChange={onImageUpload}
                             className="hidden"
                         />
-                        <div className="relative px-12 py-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black text-xl rounded-full shadow-lg group-hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
-                            <Upload className="w-6 h-6" />
-                            <span>Choose Photo</span>
+                        <div className="relative w-full py-8 landscape:py-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black text-xl landscape:text-lg rounded-2xl shadow-lg group-hover:scale-[1.02] active:scale-95 transition-all flex flex-col items-center gap-3">
+                            <div className="p-3 bg-white/20 rounded-full">
+                                <Upload className="w-8 h-8 landscape:w-6 landscape:h-6" />
+                            </div>
+                            <span>Choose Photos</span>
                         </div>
-                        <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur opacity-30 group-hover:opacity-60 transition-opacity" />
                     </label>
-
-                    {/* Progress Indicator */}
-                    <div className="w-full max-w-xs bg-gray-100 rounded-full h-2 mt-4 overflow-hidden">
-                        <div className="w-1/3 h-full bg-purple-500 rounded-full" />
-                    </div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Step 1 of 3: Upload</p>
+                    <p className="mt-4 text-xs font-bold text-purple-300 uppercase tracking-widest text-center">Supports JPG, PNG</p>
                 </div>
             </div>
         </motion.div>
@@ -236,46 +247,51 @@ function PreviewSection({ image, onAnalyze, onReset }: {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-4xl mx-auto"
+            className="bg-white rounded-[2.5rem] shadow-2xl p-8 landscape:p-6 max-w-5xl mx-auto"
         >
-            <h2 className="text-3xl font-black text-center mb-8 text-gray-800">
-                Ready to Match?
-            </h2>
-
-            <div className="flex flex-col md:flex-row items-center gap-8 mb-8">
-                <div className="w-full md:w-1/2">
-                    <img
-                        src={image}
-                        alt="Your drawing"
-                        className="w-full aspect-square object-cover rounded-2xl border-4 border-purple-200 shadow-md transform rotate-1"
-                    />
+            <div className="flex flex-col landscape:flex-row items-center gap-8 landscape:gap-10">
+                <div className="w-full landscape:w-1/2">
+                    <div className="relative group">
+                        <img
+                            src={image}
+                            alt="Your drawing"
+                            className="w-full aspect-square object-cover rounded-3xl border-4 border-purple-200 shadow-xl"
+                        />
+                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full font-black text-purple-600 shadow-lg text-sm">
+                            YOUR ART ✨
+                        </div>
+                    </div>
                 </div>
-                <div className="w-full md:w-1/2 space-y-6">
-                    <p className="text-lg text-gray-600 font-medium">
+                <div className="w-full landscape:w-1/2 space-y-6 landscape:space-y-4">
+                    <h2 className="text-4xl landscape:text-2xl font-black text-gray-800">
+                        Ready to Match?
+                    </h2>
+                    <p className="text-lg landscape:text-sm text-gray-600 font-medium leading-relaxed">
                         Your artwork looks amazing! Magic Kat is ready to compare it with thousands of famous paintings.
                     </p>
 
-                    {/* Progress Indicator Step 2 */}
                     <div className="space-y-2">
                         <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                            <div className="w-2/3 h-full bg-purple-500 rounded-full" />
+                            <div className="w-2/3 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
                         </div>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Step 2 of 3: Review</p>
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Step 2 of 3: Vision Check</p>
                     </div>
 
-                    <button
-                        onClick={onAnalyze}
-                        className="w-full py-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black text-xl rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
-                    >
-                        <Sparkles className="w-6 h-6 animate-pulse" />
-                        Find My Match!
-                    </button>
-                    <button
-                        onClick={onReset}
-                        className="w-full py-3 text-gray-400 font-bold hover:text-gray-600"
-                    >
-                        Choose Different Photo
-                    </button>
+                    <div className="pt-4 landscape:pt-2 flex flex-col gap-3">
+                        <button
+                            onClick={onAnalyze}
+                            className="w-full py-5 landscape:py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black text-xl landscape:text-lg rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                        >
+                            <Sparkles className="w-6 h-6 animate-pulse" />
+                            Match It! (-50 Pts)
+                        </button>
+                        <button
+                            onClick={onReset}
+                            className="w-full py-3 text-gray-400 font-bold hover:text-purple-600 transition-colors text-sm"
+                        >
+                            Choose Different Photo
+                        </button>
+                    </div>
                 </div>
             </div>
         </motion.div>
@@ -447,8 +463,8 @@ function ResultSection({ uploadedImage, results, audioUrl, onReset }: {
                                 onClick={playAudio}
                                 disabled={!audioUrl || isPlaying}
                                 className={`w-full py-5 rounded-2xl font-black text-xl shadow-lg flex items-center justify-center gap-4 transition-all ${isPlaying
-                                        ? "bg-white/90 text-indigo-600 scale-95 ring-4 ring-indigo-300"
-                                        : "bg-white text-indigo-600 hover:scale-105 active:scale-95 hover:shadow-2xl"
+                                    ? "bg-white/90 text-indigo-600 scale-95 ring-4 ring-indigo-300"
+                                    : "bg-white text-indigo-600 hover:scale-105 active:scale-95 hover:shadow-2xl"
                                     }`}
                             >
                                 {isPlaying ? (

@@ -5,6 +5,22 @@
   --font-serif: 'Outfit', sans-serif;
 }
 
+/* Custom Landscape Variants */
+/* iphone-ls: For phones (short height in landscape) */
+@variant iphone-ls (&:where(@media (orientation: landscape) and (max-height: 600px)));
+/* ipad-ls: For tablets (tall height in landscape) */
+@variant ipad-ls (&:where(@media (orientation: landscape) and (min-height: 601px)));
+
+/* Base styles for consistent background-first layout */
+html,
+body {
+  background-color: #0f172a;
+  /* Deep slate to avoid white gaps */
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -55,6 +71,24 @@
   animation: float 4s ease-in-out infinite;
 }
 
+@keyframes bounce-horizontal {
+
+  0%,
+  100% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+
+  50% {
+    transform: translateX(-25%);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.animate-bounce-horizontal {
+  animation: bounce-horizontal 1s infinite;
+}
+
 /* HIDE DOWNLOAD/CAST CONTROLS IN EDGE/CHROME */
 /* Specific for Edge's extra buttons */
 video::-internal-media-controls-download-button {
@@ -92,6 +126,19 @@ video::-webkit-media-controls-enclosure {
   display: none !important;
 }
 
+/* Background Cover Utility */
+.bg-cover-fixed {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover !important;
+  transform: scale(1.05);
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 /* Puzzle Bubble Button Styles */
 .puzzle-bubble {
   background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%) !important;
@@ -119,4 +166,226 @@ video::-webkit-media-controls-enclosure {
   .puzzle-bubble span {
     font-size: 24px !important;
   }
+}
+
+/* Mic Button Pulse Animation (User Requested) */
+.mic-button.listening {
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 20px rgba(99, 102, 241, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+}
+
+/* 流光边框动画 */
+@keyframes flowing-border {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.flowing-border {
+  position: relative;
+  background: white;
+}
+
+/* Shimmer Animation - Explicit Class for FanMenu */
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-shimmer {
+  background-size: 200% 200%;
+  animation: shimmer 3s linear infinite;
+}
+
+.flowing-border::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  padding: 3px;
+  background: linear-gradient(90deg,
+      #ff6b6b,
+      #ffd93d,
+      #6bcf7f,
+      #4d96ff,
+      #c77dff,
+      #ff6b6b);
+  background-size: 400% 400%;
+  animation: flowing-border 3s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* iPad横屏适配优化 */
+
+/* iPad横屏专用样式 */
+@media (min-width: 1024px) and (orientation: landscape) {
+
+  /* 优化触摸目标尺寸 - Apple推荐最小44x44px */
+  button:not(.no-touch-optimize),
+  a:not(.no-touch-optimize),
+  [role="button"]:not(.no-touch-optimize) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* 优化间距，防止误触 */
+  .touch-spacing>*+* {
+    margin-left: 12px;
+  }
+
+  /* 导航栏优化 */
+  nav button,
+  nav a {
+    padding: 12px 16px;
+  }
+}
+
+/* 所有平板设备（iPad, Android tablets） */
+@media (min-width: 768px) and (max-width: 1366px) {
+
+  /* 增大可点击区域 */
+  .interactive-element {
+    padding: 8px;
+  }
+
+  /* 优化文字大小，便于触摸设备阅读 */
+  body {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* 竖屏提示（可选 - 如果需要强制横屏） */
+.landscape-only-hint {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 1024px) {
+  .landscape-only-hint {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .landscape-only-hint h2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+
+  .landscape-only-hint p {
+    font-size: 1rem;
+    opacity: 0.9;
+  }
+}
+
+/* 触摸优化 - 消除300ms点击延迟 */
+* {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 针对触摸设备优化滚动 */
+@media (pointer: coarse) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 增大滚动条宽度，便于触摸拖动 */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 6px;
+  }
+}
+
+/* iPad Pro 12.9" 横屏优化 */
+@media only screen and (min-device-width: 1024px) and (max-device-width: 1366px) and (orientation: landscape) {
+
+  /* 更大的触摸目标 */
+  button,
+  a,
+  [role="button"] {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* Removed restrictive video width/height that caused gaps on iPad Pro landscape */
+}
+
+/* 触摸反馈动画 */
+@keyframes touch-feedback {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(0.95);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.touch-active {
+  animation: touch-feedback 0.2s ease-out;
+}
+
+/* 防止文本选择（触摸设备） */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }

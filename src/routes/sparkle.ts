@@ -242,6 +242,92 @@ router.post('/speak-minimax', optionalApiKeyAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/sparkle/speak-minimax-stream
+ * Input: { text: string, voiceId?: string }
+ */
+router.post('/speak-minimax-stream', optionalApiKeyAuth, async (req, res) => {
+    try {
+        const { text, voiceId = 'kiki' } = req.body;
+        if (!text) return res.status(400).json({ error: 'Text required' });
+
+        console.log(`[Sparkle Minimax Stream] Request: voiceId="${voiceId}"`);
+
+        const stream = await import('../services/minimax.js').then(m => m.minimaxService.generateSpeechStream(text, voiceId));
+
+        res.set('Content-Type', 'audio/mp3');
+        res.set('Transfer-Encoding', 'chunked');
+
+        // We need to parse the Minimax SSE stream and pipe ONLY the 'data.audio' parts (which are Hex)
+        // Actually, minimax v2 with stream:true returns a stream of JSON objects.
+        // Let's refine the piping logic.
+
+        let leftover = '';
+        let chunkCount = 0;
+        let totalAudioBytes = 0;
+        stream.on('data', (chunk: Buffer) => {
+            chunkCount++;
+            const data = leftover + chunk.toString();
+            const lines = data.split('\n');
+            leftover = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data:')) {
+                    try {
+                        const jsonStr = line.substring(5).trim();
+                        if (!jsonStr) continue;
+                        const json = JSON.parse(jsonStr);
+                        if (json.data && json.data.audio) {
+                            // Minimax returns HEX audio in stream too
+                            const audioBuffer = Buffer.from(json.data.audio, 'hex');
+
+                            // 🔧 FIX: MiniMax sends a DUPLICATE chunk at the end containing all previous data
+                            // Only skip if:
+                            // 1. We have already processed a significant amount of data (> 10KB)
+                            // 2. The current chunk is essentially a copy of everything so far (within 5% margin)
+                            const previousTotal = totalAudioBytes;
+                            const chunkSize = audioBuffer.length;
+
+                            if (previousTotal > 10000 && chunkSize >= previousTotal * 0.95 && chunkSize <= previousTotal * 1.05) {
+                                console.log(`[Minimax-Stream] ⚠️ Skipping duplicate chunk #${chunkCount}: ${chunkSize} bytes (previous total: ${previousTotal})`);
+                                continue;
+                            }
+
+                            totalAudioBytes += chunkSize;
+                            console.log(`[Minimax-Stream] Chunk #${chunkCount}: ${chunkSize} bytes (total: ${totalAudioBytes})`);
+                            res.write(audioBuffer);
+                        }
+                    } catch (e) {
+                        // console.error("Error parsing minimax stream line", e);
+                    }
+                }
+            }
+        });
+
+        stream.on('end', () => {
+            console.log(`[Minimax-Stream] ✅ Stream ended. Total chunks: ${chunkCount}, Total bytes: ${totalAudioBytes}`);
+            res.end();
+        });
+
+        stream.on('error', (err: any) => {
+            console.error("Minimax stream error", err);
+            if (!res.headersSent) {
+                res.status(500).end();
+            } else {
+                res.end();
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Sparkle Minimax Stream Error:', error.message);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Minimax stream failed' });
+        } else {
+            res.end();
+        }
+    }
+});
+
+/**
  * POST /api/sparkle/speak-premium
  * Premium kid voice with caching (ElevenLabs)
  * Input: { text: string, voiceId?: string, userId: string, cacheKey?: string }

@@ -243,21 +243,21 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
 
             {/* Center Column: Upload + Page + Roles + Generate */}
             <div className="w-full order-1 md:order-2 flex flex-col items-center gap-8">
-                {/* Upload Box (Children) */}
-                <div className="w-[85%] max-w-sm aspect-square shadow-2xl rounded-3xl overflow-hidden border-4 border-white/50 bg-white/10 backdrop-blur-sm">
-                    {children}
-                </div>
-
                 {/* Helper Text (Moved here) */}
                 {!isReady && (
                     <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-sm text-amber-400 text-center font-black animate-pulse tracking-widest uppercase drop-shadow-md"
+                        className="text-sm text-white text-center font-black animate-pulse tracking-widest uppercase drop-shadow-md"
                     >
                         ✨ Upload a photo to start the magic! ✨
                     </motion.p>
                 )}
+
+                {/* Upload Box (Children) */}
+                <div className="w-[85%] max-w-sm aspect-square shadow-2xl rounded-3xl overflow-hidden border-4 border-white/50 bg-white/10 backdrop-blur-sm">
+                    {children}
+                </div>
 
 
 

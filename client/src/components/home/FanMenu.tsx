@@ -1,14 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
+import { MagicVideoButton } from '../ui/MagicVideoButton';
+import confetti from 'canvas-confetti';
+import { isTouchDevice } from '../../hooks/useTouchInteraction';
 
 export interface FanMenuItem {
     icon?: string | React.ReactNode;
     label: string;
+    shortDesc?: string;
     to: string;
     videoSrc?: string;
     description?: string;
+    isFree?: boolean;
 }
 
 interface FanMenuProps {
@@ -24,16 +29,34 @@ export const FanMenu: React.FC<FanMenuProps> = ({
     radius = 140,
     spread = 90
 }) => {
+    // DEBUG: Confirm file update
+    console.log("FanMenu Updated: Shimmer Version");
+
     const navigate = useNavigate();
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [touchedIndex, setTouchedIndex] = useState<number | null>(null);
     const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isTouch = isTouchDevice();
 
     useEffect(() => {
         return () => {
             if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
         };
     }, []);
+
+    // 点击外部区域重置触摸状态
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (touchedIndex !== null) {
+                setTouchedIndex(null);
+            }
+        };
+
+        if (isTouch) {
+            document.addEventListener('touchstart', handleClickOutside);
+            return () => document.removeEventListener('touchstart', handleClickOutside);
+        }
+    }, [touchedIndex, isTouch]);
 
     // Configuration for fan layout
     const RADIUS = radius;
@@ -61,20 +84,35 @@ export const FanMenu: React.FC<FanMenuProps> = ({
     };
 
     const getCoordinates = (index: number) => {
-        // "Wonder Studio" Special Layout: 3 Top, 2 Bottom, Centered Horizontal
+        // "Wonder Studio" Special Layout: 3 Top, Remaining Bottom
         if (position === 'surround') {
             const isTopRow = index < 3;
             // Top Row (Indices 0, 1, 2) -> Y = -radius
             if (isTopRow) {
-                // Centered: 0->-1, 1->0, 2->1
-                const offset = index - 1;
-                return { x: offset * (spread * 1.2), y: -radius };
+                // Top 3: Evenly distributed Left, Center, Right
+                const positions = [-spread, 0, spread];
+                return { x: positions[index], y: -radius };
             }
-            // Bottom Row (Indices 3, 4) -> Y = +radius
+            // Bottom Row (Indices 3+) -> Y = +radius
             else {
-                // Centered: 3->-0.5, 4->0.5
-                const offset = (index - 3) === 0 ? -0.5 : 0.5;
-                return { x: offset * (spread * 1.2), y: radius };
+                // Determine layout based on count
+                const bottomStartIndex = 3;
+                const bottomCount = items.length - bottomStartIndex;
+
+                let positions: number[] = [];
+                if (bottomCount === 2) {
+                    // Optimized for 2 items: Compact center pair
+                    positions = [-spread * 0.6, spread * 0.6];
+                } else {
+                    // Default / 3 items: Full spread
+                    positions = [-spread, 0, spread];
+                }
+
+                // Safety map if index exceeds positions
+                const localizedIndex = index - bottomStartIndex;
+                const x = positions[localizedIndex] ?? 0;
+
+                return { x: x, y: radius * 0.45 };
             }
         }
 
@@ -103,23 +141,57 @@ export const FanMenu: React.FC<FanMenuProps> = ({
         };
     };
 
-    const handleItemClick = (e: React.MouseEvent, index: number, to: string) => {
+    // 触摸交互处理
+    const handleItemTouch = (e: React.TouchEvent, index: number, to: string) => {
         e.stopPropagation();
 
-        // Mobile tap logic
-        if (window.innerWidth < 768) {
-            if (touchedIndex !== index) {
-                e.preventDefault();
-                setTouchedIndex(index);
+        // 第一次触摸：显示tooltip
+        if (touchedIndex !== index) {
+            e.preventDefault();
+            setTouchedIndex(index);
+            setHoveredIndex(index);
 
-                if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
-                touchTimeoutRef.current = setTimeout(() => setTouchedIndex(null), 3000);
-                return;
-            }
+            // 3秒后自动隐藏
+            if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+            touchTimeoutRef.current = setTimeout(() => {
+                setTouchedIndex(null);
+                setHoveredIndex(null);
+            }, 3000);
+        } else {
+            // 第二次触摸：执行跳转
+            navigate(to);
         }
-
-        navigate(to);
     };
+
+    const handleItemClick = (e: React.MouseEvent, index: number, to: string) => {
+        e.stopPropagation();
+        // 鼠标设备直接跳转
+        if (!isTouch) {
+            navigate(to);
+        }
+    };
+
+    // Inject custom style for shimmer animation
+    useEffect(() => {
+        const styleId = 'fan-menu-shimmer-style';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.innerHTML = `
+                @keyframes fan-shimmer {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+                .fan-shimmer-border {
+                    background-size: 200% 200%;
+                    animation: fan-shimmer 3s linear infinite;
+                    background-image: linear-gradient(90deg, #a855f7, #ec4899, #06b6d4, #a855f7);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }, []);
 
     return (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 h-0 pointer-events-none z-50">
@@ -143,40 +215,84 @@ export const FanMenu: React.FC<FanMenuProps> = ({
                             exit={{ scale: 0, opacity: 0 }}
                             transition={{
                                 type: "spring",
-                                stiffness: 200,
-                                damping: 15,
-                                delay: index * 0.05
+                                stiffness: 260,
+                                damping: 20,
+                                delay: index * 0.1
                             }}
-                            className="absolute -translate-x-1/2 -translate-y-1/2 w-24 h-24"
-                            onMouseEnter={() => setHoveredIndex(index)}
-                            onMouseLeave={() => setHoveredIndex(null)}
+                            className="absolute -translate-x-1/2 -translate-y-1/2 w-24 h-24 no-select"
+                            onMouseEnter={() => !isTouch && setHoveredIndex(index)}
+                            onMouseLeave={() => !isTouch && setHoveredIndex(null)}
+                            onTouchStart={(e) => handleItemTouch(e, index, item.to)}
                         >
-                            <button
-                                onClick={(e) => handleItemClick(e, index, item.to)}
-                                className="w-full h-full rounded-2xl bg-white/90 backdrop-blur-md shadow-xl border-4 border-indigo-100 flex flex-col items-center justify-center group hover:scale-110 hover:border-indigo-300 transition-all pointer-events-auto overflow-hidden relative z-10"
-                            >
-                                {item.videoSrc ? (
-                                    <video
-                                        src={item.videoSrc}
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-                                    />
-                                ) : (
-                                    <span className="text-3xl mb-1 group-hover:scale-110 transition-transform block">
-                                        {item.icon}
+                            <div className="relative w-full h-full transform transition-transform duration-300 hover:scale-110">
+                                {/* 1. Shimmer Border Layer (Background) */}
+                                <div
+                                    className="absolute inset-0 rounded-2xl fan-shimmer-border"
+                                    style={{
+                                        padding: 0,
+                                        zIndex: 0
+                                    }}
+                                />
+
+                                {/* 2. Content Layer (Foreground, slightly smaller to reveal border) */}
+                                <div className="absolute inset-[3px] rounded-xl bg-black overflow-hidden z-10">
+                                    <button
+                                        onClick={(e) => handleItemClick(e, index, item.to)}
+                                        className="w-full h-full flex flex-col items-center justify-center cursor-pointer outline-none border-none p-0 bg-black"
+                                        style={{ background: 'black' }}
+                                    >
+                                        {item.videoSrc ? (
+                                            <video
+                                                src={item.videoSrc}
+                                                className="w-full h-full"
+                                                style={{
+                                                    objectFit: 'cover',
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    transform: 'scale(1.1)', // Slight zoom to prevent white edges
+                                                    background: 'black'
+                                                }}
+                                                muted
+                                                playsInline
+                                                preload="auto"
+                                                onLoadedData={(e) => {
+                                                    const video = e.target as HTMLVideoElement;
+                                                    video.currentTime = 0.1;
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-white flex items-center justify-center">
+                                                <span className="text-3xl transition-transform block">
+                                                    {item.icon}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Free Badge */}
+                                {item.isFree && (
+                                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-white z-20 transform rotate-12 animate-pulse pointer-events-none">
+                                        FREE
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Label & Subtext Plate (New UI) */}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 flex flex-col items-center w-max pointer-events-none z-20">
+                                {/* Main Label */}
+                                <div className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full shadow-md border border-indigo-50 mb-1">
+                                    <span className="text-xs font-black text-indigo-900 block text-center whitespace-nowrap">{item.label}</span>
+                                </div>
+                                {/* Subtext (Short Desc) */}
+                                {item.shortDesc && (
+                                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50/90 px-2 py-0.5 rounded-full border border-indigo-100 shadow-sm whitespace-nowrap">
+                                        {item.shortDesc}
                                     </span>
                                 )}
+                            </div>
 
-                                {/* Label Overlay */}
-                                <span className="absolute bottom-1 z-10 text-[10px] font-bold text-indigo-900 bg-white/80 px-2 rounded-full whitespace-nowrap shadow-sm backdrop-blur-sm">
-                                    {item.label}
-                                </span>
-                            </button>
-
-                            {/* Tooltip / Info Card */}
+                            {/* Tooltip / Info Card (Detailed Description) */}
                             <AnimatePresence>
                                 {isActive && (
                                     <motion.div
@@ -184,12 +300,12 @@ export const FanMenu: React.FC<FanMenuProps> = ({
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: y < 0 ? -10 : 10, scale: 0.9 }}
                                         className={cn(
-                                            "absolute z-50 w-48 p-3 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-indigo-100 text-center left-1/2 -translate-x-1/2 pointer-events-none",
-                                            y < 0 ? "top-full mt-3 origin-top" : "bottom-full mb-3 origin-bottom"
+                                            "absolute z-50 w-56 p-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-indigo-100 text-center left-1/2 -translate-x-1/2 pointer-events-none",
+                                            y < 0 ? "top-[130%] mt-2 origin-top" : "bottom-[130%] mb-2 origin-bottom"
                                         )}
                                     >
-                                        <h4 className="font-bold text-indigo-900 text-sm mb-1 uppercase tracking-wider">{item.label}</h4>
-                                        <p className="text-xs text-gray-600 leading-tight">
+                                        <h4 className="font-black text-indigo-900 text-sm mb-2 uppercase tracking-wide border-b border-indigo-50 pb-1">{item.label}</h4>
+                                        <p className="text-xs text-gray-600 leading-normal font-medium whitespace-pre-line">
                                             {item.description || "Click to explore!"}
                                         </p>
 

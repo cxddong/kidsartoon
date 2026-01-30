@@ -28,14 +28,20 @@ export const KatTutor: React.FC<KatTutorProps> = ({
     const [displayedMessage, setDisplayedMessage] = useState(message);
     const [hasSpoken, setHasSpoken] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const prevStartSpeakingRef = useRef(startSpeaking);
 
     useEffect(() => {
         setDisplayedMessage(message);
     }, [message]);
 
-    // Auto-speak support
+    // Auto-speak support - only trigger on false->true transition of startSpeaking
     useEffect(() => {
-        if (startSpeaking && onSpeak && !hasSpoken) {
+        const prevValue = prevStartSpeakingRef.current;
+        prevStartSpeakingRef.current = startSpeaking;
+
+        // Only speak when transitioning from false to true
+        if (!prevValue && startSpeaking && onSpeak && !hasSpoken) {
+            console.log("[KatTutor] Auto-speaking triggered (transition detected)");
             onSpeak();
             setHasSpoken(true);
         }
@@ -71,44 +77,58 @@ export const KatTutor: React.FC<KatTutorProps> = ({
                 className={`${position === 'static' ? 'relative flex-col items-center' : `absolute z-50 flex gap-4 pointer-events-none ${positionClasses[position]}`} ${className}`}
             >
                 {/* Kat Avatar */}
-                <div className="relative w-32 h-32 md:w-48 md:h-48 drop-shadow-2xl pointer-events-auto transition-transform hover:scale-110 cursor-pointer" onClick={onSpeak}>
-                    {videoSrc ? (
-                        <video
-                            ref={videoRef}
-                            src={videoSrc}
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full rounded-full object-cover border-4 border-white shadow-inner"
-                        />
-                    ) : (
-                        /* Placeholder for Kat 3D Render - Using Emoji or existing asset for now */
-                        <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full border-4 border-white flex items-center justify-center text-6xl shadow-inner">
-                            {emotion === 'happy' && '🦁'}
-                            {emotion === 'thinking' && '🤔'}
-                            {emotion === 'waiting' && '👀'}
-                            {emotion === 'celebrate' && '🎉'}
-                        </div>
-                    )}
-                    <div className="absolute -bottom-2 -right-2 bg-yellow-400 p-2 rounded-full border-2 border-white">
-                        <Volume2 className="w-6 h-6 text-yellow-900" />
+                {/* Kat Avatar Container Wrapper */}
+                <div className="relative group cursor-pointer" onClick={onSpeak}>
+                    {/* Main Circular Avatar */}
+                    <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full border-[5px] border-white shadow-xl overflow-hidden bg-white hover:scale-105 transition-transform duration-300">
+                        {videoSrc ? (
+                            <video
+                                ref={videoRef}
+                                src={videoSrc}
+                                loop
+                                muted
+                                playsInline
+                                // Classic 'Cover Background' approach + Zoom
+                                className="absolute top-1/2 left-1/2 w-full h-full object-cover origin-center"
+                                style={{
+                                    transform: 'translate(-50%, -50%) scale(1.8)', // Force zoom to remove black bars
+                                    maxWidth: 'none',
+                                    maxHeight: 'none'
+                                }}
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-4xl">
+                                {emotion === 'happy' && '🦁'}
+                                {emotion === 'thinking' && '🤔'}
+                                {emotion === 'waiting' && '👀'}
+                                {emotion === 'celebrate' && '🎉'}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Speaker Icon Badge - OUTSIDE the overflow-hidden avatar */}
+                    <div className="absolute -bottom-1 -right-1 bg-yellow-400 p-1.5 rounded-full border-2 border-white z-10 shadow-sm pointer-events-none group-hover:scale-110 transition-transform">
+                        <Volume2 className="w-4 h-4 text-yellow-900" />
                     </div>
                 </div>
 
                 {/* Speech Bubble */}
-                <motion.div
-                    key={message}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white/95 backdrop-blur-md p-6 rounded-3xl rounded-tr-none shadow-xl border-2 border-indigo-100 max-w-xs md:max-w-md pointer-events-auto"
-                >
-                    <div className="flex items-start gap-3">
-                        <Sparkles className="w-6 h-6 text-indigo-500 shrink-0 mt-1" />
-                        <p className="text-lg md:text-xl font-bold text-slate-800 font-['Nunito'] leading-snug">
-                            {displayedMessage}
-                        </p>
-                    </div>
-                </motion.div>
+                {displayedMessage && (
+                    <motion.div
+                        key={message}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="bg-white/95 backdrop-blur-md p-3 rounded-2xl rounded-tr-none shadow-lg border-2 border-indigo-100 max-w-[200px] pointer-events-auto"
+                    >
+                        <div className="flex items-start gap-2">
+                            <Sparkles className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                            <p className="text-xs font-bold text-slate-800 leading-tight">
+                                {displayedMessage}
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
             </motion.div>
         </AnimatePresence >
     );

@@ -28,6 +28,40 @@ const StartupPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Background Video Ref
+    const bgVideoRef = useRef<HTMLVideoElement>(null);
+
+    // Smart Background Logic
+    useEffect(() => {
+        const video = bgVideoRef.current;
+        if (!video) return;
+
+        // 1. Setup Safe Chain
+        const handleEnded = () => {
+            console.log("Background Intro Ended -> Switching to Muted Loop");
+            video.muted = true;
+            video.loop = true;
+            video.play().catch(e => console.log("Loop play failed", e));
+        };
+
+        video.addEventListener('ended', handleEnded);
+
+        // 2. Attempt Play (Unmuted first for voice)
+        video.muted = false;
+        video.loop = false; // Play once first
+        video.play().catch(err => {
+            console.warn("Autoplay with sound prevented:", err);
+            // Fallback: Muted Loop immediately
+            video.muted = true;
+            video.loop = true;
+            video.play();
+        });
+
+        return () => {
+            video.removeEventListener('ended', handleEnded);
+        };
+    }, []);
+
     // Wizard State
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -575,10 +609,12 @@ const StartupPage: React.FC = () => {
         </motion.div>
     );
 
+
+
     return (
-        <div className="fixed inset-0 w-full h-full bg-[#FAFAFA] overflow-hidden">
+        <div className="fixed inset-0 w-full min-h-[100dvh] bg-slate-900 overflow-hidden">
             {/* Backgrounds */}
-            <div className="fixed inset-0 bg-[url('/onboarding_bg.jpg')] bg-cover bg-center z-0 opacity-80" />
+            <div className="bg-cover-fixed opacity-80 bg-[url('/onboarding_bg.jpg')]" />
             <div className="fixed inset-0 bg-white/60 backdrop-blur-md z-0" />
 
             {/* Content Wrapper */}

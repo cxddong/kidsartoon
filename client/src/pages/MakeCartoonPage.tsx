@@ -45,7 +45,7 @@ const VISUAL_STYLES = [
 export const MakeCartoonPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuth();
+    const { user, activeProfile } = useAuth();
 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -246,6 +246,7 @@ export const MakeCartoonPage: React.FC = () => {
 
             formData.append('prompt', compositePrompt);
             formData.append('userId', user?.uid || 'demo');
+            if (activeProfile?.id) formData.append('profileId', activeProfile.id);
 
             const res = await fetch('/api/media/generate-magic-comic', {
                 method: 'POST',
@@ -273,6 +274,7 @@ export const MakeCartoonPage: React.FC = () => {
         try {
             const body = {
                 userId: user?.uid || 'demo',
+                profileId: activeProfile?.id,
                 imageUrl: serverImageUrl || imagePreview,
                 theme: storyData?.story || 'A magical adventure',
                 pageCount: builderData.pageCount,
@@ -350,6 +352,7 @@ export const MakeCartoonPage: React.FC = () => {
                 effect: builderData.effect,                     // NEW
                 scene: builderData.scene,                       // NEW: Custom scene/music prompt
                 userId: user?.uid || 'demo',
+                profileId: activeProfile?.id,
                 duration: builderData.duration || 5,
                 generateAudio: builderData.generateAudio !== false
             });

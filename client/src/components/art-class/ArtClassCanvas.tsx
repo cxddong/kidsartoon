@@ -20,6 +20,7 @@ export interface ArtClassCanvasRef {
     clear: () => void;
     getImage: () => string; // Returns base64
     handleUndo: () => void;
+    getCanvas: () => HTMLCanvasElement | null;
 }
 
 export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>(({
@@ -40,7 +41,7 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
     useImperativeHandle(ref, () => ({
         clear: () => {
             const canvas = canvasRef.current;
-            const ctx = canvas?.getContext('2d');
+            const ctx = canvas?.getContext('2d', { willReadFrequently: true });
             if (canvas && ctx) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 setPoints([]);
@@ -50,9 +51,12 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
         getImage: () => {
             return canvasRef.current?.toDataURL('image/png') || '';
         },
+        getCanvas: () => {
+            return canvasRef.current;
+        },
         handleUndo: () => {
             const canvas = canvasRef.current;
-            const ctx = canvas?.getContext('2d');
+            const ctx = canvas?.getContext('2d', { willReadFrequently: true });
             if (canvas && ctx && history.length > 0) {
                 const newHistory = [...history];
                 newHistory.pop(); // Remove current state
@@ -68,44 +72,48 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
         }
     }));
 
-    // Setup Canvas Size
+    // Setup Canvas Size (ResizeObserver)
     useEffect(() => {
-        const handleResize = () => {
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const parent = canvas.parentElement;
-                if (parent) {
-                    // Save content
-                    const ctx = canvas.getContext('2d');
-                    const content = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-                    canvas.width = parent.clientWidth;
-                    canvas.height = parent.clientHeight;
+        const parent = canvas.parentElement;
+        if (!parent) return;
 
-                    // Restore if possible (naive, better to redraw paths usually but this is MVP)
-                    if (content && ctx) {
-                        ctx.putImageData(content, 0, 0);
-                    }
-                    // Set props again as resize clears them
-                    if (ctx) {
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                    }
+        const resizeObserver = new ResizeObserver(() => {
+            const rect = parent.getBoundingClientRect();
+            // Only resize if dimensions actually changed to avoid loop
+            if (canvas.width !== rect.width || canvas.height !== rect.height) {
+                // Save content
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                const content = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+
+                // Restore
+                if (content && ctx) {
+                    ctx.putImageData(content, 0, 0);
+                    // Restore context settings
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.lineWidth = brushSize; // Restore current brush size
+                    ctx.strokeStyle = color;
                 }
             }
-        };
+        });
 
-        window.addEventListener('resize', handleResize);
-        handleResize();
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+        resizeObserver.observe(parent);
+
+        return () => resizeObserver.disconnect();
+    }, [brushSize, color]); // Add dependencies to restore context correctly
 
     // Ghost Path Rendering
     useEffect(() => {
         if (!ghostPath || ghostPath.length < 2) return;
 
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
         if (!canvas || !ctx) return;
 
         ctx.save();
@@ -132,7 +140,7 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
 
         // Save history state before new stroke
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
         if (canvas && ctx) {
             setHistory(prev => [...prev, ctx.getImageData(0, 0, canvas.width, canvas.height)]);
         }
@@ -147,7 +155,7 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
         setPoints(prev => [...prev, newPoint]);
 
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
         if (!canvas || !ctx || points.length === 0) return;
 
         ctx.strokeStyle = color;
@@ -225,9 +233,12 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
             clientY = (e as React.MouseEvent).clientY;
         }
 
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
         return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
         };
     };
 
@@ -236,7 +247,7 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
         if (!smartPenEnabled) return;
 
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
         if (!canvas || !ctx || points.length < 3) return;
 
         // Revert to history state (remove the raw shaky line)

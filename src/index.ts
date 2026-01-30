@@ -96,6 +96,8 @@ import cartoonBookRouter from './routes/cartoonBook.js'; // Cartoon Book
 import jumpIntoArtRouter from './routes/jumpIntoArt.js'; // Jump Into Art
 import profileRouter from './routes/profile.js'; // Profile/Studio
 import parentCodeRouter from './routes/parentCode.js';
+import { auditRouter } from './routes/audit.js';
+import { router as migrationRouter } from './routes/migration.js';
 
 // Story Services/Studio
 import { optionalApiKeyAuth } from './middleware/auth.js';
@@ -105,6 +107,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', version: '0.1.1', tim
 
 // --- API Routes ---
 app.use('/api/media', mediaRouter);
+app.use('/api/migration', migrationRouter);
 app.use('/api/images', imageRouter);
 app.use('/api/checkin', checkinRouter); // Daily Check-in
 app.use('/api/users', userRouter);
@@ -122,16 +125,19 @@ app.use('/api/mentor', mentorRouter);
 app.use('/api/referral', referralRouter); // New Referral Router
 import { magicRouter } from './routes/magic.js'; // Magic Mirror
 import { magicLabRouter } from './routes/magicLab.js'; // Magic Lab AI Chat
+import { magicArtRouter } from './routes/magicArt.js'; // Magic Art Class Routes
 import reportsRouter from './routes/reports.js'; // Parent Reports
 
 // ... (API Routes)
 app.use('/api/cartoon-book', cartoonBookRouter); // Cartoon Book Routes
 app.use('/api/magic', magicRouter); // Magic Mirror Routes
 app.use('/api/magic-lab', magicLabRouter); // Magic Lab AI Chat Routes
+app.use('/api/magic-art', magicArtRouter); // Magic Art Class Routes
 app.use('/api/reports', reportsRouter); // Reports Routes
 app.use('/api/jump-into-art', jumpIntoArtRouter); // Jump Into Art Routes
 app.use('/api/profile', profileRouter); // Profile/Studio Routes
 app.use('/api/parent-code', parentCodeRouter);
+app.use('/api/audit', auditRouter);
 
 // AI Related
 const aiRouter = express.Router();

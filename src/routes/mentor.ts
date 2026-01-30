@@ -3,6 +3,7 @@ import { databaseService } from '../services/database.js';
 import { magicMentorService } from '../services/mentor.js';
 import { geminiService } from '../services/gemini.js';
 import { MentorStepRequest } from '../types/mentor.js';
+import { pointsService } from '../services/points.js';
 
 const router = Router();
 import multer from 'multer';
@@ -27,6 +28,12 @@ router.post('/step', upload.single('image'), async (req, res) => {
 
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'Missing image file' });
+        }
+
+        // --- Points Consumption ---
+        const pointResult = await pointsService.consumePoints(userId, 'magic_mentor_step');
+        if (!pointResult.success) {
+            return res.status(403).json({ success: false, message: 'Not enough Magic Points! You need 25 points for an Art Coach session.' });
         }
 
         const result = await magicMentorService.processStep({

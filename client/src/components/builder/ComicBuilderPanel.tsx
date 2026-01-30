@@ -178,7 +178,7 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                     <h3 className="text-lg font-black text-white flex flex-col items-center md:items-start gap-1">
                         <div className="flex items-center gap-2">
                             <span className="bg-green-400 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shadow-sm">3</span>
-                            Who is this? 🏷️
+                            Who is in the story? 🏷️
                         </div>
                         <span className="text-xs font-bold text-green-200 uppercase tracking-wider ml-10">Assign a Role to your photo!</span>
                     </h3>
@@ -282,12 +282,11 @@ export const ComicBuilderPanel: React.FC<ComicBuilderPanelProps> = ({ onGenerate
                                 />
                             </filter>
                         </svg>
-                        {/* Cost Badge */}
-                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20 bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm border border-white/20 shadow-lg whitespace-nowrap">
-                            30 Magic Pts
-                        </div>
                     </button>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Ready to create!</p>
+                    <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold text-xs border border-amber-200 shadow-sm mt-2">
+                        <span>✨</span>
+                        <span>30 Magic Pts</span>
+                    </div>
                 </div>
             </div>
 

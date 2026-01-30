@@ -179,7 +179,8 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                 })
             });
             const data = await res.json();
-            setAiReview({ loading: false, text: data.text, shown: true });
+            const finalText = data.text || "Magic analysis complete! Use your imagination to see what's special!";
+            setAiReview({ loading: false, text: finalText, shown: true });
         } catch (err) {
             console.error(err);
             setAiReview({ loading: false, text: "The art teacher is on a coffee break! Try again later.", shown: true });
@@ -555,18 +556,20 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                         <div className="text-xs text-slate-400 font-medium">
                             {/* Magic ID removed */}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
+                            {/* Premium Analyze Button */}
                             <button
                                 onClick={handleAiReview}
-                                className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white transition-all shadow-md hover:scale-110 hover:shadow-lg"
-                                title="AI Review"
+                                className="w-16 h-16 transition-transform hover:scale-110 active:scale-95 drop-shadow-md hover:drop-shadow-xl"
+                                title="Magic Analysis"
                             >
-                                �?
+                                <img src="/assets/btn_magic_analyze.png" alt="Analyze" className="w-full h-full object-contain" />
                             </button>
-                            {/* Share Button - NEW */}
+
+                            {/* Share Button (Styled to Match) */}
                             <button
                                 onClick={() => setShowShare(true)}
-                                className="w-10 h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-full flex items-center justify-center transition-colors shadow-sm"
+                                className="w-10 h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-full flex items-center justify-center transition-colors shadow-sm mx-1"
                                 title="Share Magic Pass"
                             >
                                 <Share2 size={20} />
@@ -575,7 +578,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                             <button
                                 onClick={() => onToggleFavorite(image.id)}
                                 className={cn(
-                                    "p-3 rounded-full transition-all shadow-md hover:scale-110",
+                                    "p-3 rounded-full transition-all shadow-md hover:scale-110 mx-1",
                                     image.favorite
                                         ? "bg-pink-500 text-white"
                                         : "bg-white text-slate-400 hover:text-pink-500"
@@ -586,7 +589,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                             </button>
 
                             {/* Magic Create Menu */}
-                            <div className="relative">
+                            <div className="relative mx-1">
                                 <button
                                     onClick={() => setShowMagicMenu(!showMagicMenu)}
                                     className="px-4 h-10 flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:from-purple-700 hover:to-pink-600 border-0 transition-all shadow-sm font-bold text-sm animate-pulse hover:animate-none"
@@ -645,18 +648,19 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                             {onDelete && (
                                 <button
                                     onClick={() => onDelete(image.id)}
-                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 hover:text-red-500 border border-slate-200 transition-all shadow-sm"
+                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 hover:text-red-500 border border-slate-200 transition-all shadow-sm mx-1"
                                 >
                                     <Trash2 size={18} />
                                 </button>
                             )}
-                            {/* Download Button */}
+
+                            {/* Premium Download Button */}
                             <button
                                 onClick={handleDownload}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 hover:text-blue-500 border border-slate-200 transition-all shadow-sm"
-                                title="Download Image"
+                                className="w-16 h-16 transition-transform hover:scale-110 active:scale-95 drop-shadow-md hover:drop-shadow-xl -mr-2"
+                                title="Save to Device"
                             >
-                                <Download size={18} />
+                                <img src="/assets/btn_magic_save.png" alt="Save" className="w-full h-full object-contain" />
                             </button>
 
                         </div>

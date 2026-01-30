@@ -6,25 +6,32 @@ import { Shield, Lock, Activity, Palette, Brain, Target, Sparkles, AlertCircle, 
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
+import { BouncyButton } from '../components/ui/BouncyButton';
 
 // -- Charts Components (SVG) --
 
 const RadarChart = ({ scores }: { scores: Record<string, number> }) => {
-    // 5 Axis: Composition, Color, Imagination, Line, Story
-    // Scores 0-10
-    const axes = ['Composition', 'Color', 'Imagination', 'Line', 'Story'];
+    // 5 Axis: Color IQ, Spatial, Motor Skill, Creativity, Focus
+    const axes = ['Color IQ', 'Spatial', 'MotorSkill', 'Creativity', 'Focus'];
     const radius = 80;
-    const center = 120; // Shift center to allow more padding
+    const center = 120;
 
     // Calculate points
     const points = axes.map((axis, i) => {
         const angle = (Math.PI * 2 * i) / axes.length - Math.PI / 2;
-        const key = axis.toLowerCase();
-        let rawScore = scores[key] || 5;
-        // Auto-normalize 0-100 scale to 0-10
-        if (rawScore > 10) rawScore = rawScore / 10;
+        // Map UI axis labels to data keys
+        const keyMap: Record<string, string> = {
+            'Color IQ': 'colorIQ',
+            'Spatial': 'spatial',
+            'MotorSkill': 'motorSkill',
+            'Creativity': 'creativity',
+            'Focus': 'focus'
+        };
+        const key = keyMap[axis] || axis.toLowerCase();
+        let rawScore = scores[key] || 50;
 
-        const score = Math.min(rawScore / 10, 1); // Clamp to max 1.0 (radius)
+        // Normalize 0-100 to 0.1 - 1.0 radius
+        const score = Math.max(0.1, Math.min(rawScore / 100, 1));
         const x = center + Math.cos(angle) * (radius * score);
         const y = center + Math.sin(angle) * (radius * score);
         return `${x},${y}`;
@@ -38,28 +45,37 @@ const RadarChart = ({ scores }: { scores: Record<string, number> }) => {
     }).join(' ');
 
     return (
-        <svg viewBox="0 0 240 240" className="w-full h-full">
+        <svg viewBox="0 0 240 240" className="w-full h-full drop-shadow-xl">
+            <defs>
+                <radialGradient id="radarGrad">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.6" />
+                </radialGradient>
+            </defs>
             {/* Background Pentagon */}
-            <polygon points={bgPoints} fill="none" stroke="#e2e8f0" strokeWidth="1" />
-            <circle cx={center} cy={center} r={radius * 0.5} fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+            <polygon points={bgPoints} fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+            {[0.25, 0.5, 0.75].map(r => (
+                <circle key={r} cx={center} cy={center} r={radius * r} fill="none" stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="2 2" />
+            ))}
 
             {/* Data Polygon */}
             <motion.polygon
                 initial={{ opacity: 0, scale: 0, transformOrigin: `${center}px ${center}px` }}
-                animate={{ opacity: 0.6, scale: 1 }}
+                animate={{ opacity: 1, scale: 1 }}
                 points={points}
-                fill="#8b5cf6"
-                stroke="#6d28d9"
-                strokeWidth="2"
+                fill="url(#radarGrad)"
+                stroke="#2563eb"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
             />
 
             {/* Labels */}
             {axes.map((axis, i) => {
                 const angle = (Math.PI * 2 * i) / axes.length - Math.PI / 2;
-                const x = center + Math.cos(angle) * (radius + 25);
-                const y = center + Math.sin(angle) * (radius + 25);
+                const x = center + Math.cos(angle) * (radius + 30);
+                const y = center + Math.sin(angle) * (radius + 30);
                 return (
-                    <text key={axis} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="text-[10px] fill-slate-500 font-bold uppercase tracking-wider">
+                    <text key={axis} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="text-[9px] fill-slate-400 font-black uppercase tracking-tighter">
                         {axis}
                     </text>
                 );
@@ -68,63 +84,42 @@ const RadarChart = ({ scores }: { scores: Record<string, number> }) => {
     );
 };
 
-// -- Color Logic --
-const COLOR_MEANINGS: Record<string, string> = {
-    'red': 'Energy, Passion, Confidence',
-    '#ff0000': 'Energy, Passion',
-    'blue': 'Calm, Logic, Trust',
-    '#0000ff': 'Calm, Focus',
-    'yellow': 'Happiness, Optimism',
-    'green': 'Growth, Harmony, Nature',
-    'purple': 'Imagination, Mystery',
-    'orange': 'Creativity, Enthusiasm',
-    'pink': 'Love, Playfulness',
-    'black': 'Strength, Authority',
-    'white': 'Purity, New Beginnings'
-};
-
-const ColorPie = ({ colors }: { colors: string[] }) => {
-    // Determine colors or fallback
-    const validColors = colors.length > 0 ? colors : ['#ef4444', '#f59e0b', '#3b82f6'];
-    const total = validColors.length;
-
-    // Helper to find closest meaning (very basic string match for MVP)
-    const getMeaning = (c: string) => {
-        // Try direct key match
-        if (COLOR_MEANINGS[c]) return COLOR_MEANINGS[c];
-        // Try basic color names check
-        if (c.toLowerCase().includes('red')) return COLOR_MEANINGS['red'];
-        if (c.toLowerCase().includes('blue')) return COLOR_MEANINGS['blue'];
-        // Default
-        return 'Unique Expression';
-    };
+const EmotionalWeather = ({ trend }: { trend: string }) => {
+    const isImproving = trend === 'Improving';
+    const isFluctuating = trend === 'Fluctuating';
 
     return (
-        <div className="flex flex-col items-center gap-6">
-            <div className="flex gap-1 h-8 w-full rounded-full overflow-hidden shadow-inner">
-                {validColors.map((c, i) => (
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400 uppercase">Mood Trend</span>
+                <div className={cn(
+                    "flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black",
+                    isImproving ? "bg-green-100 text-green-700" :
+                        isFluctuating ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                )}>
+                    {isImproving ? <Zap size={14} /> : isFluctuating ? <Activity size={14} /> : <CheckCircle size={14} />}
+                    {trend}
+                </div>
+            </div>
+
+            {/* Simplified Mood Sparkline */}
+            <div className="h-16 flex items-end gap-1 px-2">
+                {[40, 65, 55, 80, 75, 90, 85].map((h, i) => (
                     <motion.div
                         key={i}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${100 / total}%` }}
-                        className="h-full"
-                        style={{ backgroundColor: c }}
+                        initial={{ height: 0 }}
+                        animate={{ height: `${h}%` }}
                         transition={{ delay: i * 0.1 }}
+                        className={cn(
+                            "flex-1 rounded-t-sm",
+                            i === 6 ? "bg-blue-500" : "bg-slate-200"
+                        )}
                     />
                 ))}
             </div>
-
-            <div className="w-full space-y-3">
-                {validColors.slice(0, 3).map((c, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl">
-                        <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full shadow-sm" style={{ backgroundColor: c }} />
-                            <span className="font-bold text-slate-700 capitalize">{c}</span>
-                        </div>
-                        <span className="text-xs font-medium text-slate-500">{getMeaning(c)}</span>
-                    </div>
-                ))}
-            </div>
+            <p className="text-[11px] text-slate-500 leading-tight">
+                Mood scores based on color saturation and stroke force density over the last 7 days.
+            </p>
         </div>
     );
 };
@@ -418,118 +413,157 @@ export const ParentDashboardPage: React.FC = () => {
 
             <main className="max-w-4xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-                {/* 1. Overview Cards */}
-                {/* 1. Overview Cards (Production Stats) */}
-                <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {[
-                        { label: 'Magic Cinema', val: report?.stats?.videoCount || 0, icon: Video, color: 'bg-indigo-100 text-indigo-600' },
-                        { label: 'Storybooks', val: report?.stats?.bookCount || 0, icon: BookOpen, color: 'bg-blue-100 text-blue-600' },
-                        { label: 'Graphic Novels', val: report?.stats?.comicCount || 0, icon: Activity, color: 'bg-pink-100 text-pink-600' },
-                        { label: 'Greeting Cards', val: report?.stats?.cardCount || 0, icon: Sparkles, color: 'bg-purple-100 text-purple-600' },
-                        { label: 'Puzzles', val: report?.stats?.puzzleCount || 0, icon: Zap, color: 'bg-orange-100 text-orange-600' },
-                        { label: 'Magic Art', val: report?.stats?.magicImageCount || 0, icon: Palette, color: 'bg-emerald-100 text-emerald-600' },
-                    ].map((item, i) => (
-                        <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
-                            <div className={cn("p-2 rounded-full mb-1", item.color)}>
-                                <item.icon size={16} />
-                            </div>
-                            <span className="text-xl font-black text-slate-800">{item.val}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase leading-tight">{item.label}</span>
+                {/* --- NEW MAGIC SCANNER ENTRY --- */}
+                <motion.section
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => navigate('/parent/scanner')}
+                    className="cursor-pointer bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group"
+                >
+                    <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-125 transition-transform duration-700">
+                        <Zap size={160} className="text-white" />
+                    </div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                        <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/30 shadow-xl">
+                            <Sparkles className="w-10 h-10 text-white" />
                         </div>
-                    ))}
-                </section>
-
-                {/* 2. Future Potential (Scientific Career Path) */}
-                <section className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl">
-                    <Sparkles className="absolute top-0 right-0 w-64 h-64 text-white/5 -translate-y-1/2 translate-x-1/4" />
-                    <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-6 opacity-80">
-                            <div className="flex items-center gap-2">
-                                <Target size={18} className="text-indigo-400" />
-                                <span className="text-xs font-bold uppercase tracking-widest">AI Career Discovery</span>
-                            </div>
-                            {report?.aiCommentary?.learningStyle && (
-                                <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-bold backdrop-blur-sm border border-white/20">
-                                    {report.aiCommentary.learningStyle}
-                                </span>
-                            )}
+                        <div className="flex-1 text-center md:text-left">
+                            <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Magic Art Scanner</h2>
+                            <p className="text-indigo-100 font-medium text-lg leading-tight">
+                                Turn a pile of drawings into a scientific Growth Report.
+                            </p>
                         </div>
+                        <BouncyButton className="bg-white text-indigo-600 font-black px-8 py-4 rounded-2xl shadow-xl whitespace-nowrap">
+                            Upload Portfolio
+                        </BouncyButton>
+                    </div>
+                </motion.section>
 
-                        {isLoading ? (
-                            <div className="h-32 flex items-center justify-center">
-                                <span className="animate-pulse">Analyzing patterns...</span>
-                            </div>
-                        ) : (
-                            <div className="grid md:grid-cols-2 gap-8 items-center">
-                                <div>
-                                    <h2 className="text-3xl font-black mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-white">
-                                        {report?.aiCommentary?.potentialCareer || 'Creative Explorer'}
-                                    </h2>
-                                    <p className="text-indigo-200 text-sm leading-relaxed mb-4">
-                                        {report?.aiCommentary?.careerReason || "Based on object detection of their recent works."}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {report?.artAnalysis?.topSubjects?.map((sub: string, i: number) => (
-                                            <span key={i} className="px-2 py-1 bg-indigo-500/30 rounded text-[10px] font-bold tracking-wider">
-                                                {sub}
-                                            </span>
-                                        ))}
-                                    </div>
+                {/* 1. Statistics Summary */}
+                <section className="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Activity Analysis</h2>
+                            <p className="text-sm font-medium text-slate-400">Week of {report?.weekId || 'Loading...'}</p>
+                        </div>
+                        <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest">
+                            Expert Review V2.0
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                        {[
+                            { label: 'Cinema', val: report?.stats?.videoCount || 0, icon: Video, color: 'bg-indigo-50 text-indigo-500' },
+                            { label: 'Books', val: report?.stats?.bookCount || 0, icon: BookOpen, color: 'bg-blue-50 text-blue-500' },
+                            { label: 'Graphic Novels', val: report?.stats?.comicCount || 0, icon: Activity, color: 'bg-pink-50 text-pink-500' },
+                            { label: 'Greeting Cards', val: report?.stats?.cardCount || 0, icon: Sparkles, color: 'bg-purple-50 text-purple-500' },
+                            { label: 'Screen Time', val: `${report?.stats?.totalScreenTimeMinutes || 0}m`, icon: Clock, color: 'bg-orange-50 text-orange-500' },
+                            { label: 'Magic Art', val: report?.stats?.magicImageCount || 0, icon: Palette, color: 'bg-emerald-50 text-emerald-500' },
+                        ].map((item, i) => (
+                            <div key={i} className="p-4 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col items-center text-center group hover:bg-white hover:shadow-md transition-all duration-300">
+                                <div className={cn("p-2.5 rounded-2xl mb-2", item.color)}>
+                                    <item.icon size={18} />
                                 </div>
-                                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                                    <p className="text-xs font-bold text-indigo-300 uppercase mb-2">Growth Advice</p>
-                                    <p className="text-white text-sm italic">
-                                        "{report?.artAnalysis?.adviceText || report?.aiCommentary?.strength || "Keep exploring!"}"
-                                    </p>
-                                </div>
+                                <span className="text-xl font-black text-slate-800 tabular-nums">{item.val}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{item.label}</span>
                             </div>
-                        )}
+                        ))}
                     </div>
                 </section>
 
-                {/* 3. Creative DNA (Grid) */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    {/* Radar Chart */}
-                    <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col">
-                        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                            <Brain size={18} className="text-purple-500" />
-                            Creative Stats
-                        </h3>
-                        <div className="flex-1 flex items-center justify-center">
-                            <div className="aspect-square w-full max-w-[240px]">
-                                {report?.artAnalysis?.radarScores && (
-                                    <RadarChart scores={report.artAnalysis.radarScores} />
-                                )}
+                {/* 2. Professional Insight Grid */}
+                <div className="grid lg:grid-cols-2 gap-8">
+                    {/* A: Emotional Weather & Radar */}
+                    <div className="space-y-8">
+                        <section className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 overflow-hidden relative">
+                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] scale-150 rotate-12">
+                                <Activity size={120} />
                             </div>
-                        </div>
-                    </section>
+                            <div className="relative z-10">
+                                <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+                                    <Brain size={20} className="text-blue-500" />
+                                    Emotional Weather
+                                </h3>
+                                <EmotionalWeather trend={report?.aiCommentary?.moodTrend || 'Stable'} />
 
-                    {/* Scientific Color Psychology */}
-                    <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <Palette size={18} className="text-pink-500" />
-                            Color Psychology
-                        </h3>
-
-                        <div className="mb-6">
-                            {report?.artAnalysis?.dominantColors && (
-                                <ColorPie colors={report.artAnalysis.dominantColors} />
-                            )}
-                        </div>
-
-                        <div className="space-y-3">
-                            <div>
-                                <span className="text-xs font-bold text-slate-400 uppercase">Trend</span>
-                                <p className="text-slate-800 font-bold">{report?.artAnalysis?.colorTrend || 'Mixed Palette'}</p>
+                                <div className="mt-8 pt-8 border-t border-slate-50">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Professional Radar (Expera)</h4>
+                                    <div className="aspect-square w-full max-w-[280px] mx-auto">
+                                        <RadarChart scores={report?.artAnalysis?.scores || {}} />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <span className="text-xs font-bold text-slate-400 uppercase block mb-1">Scientific Interpretation</span>
-                                <p className="text-xs text-slate-600 leading-relaxed">
-                                    {report?.artAnalysis?.colorPsychologyText || report?.artAnalysis?.colorAnalysis || "Analysis pending..."}
-                                </p>
+                        </section>
+
+                        <section className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
+                            <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                                <Target size={20} className="text-purple-500" />
+                                Expert Prescription
+                            </h3>
+                            <div className="space-y-4">
+                                {report?.aiCommentary?.parentActionPlan?.map((tip: string, i: number) => (
+                                    <div key={i} className="flex gap-4 p-4 rounded-2xl bg-indigo-50/30 border border-indigo-100/50">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-black text-xs">
+                                            {i + 1}
+                                        </div>
+                                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{tip}</p>
+                                    </div>
+                                ))}
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    </div>
+
+                    {/* B: Cognitive Growth & Analysis */}
+                    <div className="space-y-8">
+                        <section className="bg-slate-900 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden group">
+                            <Sparkles className="absolute -top-12 -right-12 w-48 h-48 opacity-10 group-hover:opacity-20 transition-opacity" />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Growth Phase</span>
+                                </div>
+                                <h3 className="text-3xl font-black mb-2 tracking-tight">
+                                    {report?.artAnalysis?.developmentStage || 'Analyzing...'}
+                                </h3>
+                                <div className="py-1 px-3 bg-blue-500/20 rounded-full text-[10px] font-black text-blue-300 border border-blue-500/30 inline-block mb-6">
+                                    Lowenfeld Theory Stage
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase mb-2">Evidence Identified</p>
+                                        <p className="text-sm text-blue-50 leading-relaxed italic">
+                                            "{report?.artAnalysis?.developmentEvidence || 'Looking for specific visual markers in drawings...'}"
+                                        </p>
+                                    </div>
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase mb-2">Psychological Summary</p>
+                                        <p className="text-sm text-slate-300 leading-relaxed font-medium">
+                                            {report?.aiCommentary?.psychologicalAnalysis || 'Gathering insights from recent artistic choices...'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                    <Activity size={20} className="text-emerald-500" />
+                                    Future Trajectory
+                                </h3>
+                                <div className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded text-[8px] font-black uppercase">
+                                    High Matching
+                                </div>
+                            </div>
+                            <div className="mb-6">
+                                <p className="text-2xl font-black text-emerald-600 mb-1">{report?.aiCommentary?.potentialCareer || 'Artistic Explorer'}</p>
+                                <p className="text-xs text-slate-500 font-medium">Recommended Career Focus</p>
+                            </div>
+                            <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 font-medium">
+                                {report?.aiCommentary?.careerReason || 'Analysis based on subject frequency and spatial logic.'}
+                            </p>
+                        </section>
+                    </div>
                 </div>
 
                 {/* 4. Parent Settings */}
@@ -561,15 +595,18 @@ export const ParentDashboardPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* Disclaimer */}
-                <footer className="text-center py-8 px-4">
-                    <div className="flex items-center justify-center gap-2 text-slate-400 mb-2">
-                        <AlertCircle size={14} />
-                        <span className="text-xs font-bold uppercase">AI Disclaimer</span>
+                <footer className="text-center py-12 px-8 border-t border-slate-200/50">
+                    <div className="flex items-center justify-center gap-2 text-slate-400 mb-4">
+                        <Shield size={16} className="text-blue-400" />
+                        <span className="text-xs font-black uppercase tracking-[0.3em]">Official Disclaimer</span>
                     </div>
-                    <p className="text-[10px] text-slate-400 max-w-lg mx-auto leading-normal">
-                        This report is generated by AI based on creative patterns. Each child is unique and has infinite potential.
-                        Please use these insights as fun conversation starters rather than professional educational advice.
+                    <p className="text-[11px] text-slate-400 max-w-2xl mx-auto leading-relaxed font-medium">
+                        This report is generated by AI based on creative patterns and artistic features.
+                        While grounded in art psychology (Viktor Lowenfeld theory) and color therapy principles,
+                        <strong> it is NOT a medical or psychological diagnosis.</strong>
+                        This report does not replace professional consultation with a clinical child psychologist
+                        or medical doctor. If you have serious concerns about your child's emotional or cognitive development,
+                        please consult a licensed professional immediately.
                     </p>
                 </footer>
             </main>

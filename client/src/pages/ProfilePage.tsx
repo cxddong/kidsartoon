@@ -200,28 +200,11 @@ export const ProfilePage: React.FC = () => {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     // Profile Management State
-    const [showAddProfile, setShowAddProfile] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-    const [newProfileName, setNewProfileName] = useState('');
-    const [newProfileAge, setNewProfileAge] = useState('');
     const [showAdminTools, setShowAdminTools] = useState(false);
     const [showParentCode, setShowParentCode] = useState(false);
 
 
-    const handleAddProfile = async () => {
-        if (!newProfileName.trim()) return;
-        try {
-            await addChildProfile(newProfileName, `https://api.dicebear.com/7.x/avataaars/svg?seed=${newProfileName}`, Number(newProfileAge));
-            setShowAddProfile(false);
-            setNewProfileName('');
-            setNewProfileAge('');
-            // Redirect to onboarding for the new child
-            navigate('/startup');
-        } catch (e) {
-            console.error("Failed to add profile", e);
-            alert("Failed to add profile");
-        }
-    };
 
 
 
@@ -315,8 +298,10 @@ export const ProfilePage: React.FC = () => {
                             const imgProfileId = img.meta?.profileId;
 
                             if (activeProfile) {
-                                // Child View: Only show exact matches
-                                return imgProfileId === activeProfile.id;
+                                // Child View: Show exact matches OR "Shared/Parent" items (to prevent data loss)
+                                // If an item has NO profileId (undefined/null), or matches the Parent UID, show it to everyone.
+                                const isSharedOrParent = !imgProfileId || imgProfileId === user.uid;
+                                return imgProfileId === activeProfile.id || isSharedOrParent;
                             } else {
                                 // Parent View: Show items that are explicitly Parent's OR Legacy (no profileId)
                                 // ALSO: Show "Orphaned" items (profileId exists but doesn't match any known child)
@@ -428,10 +413,10 @@ export const ProfilePage: React.FC = () => {
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-sm font-black text-slate-800 leading-none">
-                                    {activeProfile ? activeProfile.name : (user?.name || 'Parent')}
+                                    {activeProfile ? activeProfile.name : 'Select Profile'}
                                 </span>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                                    {activeProfile ? 'Child Profile' : 'Parent Account'}
+                                    {activeProfile ? 'Child Account' : 'Choose Account'}
                                     <ChevronDown size={12} />
                                 </span>
                             </div>
@@ -441,27 +426,9 @@ export const ProfilePage: React.FC = () => {
                         {isProfileDropdownOpen && (
                             <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                 <div className="p-2 space-y-1">
-                                    <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Switch Profile</div>
+                                    <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Switch Artist</div>
 
-                                    {/* Parent Option */}
-                                    <button
-                                        onClick={() => { switchProfile(null); setIsProfileDropdownOpen(false); }}
-                                        className={cn(
-                                            "w-full flex items-center gap-3 p-2 rounded-xl transition-colors",
-                                            !activeProfile ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-600"
-                                        )}
-                                    >
-                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200">
-                                            <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div className="flex flex-col items-start">
-                                            <span className="text-sm font-bold">{user?.name || 'Parent'}</span>
-                                            <span className="text-[10px] opacity-75">Admin</span>
-                                        </div>
-                                        {!activeProfile && <CheckCircle size={14} className="ml-auto" />}
-                                    </button>
-
-                                    {/* Child Options */}
+                                    {/* Child Options ONLY */}
                                     {user?.profiles?.map(p => (
                                         <button
                                             key={p.id}
@@ -476,33 +443,13 @@ export const ProfilePage: React.FC = () => {
                                             </div>
                                             <div className="flex flex-col items-start">
                                                 <span className="text-sm font-bold">{p.name}</span>
-                                                <span className="text-[10px] opacity-75">Child</span>
                                             </div>
                                             {activeProfile?.id === p.id && <CheckCircle size={14} className="ml-auto" />}
                                         </button>
                                     ))}
 
-                                    <div className="h-px bg-slate-100 my-1" />
+                                    {/* Parent Option Hidden - But maybe allow 'Back to Parent' via secret? No. */}
 
-                                    {/* Add Profile */}
-                                    <button
-                                        onClick={() => { setShowAddProfile(true); setIsProfileDropdownOpen(false); }}
-                                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-slate-500 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-full border border-dashed border-slate-300 flex items-center justify-center">
-                                            <Plus size={14} />
-                                        </div>
-                                        <span className="text-sm font-medium">Add Profile</span>
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowAddProfile(true); setIsProfileDropdownOpen(false); }}
-                                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-slate-500 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-full border border-dashed border-slate-300 flex items-center justify-center">
-                                            <Plus size={14} />
-                                        </div>
-                                        <span className="text-sm font-medium">Add Profile</span>
-                                    </button>
                                 </div>
                             </div>
                         )}
@@ -802,53 +749,7 @@ export const ProfilePage: React.FC = () => {
                 />
             )}
 
-            {/* Add Profile Modal */}
-            {showAddProfile && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in duration-200">
-                        <button
-                            onClick={() => setShowAddProfile(false)}
-                            className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
-                        >
-                            <X size={24} />
-                        </button>
-                        <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
-                            <span className="text-3xl">👶</span> Add Child Profile
-                        </h2>
 
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-600 mb-2">Name</label>
-                                <input
-                                    type="text"
-                                    value={newProfileName}
-                                    onChange={(e) => setNewProfileName(e.target.value)}
-                                    placeholder="e.g., Leo, Maya..."
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:outline-none transition-colors text-lg font-medium"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-600 mb-2">Age (Optional)</label>
-                                <input
-                                    type="number"
-                                    value={newProfileAge}
-                                    onChange={(e) => setNewProfileAge(e.target.value)}
-                                    placeholder="e.g., 5"
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:outline-none transition-colors text-lg font-medium"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleAddProfile}
-                                disabled={!newProfileName.trim()}
-                                className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Create Profile
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* PARENT CODE MODAL */}
             {showParentCode && user && (
