@@ -32,9 +32,9 @@ export interface PortfolioReport {
     };
 
     // Recommended Top 3
-    topPicks?: Array<{
+    topPicks: Array<{
         imageId: string;
-        imageUrl?: string;
+        imageUrl: string;
         strength: string;
         reason: string;
         recommendation: {
