@@ -18,6 +18,7 @@ import spectralIcon from '../assets/magic_icons/spectral.jpg';
 import biolumIcon from '../assets/magic_icons/biolum.jpg';
 import acidIcon from '../assets/magic_icons/acid.jpg';
 import holoIcon from '../assets/magic_icons/holo.jpg';
+import richJewelIcon from '../assets/magic_icons/jewel.jpg';
 import artStudioBg from '../assets/artstudio.mp4';
 
 interface ArtMode {
@@ -96,7 +97,7 @@ const COLOR_VIBES = [
         id: 'jewel_tones',
         label: 'Rich Jewel',
         color: 'bg-gradient-to-r from-emerald-600 via-purple-700 to-amber-600 text-white',
-        image: jewelIcon,
+        image: richJewelIcon,
         prompt: 'Deep jewel tones, rich emerald and sapphire, crimson and gold, baroque color grading, dramatic lighting, heavy saturation, velvety texture, cinematic warm lighting'
     },
     {
@@ -642,7 +643,7 @@ export const MagicArtStudioPage: React.FC = () => {
                             <div className="mt-4">
                                 <button
                                     onClick={(e) => {
-                                        animatePoints({ x: e.clientX, y: e.clientY }, -10); // Deduct 10 points
+                                        animatePoints({ x: e.clientX, y: e.clientY }, -25); // Deduct 25 points
                                         handleGenerate();
                                     }}
                                     disabled={!image || isGenerating}
@@ -659,7 +660,7 @@ export const MagicArtStudioPage: React.FC = () => {
                                     ) : (
                                         <>
                                             <Sparkles className="w-6 h-6 fill-white/30" />
-                                            <span className="text-lg">Generate Magic Art</span>
+                                            <span className="text-lg">Generate Magic Art (-25 Pts)</span>
                                             <Sparkles className="w-5 h-5" />
                                         </>
                                     )}
