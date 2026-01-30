@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
     onAuthStateChanged,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword
@@ -50,7 +52,8 @@ interface AuthContextType {
     user: User | null;
     activeProfile: ChildProfile | null; // Derived helper
     loading: boolean;
-    loginWithGoogle: () => Promise<boolean>; // Returns true if new user
+    loginWithGoogle: () => Promise<boolean>;
+    loginWithGoogleRedirect: () => Promise<void>;
     loginWithApple: () => Promise<boolean>;
     login: (email: string, password?: string) => Promise<void>;
     signup: (email: string, password: string, name: string) => Promise<void>;
@@ -80,6 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
+                // Check if we just signed in via redirect
+                getRedirectResult(auth).then((result) => {
+                    if (result) {
+                        console.log('✅ Google redirect login success!', result.user.email);
+                    }
+                }).catch((error) => {
+                    console.error('❌ Google redirect login failed:', error.code, error.message);
+                });
+
                 // Subscribe to real-time updates of user profile from Firestore
                 const userRef = doc(db, 'users', firebaseUser.uid);
                 const unsubDoc = onSnapshot(userRef, (docSnap) => {
@@ -232,15 +244,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error: any) {
             console.error("❌ Google login failed:", error.code, error.message);
 
+            if (error.code === 'auth/unauthorized-domain') {
+                const currentOrigin = window.location.origin;
+                console.error(`🚨 UNAUTHORIZED DOMAIN: ${currentOrigin} is not authorized in Firebase Console.`);
+                throw new Error(`This domain (${currentOrigin}) is not authorized for Google Login. Please add it to your Firebase Console > Authentication > Settings > Authorized Domains.`);
+            }
+
             // User-friendly error messages
             if (error.code === 'auth/popup-closed-by-user') {
                 throw new Error('Login cancelled. Please try again.');
             } else if (error.code === 'auth/popup-blocked') {
-                throw new Error('Popup blocked by browser. Please allow popups and try again.');
+                throw new Error('Popup blocked by browser. Please allow popups or try the alternate login method.');
             } else if (error.code === 'auth/cancelled-popup-request') {
                 throw new Error('Login cancelled.');
             }
 
+            throw error;
+        }
+    };
+
+    // 1b. Google Login (Redirect-based fallback)
+    const loginWithGoogleRedirect = async (): Promise<void> => {
+        try {
+            console.log('🔐 Starting Google login with redirect...');
+            await signInWithRedirect(auth, googleProvider);
+        } catch (error: any) {
+            console.error("❌ Google redirect login failed to start:", error.code, error.message);
             throw error;
         }
     };
@@ -304,6 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // 6. Update Profile
+    // 6. Update Profile
     const updateProfile = async (data: Partial<User>) => {
         if (!auth.currentUser) return;
 
@@ -351,7 +381,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.profileCompleted !== undefined) firestoreData.profileCompleted = data.profileCompleted;
         if (data.uiMode !== undefined) firestoreData.uiMode = data.uiMode;
         if (data.profiles !== undefined) firestoreData.profiles = data.profiles;
-        if (data.currentProfileId !== undefined) firestoreData.currentProfileId = data.currentProfileId;
+        if (data.currentProfileId !== undefined) firestoreData.currentProfileId = data.currentProfileId; // Allow setting null
         if (data.parentPin !== undefined) firestoreData.parentPin = data.parentPin;
 
         await setDoc(doc(db, 'users', auth.currentUser.uid), firestoreData, { merge: true });
@@ -376,7 +406,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     };
 
-    // 9. Delete Child Profile (New)
+    // 9. Delete Child Profile (Resurrected)
     const deleteChildProfile = async (profileId: string) => {
         if (!auth.currentUser || !user || !user.profiles) return;
 
@@ -398,8 +428,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 8. Switch Profile
     const switchProfile = async (profileId: string | null) => {
         if (!auth.currentUser) return;
-        // Currently just updating local state/firestore preference
-        // Depending on app logic, this might just be local state if we don't need persistence across devices for "last active"
         // But persisting is better UX.
         await updateProfile({ currentProfileId: profileId || undefined });
     };
@@ -411,6 +439,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             user,
             loading,
             loginWithGoogle,
+            loginWithGoogleRedirect,
             loginWithApple,
             login,
             signup,

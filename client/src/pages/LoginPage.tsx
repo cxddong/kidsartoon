@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
-    const { login, loginWithGoogle, loginWithApple } = useAuth();
+    const { login, loginWithGoogle, loginWithGoogleRedirect, loginWithApple } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -64,16 +64,24 @@ const LoginPage: React.FC = () => {
     };
 
     const handleProvider = async (provider: 'google' | 'apple') => {
+        setErr('');
         try {
-            // addLog(`Starting ${provider} login...`);
             let isNew = false;
             if (provider === 'google') {
-                isNew = await loginWithGoogle();
+                try {
+                    isNew = await loginWithGoogle();
+                } catch (popupError: any) {
+                    // If popup is blocked or fails, and it's Google, offer redirect as fallback
+                    if (popupError.message.includes('Popup blocked') || popupError.message.includes('Login cancelled')) {
+                        console.log("Switching to redirect mode due to popup issue...");
+                        await loginWithGoogleRedirect();
+                        return; // Execution will resume via onAuthStateChanged after redirect
+                    }
+                    throw popupError;
+                }
             } else {
                 isNew = await loginWithApple();
             }
-
-            // addLog(`${provider} login success. isNew=${isNew}`);
 
             if (isNew) {
                 navigate('/startup');
@@ -82,7 +90,6 @@ const LoginPage: React.FC = () => {
             }
         } catch (error: any) {
             console.error("Login failed", error);
-            // addLog(`PROVIDER LOGIN FAILED: ${error.message} / ${error.code}`);
             setErr(error.message || "Login failed");
         }
     };
@@ -217,8 +224,15 @@ const LoginPage: React.FC = () => {
                             className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-2xl shadow-sm border-2 border-slate-100 flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]"
                             type="button"
                         >
-                            <span className="text-xl">🇬</span>
                             Continue with Google
+                        </button>
+
+                        <button
+                            onClick={() => handleProvider('google')}
+                            className="w-full text-xs text-slate-400 font-medium hover:text-blue-500 transition-colors py-1"
+                            type="button"
+                        >
+                            Popup blocked? Click here to use redirect
                         </button>
 
                         {/* Apple Button */}

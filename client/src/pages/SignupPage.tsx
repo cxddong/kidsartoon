@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 const SignupPage: React.FC = () => {
-    const { signup, loginWithGoogle, loginWithApple } = useAuth();
+    const { signup, loginWithGoogle, loginWithGoogleRedirect, loginWithApple } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,19 +33,28 @@ const SignupPage: React.FC = () => {
     };
 
     const handleProvider = async (provider: 'google' | 'apple') => {
+        setErr('');
         try {
             let isNew = false;
-            if (provider === 'google') isNew = await loginWithGoogle();
-            else isNew = await loginWithApple();
-
-            if (isNew) {
-                navigate('/startup');
+            if (provider === 'google') {
+                try {
+                    isNew = await loginWithGoogle();
+                } catch (popupError: any) {
+                    if (popupError.message.includes('Popup blocked') || popupError.message.includes('Login cancelled')) {
+                        console.log("Switching to redirect mode due to popup issue...");
+                        await loginWithGoogleRedirect();
+                        return;
+                    }
+                    throw popupError;
+                }
             } else {
-                navigate('/home');
+                isNew = await loginWithApple();
             }
+
+            if (isNew) navigate('/startup');
+            else navigate('/home');
         } catch (error: any) {
             console.error("Signup failed", error);
-            alert(`Last Error: ${error.message}`);
             setErr(error.message || "Signup failed");
         }
     };
@@ -77,12 +86,12 @@ const SignupPage: React.FC = () => {
                 <h1 className="text-2xl font-black text-slate-800 mb-2">Create Account</h1>
                 <p className="text-slate-500 mb-6 text-center text-sm font-medium">Join us to start your artistic journey!</p>
 
-                {err && <div className="mb-4 text-red-500 font-bold text-sm bg-red-50 px-4 py-2 rounded-xl">{err}</div>}
+                {err && <div className="mb-4 text-red-500 font-bold text-sm bg-red-50 px-4 py-2 rounded-xl text-center">{err}</div>}
 
                 <form onSubmit={handleSignup} className="w-full space-y-4 mb-6">
                     <input
                         type="text"
-                        placeholder="Name"
+                        placeholder="Child's Name"
                         value={name}
                         onChange={e => setName(e.target.value)}
                         className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
@@ -126,6 +135,14 @@ const SignupPage: React.FC = () => {
                     >
                         <span className="text-xl">🇬</span>
                         Sign up with Google
+                    </button>
+
+                    <button
+                        onClick={() => handleProvider('google')}
+                        className="w-full text-xs text-slate-400 font-medium hover:text-blue-500 transition-colors py-1"
+                        type="button"
+                    >
+                        Popup blocked? Click here to use redirect
                     </button>
 
                     {/* Apple Button */}
