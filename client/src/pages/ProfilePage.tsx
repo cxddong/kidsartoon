@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Crown, Edit2, Grid, Clock, Star, List, LogOut, Home, Heart, Mic, Search, Sparkles, CloudUpload, Trash2, X, CheckCircle, BookOpen, UserCircle, Plus, ChevronDown, Shield, Video, Palette } from 'lucide-react';
+import { Settings, Crown, Edit2, Grid, Clock, Star, List, LogOut, Home, Heart, Mic, Search, Sparkles, CloudUpload, Trash2, X, CheckCircle, BookOpen, UserCircle, Plus, ChevronDown, Shield, Video, Palette, Copy } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +35,7 @@ const AdminToolsModal = ({ onClose, user }: { onClose: () => void, user: any }) 
     const [generatedCodes, setGeneratedCodes] = useState<any[]>([]);
     const [feedbacks, setFeedbacks] = useState<any[]>([]);
     const [loadingFeedback, setLoadingFeedback] = useState(false);
+    const { showToast } = useToast();
 
     const handleGenerate = async () => {
         try {
@@ -123,9 +124,19 @@ const AdminToolsModal = ({ onClose, user }: { onClose: () => void, user: any }) 
                                 <h3 className="font-bold text-lg">New Codes</h3>
                                 <div className="h-[400px] overflow-y-auto bg-slate-50 p-4 rounded-xl border font-mono text-sm space-y-2">
                                     {generatedCodes.map((c, i) => (
-                                        <div key={i} className="flex justify-between items-center bg-white p-2 rounded border border-slate-200 shadow-sm">
-                                            <span className="font-bold text-slate-700">{c.code}</span>
-                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">{c.value}</span>
+                                        <div key={i} className="flex justify-between items-center bg-white p-2 rounded border border-slate-200 shadow-sm gap-2">
+                                            <span className="font-bold text-slate-700 flex-1 font-mono">{c.code}</span>
+                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full whitespace-nowrap">{c.value}</span>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(c.code);
+                                                    showToast('Code copied!', 'success');
+                                                }}
+                                                className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-500 transition-colors"
+                                                title="Copy Code"
+                                            >
+                                                <Copy size={14} />
+                                            </button>
                                         </div>
                                     ))}
                                     {generatedCodes.length === 0 && <p className="text-slate-400 text-center italic mt-10">No codes generated yet</p>}

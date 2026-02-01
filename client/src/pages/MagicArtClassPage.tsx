@@ -865,7 +865,7 @@ export const MagicArtClassPage: React.FC = () => {
             {/* 1. CANVAS LAYER (Interactive Drawing Surface) */}
             <div className="absolute inset-0 z-0 touch-none">
                 <div className="absolute inset-0 z-0">
-                    <img src="/assets/canvas.png" alt="Art Studio Background" className="w-full h-full object-cover" />
+                    <img src="/assets/canvas1.png" alt="Art Studio Background" className="w-full h-full object-fill" />
                     <div className="absolute inset-0 bg-black/5" /> {/* Subtle overlay for better contrast if needed */}
                 </div>
 
@@ -890,7 +890,7 @@ export const MagicArtClassPage: React.FC = () => {
                             color={brushColor}
                             brushSize={tool === 'eraser' ? 30 : brushSize}
                             brushType={tool === 'eraser' ? 'eraser' : 'pen'}
-                            className="w-full h-full cursor-crosshair touch-none"
+                            className={`w-full h-full cursor-crosshair touch-none ${isCalibrating ? 'pointer-events-none' : ''}`}
                         />
                     </DebugResizableBox>
                 ) : (
@@ -970,36 +970,32 @@ export const MagicArtClassPage: React.FC = () => {
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-30 w-full max-w-4xl px-4 pointer-events-none">
                 <div className="pointer-events-auto flex items-center justify-between gap-2 md:gap-8 transform transition-transform hover:scale-[1.01] duration-500">
 
-                    {/* LEFT: Color Palette (Compact & Infinite) */}
-                    <div className="flex items-center gap-2 bg-white/80 p-2 md:p-3 rounded-[1.5rem] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.1)] backdrop-blur-md">
-                        <div className="relative group rounded-2xl overflow-hidden shadow-sm transition-transform hover:scale-105 active:scale-95 ring-4 ring-white"
-                            style={{ width: 'clamp(80px, 15vh, 160px)', height: 'clamp(40px, 8vh, 64px)' }}>
-                            {/* Hidden System Color Picker */}
-                            <input
-                                type="color"
-                                value={brushColor}
-                                onChange={(e) => {
-                                    setBrushColor(e.target.value);
-                                    setTool('pen');
+                    {/* LEFT: Preset Color Palette (Scrollable Flower Disk) */}
+                    <div className="flex items-center gap-1.5 bg-white/80 p-2 rounded-[1.5rem] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.1)] backdrop-blur-md overflow-x-auto max-w-[35vw] md:max-w-[40vw] scrollbar-hide">
+                        {[
+                            '#000000', // Black
+                            '#EF4444', // Red
+                            '#F97316', // Orange
+                            '#EAB308', // Yellow
+                            '#22C55E', // Green
+                            '#3B82F6', // Blue
+                            '#A855F7', // Purple
+                            '#EC4899', // Pink
+                            '#8B4513', // Brown
+                            '#FFFFFF'  // White
+                        ].map((color) => (
+                            <button
+                                key={color}
+                                onClick={() => { setBrushColor(color); setTool('pen'); }}
+                                className={`rounded-full border-2 border-white/80 shadow-sm transition-all hover:scale-110 active:scale-95 flex-shrink-0 ${brushColor === color && tool === 'pen' ? 'ring-4 ring-indigo-400 scale-110 z-10' : 'hover:z-10'}`}
+                                style={{
+                                    backgroundColor: color,
+                                    width: 'clamp(28px, 5vh, 44px)',
+                                    height: 'clamp(28px, 5vh, 44px)'
                                 }}
-                                className="absolute inset-0 w-full h-full cursor-pointer opacity-0 z-20"
+                                title={color}
                             />
-
-                            {/* Visual Representation */}
-                            <div className="w-full h-full flex items-center justify-between px-2 md:px-4"
-                                style={{ backgroundColor: brushColor }}
-                            >
-                                <div className="bg-white/20 backdrop-blur-md rounded-full p-1 md:p-2 shadow-inner">
-                                    <Palette className="w-4 h-4 md:w-6 md:h-6 text-white drop-shadow-md" />
-                                </div>
-                                <span className="text-white font-black text-xs md:text-sm uppercase tracking-wider drop-shadow-md bg-black/10 px-2 py-1 rounded-lg">
-                                    Palette
-                                </span>
-                            </div>
-
-                            {/* Gloss Effect */}
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/30 to-transparent pointer-events-none" />
-                        </div>
+                        ))}
                     </div>
 
                     {/* SEPARATOR */}
@@ -1008,17 +1004,20 @@ export const MagicArtClassPage: React.FC = () => {
                     {/* NEW: Brush Size Control (Toy Style) */}
                     <div className="flex items-center gap-2 bg-white/60 p-2 rounded-[2rem] border border-white/50 shadow-inner">
                         {[
-                            { s: 5, label: 'Thin' },
-                            { s: 12, label: 'Med' },
-                            { s: 24, label: 'Thick' }
+                            { s: 5, label: 'Thin', px: 8 },
+                            { s: 12, label: 'Med', px: 16 },
+                            { s: 24, label: 'Thick', px: 32 }
                         ].map((size) => (
                             <button
                                 key={size.s}
                                 onClick={() => setBrushSize(size.s)}
-                                className={`group relative rounded-full bg-gray-200 hover:bg-gray-300 transition-all ${brushSize === size.s ? 'bg-indigo-400 ring-2 ring-indigo-200 scale-110' : ''}`}
-                                style={{ width: `clamp(${15 + size.s}px, 5vh, ${30 + size.s}px)`, height: `clamp(${15 + size.s}px, 5vh, ${30 + size.s}px)` }}
+                                className={`group relative w-10 h-10 md:w-12 md:h-12 rounded-full transition-all flex items-center justify-center ${brushSize === size.s ? 'bg-indigo-100 ring-4 ring-indigo-300 z-10 scale-110' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                title={size.label}
                             >
-                                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${brushSize === size.s ? 'bg-white' : 'bg-gray-400'}`} style={{ width: '70%', height: '70%' }} />
+                                <div
+                                    className={`rounded-full transition-all ${brushSize === size.s ? 'bg-indigo-600' : 'bg-gray-400 group-hover:bg-gray-500'}`}
+                                    style={{ width: size.px, height: size.px }}
+                                />
                             </button>
                         ))}
                     </div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import splashVideo from '../assets/splash.mp4';
+import { VideoPreloader } from '../components/ui/VideoPreloader';
 
 export const SplashPage: React.FC = () => {
     const navigate = useNavigate();
@@ -40,6 +41,9 @@ export const SplashPage: React.FC = () => {
 
     return (
         <div className="fixed inset-0 w-full h-full bg-black flex flex-col items-center justify-center overflow-hidden z-50">
+            {/* Preload Home Page Assets */}
+            <VideoPreloader />
+
             {/* Background Video - Restored */}
             <video
                 ref={videoRef}

@@ -2,17 +2,50 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
+import { Ticket } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 
 // Register ChartJS
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+
 export const SubscriptionPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+
+    const [promoCode, setPromoCode] = useState('');
+    const [isRedeeming, setIsRedeeming] = useState(false);
+
+    const handleRedeem = async () => {
+        if (!user || !promoCode) return;
+        setIsRedeeming(true);
+        try {
+            const res = await fetch('/api/referral/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: promoCode, userId: user.uid })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Success! You got ${data.value} points!`, 'success');
+                setPromoCode('');
+                // Ideally refresh user points here
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(data.error || 'Redemption failed', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Network error during redemption', 'error');
+        } finally {
+            setIsRedeeming(false);
+        }
+    };
 
     // Chart Data
     const chartLabels = ['Magic Cinema (10s)', 'Magic Cinema (5s)', 'Graphic Novel', 'Storybook (4pg)', 'Single Art', 'Chat/Analysis'];
@@ -290,9 +323,43 @@ export const SubscriptionPage: React.FC = () => {
                         </div>
                     </div>
                 </section>
+
+                {/* 4. Redeem Code Section */}
+                <section className="max-w-xl mx-auto mb-12">
+                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 shadow-xl text-white relative overflow-hidden">
+                        <div className="relative z-10 flex flex-col items-center text-center">
+                            <div className="bg-white/10 p-3 rounded-full mb-3">
+                                <Ticket size={24} className="text-yellow-400" />
+                            </div>
+                            <h2 className="text-xl font-bold font-['Fredoka'] mb-2">Have a Gift Code?</h2>
+                            <p className="text-slate-300 text-sm mb-4">Enter your code below to instantly unlock magic points!</p>
+
+                            <div className="flex w-full gap-2">
+                                <input
+                                    type="text"
+                                    value={promoCode}
+                                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                    placeholder="ENTER-CODE-HERE"
+                                    className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white placeholder-white/30 font-mono font-bold focus:outline-none focus:border-yellow-400 focus:bg-white/20 transition-all uppercase"
+                                />
+                                <button
+                                    onClick={handleRedeem}
+                                    disabled={isRedeeming || !promoCode}
+                                    className="bg-yellow-400 text-slate-900 px-6 py-2 rounded-xl font-bold hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isRedeeming ? '...' : 'Redeem'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Background Deco */}
+                        <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/20 rounded-full blur-2xl" />
+                        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/20 rounded-full blur-2xl" />
+                    </div>
+                </section>
             </main>
 
             <MagicNavBar />
-        </div>
+        </div >
     );
 };

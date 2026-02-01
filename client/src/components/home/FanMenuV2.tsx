@@ -254,10 +254,13 @@ export const FanMenuV2: React.FC<FanMenuProps> = ({
                                                 }}
                                                 muted
                                                 playsInline
+                                                autoPlay
+                                                loop
                                                 preload="auto"
                                                 onLoadedData={(e) => {
                                                     const video = e.target as HTMLVideoElement;
-                                                    video.currentTime = 0.1;
+                                                    // Ensure play is attempted
+                                                    video.play().catch(() => { });
                                                 }}
                                             />
                                         ) : (

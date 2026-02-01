@@ -139,10 +139,49 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     };
 
     const handleSave = () => {
-        if (!canvasRef.current) return;
-        const canvas = canvasRef.current;
+        if (!image) return;
 
-        canvas.toBlob((blob) => {
+        // Create a temporary high-res canvas
+        const outputCanvas = document.createElement('canvas');
+        const OUTPUT_SIZE = 1024;
+
+        outputCanvas.width = OUTPUT_SIZE;
+        outputCanvas.height = OUTPUT_SIZE / aspectRatio;
+
+        const ctx = outputCanvas.getContext('2d');
+        if (!ctx) return;
+
+        // Fill background
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+        // Calculate scaling factor between display canvas and output canvas
+        // We rely on the internal 'scale', 'position', 'rotation' state which describes the transform relative to the DISPLAY canvas.
+        // So we need to map those to the 1024px canvas.
+
+        const { width: displayW, height: displayH } = getCanvasSize();
+        const ratio = OUTPUT_SIZE / displayW;
+
+        ctx.save();
+
+        // Translate to the center point (including the user's pan offset, scaled)
+        // This matches the display logic: ctx.translate(width / 2 + position.x, ...);
+        const centerX = outputCanvas.width / 2 + position.x * ratio;
+        const centerY = outputCanvas.height / 2 + position.y * ratio;
+
+        ctx.translate(centerX, centerY);
+
+        // Apply rotation
+        ctx.rotate((rotation * Math.PI) / 180);
+
+        // Apply scale (adjusted by the ratio of output/display size)
+        ctx.scale(scale * ratio, scale * ratio);
+
+        // Draw image centered at origin
+        ctx.drawImage(image, -image.width / 2, -image.height / 2);
+        ctx.restore();
+
+        outputCanvas.toBlob((blob) => {
             if (blob) onCrop(blob);
         }, 'image/jpeg', 0.95);
     };
@@ -239,10 +278,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Hint Text */}
-                    <p className="text-center text-xs text-slate-600 font-medium mt-3">
-                        🖱️ Drag to move • 🖱️ Scroll to zoom • 🔄 Use buttons to rotate
-                    </p>
+
                 </div>
             </div>
         </div>

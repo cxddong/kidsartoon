@@ -45,15 +45,15 @@ export const MOODS = [
 ];
 
 export const VOICES = [
-    { id: 'standard', label: 'Standard Voice', tier: 'standard', cost: 0, icon: Volume2, description: 'Clear HD voice', demoText: 'Hello! I am the standard narrator voice.', demoUrl: '/assets/audio_demos/standard_preview.mp3' },
-    { id: 'kiki', label: 'Kiki (Premium)', tier: 'premium', cost: 20, icon: Volume2, description: '3-5yo girl, cute & curious', demoText: 'Hi there! I\'m Kiki, and I love telling magical stories!', demoUrl: '/assets/audio_demos/kiki_preview.mp3' },
-    { id: 'aiai', label: 'Aiai (Premium)', tier: 'premium', cost: 20, icon: Volume2, description: 'British girl, educated', demoText: 'Good day! I\'m Aiai, and I shall narrate your wonderful tale.', demoUrl: '/assets/audio_demos/aiai_preview.mp3' },
-    { id: 'titi', label: 'Titi (Premium)', tier: 'premium', cost: 20, icon: Volume2, description: 'Senior male, captivating & cold', demoText: 'Hey! I\'m Titi, and I\'m super excited to tell your story!', demoUrl: '/assets/audio_demos/titi_preview.mp3' },
+    { id: 'standard', label: 'Robot Friend', tier: 'standard', cost: 0, image: '/assets/role_icons/icon_robot.png', icon: Volume2, description: '[FREE] Robot Friend', demoText: 'Hello! I am the standard narrator voice.', demoUrl: '/assets/audio_demos/standard_preview.mp3' },
+    { id: 'kiki', label: 'Kiki', tier: 'premium', cost: 20, image: '/assets/role_icons/icon_gigi.png', icon: Volume2, description: '20 💎 (Pro FREE ✨)', demoText: 'Hi there! I\'m Kiki, and I love telling magical stories!', demoUrl: '/assets/audio_demos/kiki_preview.mp3' },
+    { id: 'aiai', label: 'Aiai', tier: 'premium', cost: 20, image: '/assets/role_icons/icon_lily.png', icon: Volume2, description: '20 💎 (Pro FREE ✨)', demoText: 'Good day! I\'m Aiai, and I shall narrate your wonderful tale.', demoUrl: '/assets/audio_demos/aiai_preview.mp3' },
+    { id: 'titi', label: 'Titi', tier: 'premium', cost: 20, image: '/assets/role_icons/icon_leo.png', icon: Volume2, description: '20 💎 (Pro FREE ✨)', demoText: 'Hey! I\'m Titi, and I\'m super excited to tell your story!', demoUrl: '/assets/audio_demos/titi_preview.mp3' },
 ];
 
 export const MODELS = [
-    { id: 'standard', label: 'Standard', tier: 'standard', cost: 0, icon: Sparkles, description: 'Fast & fun stories' },
-    { id: 'gpt5', label: 'GPT-5.2 (Pro)', tier: 'premium', cost: 30, icon: Brain, description: 'Smartest storyteller' },
+    { id: 'standard', label: 'Quick Story (1 min)', tier: 'standard', cost: 0, image: '/assets/story_icons/icon_basic.png', icon: Sparkles, description: '[FREE] Quick Story' },
+    { id: 'gpt5', label: 'Epic Story (3 mins)', tier: 'premium', cost: 50, image: '/assets/story_icons/icon_smartest.png', icon: Brain, description: '50 💎 (Premium ✨) - Double the magic!' },
 ];
 
 export interface StoryBuilderData {
@@ -88,8 +88,23 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
     const [playingDemo, setPlayingDemo] = useState<string | null>(null);
 
     const recognitionRef = useRef<any>(null);
+    const currentAudioController = useRef<{ stop: () => void } | null>(null);
+
+    // Stop audio on unmount
+    React.useEffect(() => {
+        return () => {
+            if (currentAudioController.current) {
+                currentAudioController.current.stop();
+                currentAudioController.current = null;
+            }
+        };
+    }, []);
 
     const handleSubmit = () => {
+        if (currentAudioController.current) {
+            currentAudioController.current.stop(); // Stop demo before generating
+            currentAudioController.current = null;
+        }
         onGenerate({ storyStyle, contentTags, mood, voice, voiceTier, modelTier, voiceNote });
     };
 
@@ -124,56 +139,101 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
         }
     };
 
+    const playbackRequestId = useRef(0);
+
     // Voice Preview Logic
     const playVoiceDemo = async (item: any) => {
         const { id: voiceId, tier: voiceTier, demoText, demoUrl } = item;
+        const requestId = ++playbackRequestId.current;
+
+        // 1. Stop any currently playing audio immediately
+        if (currentAudioController.current) {
+            currentAudioController.current.stop();
+            currentAudioController.current = null;
+        }
+
+        // Toggle OFF if clicking same icon
         if (playingDemo === voiceId) {
             setPlayingDemo(null);
             return;
         }
+
         setPlayingDemo(voiceId);
 
         try {
+            let controller;
+
             if (demoUrl) {
+                // Check if file exists first (optional, but good for error catching)
                 const check = await fetch(demoUrl, { method: 'HEAD' });
                 if (check.ok) {
-                    await playAudioWithPitchShift(demoUrl, 1.0, () => setPlayingDemo(null));
-                    return;
+                    // Check ID before playing (in case check took time)
+                    if (playbackRequestId.current !== requestId) return;
+
+                    controller = await playAudioWithPitchShift(demoUrl, 1.0, () => {
+                        if (playbackRequestId.current === requestId) setPlayingDemo(null);
+                    });
                 }
             }
 
-            // Use Minimax endpoint for premium voices, standard endpoint for others
-            const endpoint = voiceTier === 'premium' ? '/api/sparkle/speak-minimax' : '/api/sparkle/speak';
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: demoText,
-                    voiceId: voiceId, // Pass the raw ID (kiki, aiai, titi), backend maps it
-                    userId: userId || 'demo'
-                })
-            });
-
-            if (response.ok) {
-                const contentType = response.headers.get('Content-Type');
-                let audioUrl: string;
-                if (contentType?.includes('application/json')) {
-                    const data = await response.json();
-                    audioUrl = data.audioUrl;
-                } else {
-                    const arrayBuffer = await response.arrayBuffer();
-                    audioUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: 'audio/mp3' }));
-                }
-                await playAudioWithPitchShift(
-                    audioUrl,
-                    voiceTier === 'premium' ? 1.0 : 1.1,
-                    () => setPlayingDemo(null)
-                );
+            // Check if ignored during file check or play setup
+            if (playbackRequestId.current !== requestId) {
+                if (controller) controller.stop();
+                return;
             }
+
+            if (!controller) {
+                // Fallback / standard generation if no demoUrl or failed
+                const endpoint = voiceTier === 'premium' ? '/api/sparkle/speak-minimax' : '/api/sparkle/speak';
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: demoText,
+                        voiceId: voiceId, // Pass the raw ID (kiki, aiai, titi), backend maps it
+                        userId: userId || 'demo'
+                    })
+                });
+
+                // Check ID after slow fetch
+                if (playbackRequestId.current !== requestId) return;
+
+                if (response.ok) {
+                    const contentType = response.headers.get('Content-Type');
+                    let audioUrl: string;
+                    if (contentType?.includes('application/json')) {
+                        const data = await response.json();
+                        audioUrl = data.audioUrl;
+                    } else {
+                        const arrayBuffer = await response.arrayBuffer();
+                        audioUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: 'audio/mp3' }));
+                    }
+
+                    controller = await playAudioWithPitchShift(
+                        audioUrl,
+                        voiceTier === 'premium' ? 1.0 : 1.1,
+                        () => {
+                            if (playbackRequestId.current === requestId) setPlayingDemo(null);
+                        }
+                    );
+                }
+            }
+
+            // Final check before storing controller
+            if (playbackRequestId.current !== requestId) {
+                if (controller) controller.stop();
+                return;
+            }
+
+            // Store controller so we can stop it later
+            if (controller) {
+                currentAudioController.current = controller;
+            }
+
         } catch (error) {
             console.error('Demo playback failed:', error);
-            setPlayingDemo(null);
+            if (playbackRequestId.current === requestId) setPlayingDemo(null);
         }
     };
 
@@ -197,23 +257,26 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                     {STORY_STYLES.map(item => (
-                        <button key={item.id} onClick={() => setStoryStyle(item.id)}
-                            className="flex flex-col items-center gap-2 transition-all group">
-                            <div className={cn(
-                                "relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all shadow-sm",
-                                storyStyle === item.id ? "border-yellow-500 ring-2 ring-yellow-300 scale-105" : "border-transparent bg-white/50"
-                            )}>
-                                <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <div key={item.id} className="relative aspect-square">
+                            <button onClick={() => setStoryStyle(item.id)}
+                                className={cn(
+                                    "w-full h-full rounded-2xl border-2 transition-all relative overflow-hidden p-0",
+                                    storyStyle === item.id ? "border-yellow-500 ring-2 ring-yellow-300 scale-105" : "border-transparent hover:scale-105"
+                                )}>
+                                <img src={item.image} className="absolute inset-0 w-full h-full object-cover" />
+                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 p-2 text-left">
+                                    <span className={cn("text-xs font-black block text-white drop-shadow-md leading-tight")}>
+                                        {item.labels.en.split(':').pop()?.trim()}
+                                    </span>
+                                </div>
                                 {storyStyle === item.id && (
-                                    <div className="absolute top-1 right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+                                    <div className="absolute top-2 right-2 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg">
                                         <div className="w-2.5 h-2.5 bg-white rounded-full" />
                                     </div>
                                 )}
-                            </div>
-                            <span className={cn("text-[10px] font-black text-center leading-tight", storyStyle === item.id ? "text-yellow-800" : "text-slate-600")}>
-                                {item.labels.en.split(':').pop()?.trim()}
-                            </span>
-                        </button>
+                            </button>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -228,26 +291,29 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                     {CONTENT_TAGS.map(tag => {
                         const isSelected = contentTags.includes(tag.id);
                         return (
-                            <button key={tag.id} onClick={() => {
-                                setContentTags(prev => {
-                                    if (prev.includes(tag.id)) return prev.filter(t => t !== tag.id);
-                                    if (prev.length >= 3) return prev;
-                                    return [...prev, tag.id];
-                                });
-                            }} className="flex flex-col items-center gap-2 transition-all group">
-                                <div className={cn(
-                                    "relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all shadow-sm",
-                                    isSelected ? "border-blue-500 ring-2 ring-blue-300 scale-105" : "border-transparent bg-white/50"
+                            <div key={tag.id} className="relative aspect-square">
+                                <button onClick={() => {
+                                    setContentTags(prev => {
+                                        if (prev.includes(tag.id)) return prev.filter(t => t !== tag.id);
+                                        if (prev.length >= 3) return prev;
+                                        return [...prev, tag.id];
+                                    });
+                                }} className={cn(
+                                    "w-full h-full rounded-2xl border-2 transition-all relative overflow-hidden p-0",
+                                    isSelected ? "border-blue-500 ring-2 ring-blue-300 scale-105" : "border-transparent hover:scale-105"
                                 )}>
-                                    <img src={tag.image} className="w-full h-full object-cover" />
+                                    <img src={tag.image} className="absolute inset-0 w-full h-full object-cover" />
+                                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                                    <div className="absolute inset-x-0 bottom-0 p-2 text-left">
+                                        <span className={cn("text-xs font-bold block text-white drop-shadow-md leading-tight")}>{tag.id}</span>
+                                    </div>
                                     {isSelected && (
-                                        <div className="absolute top-1 right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
                                             <div className="w-2.5 h-2.5 bg-white rounded-full" />
                                         </div>
                                     )}
-                                </div>
-                                <span className={cn("text-[10px] font-bold text-center", isSelected ? "text-blue-600" : "text-slate-600")}>{tag.id}</span>
-                            </button>
+                                </button>
+                            </div>
                         );
                     })}
                 </div>
@@ -261,23 +327,26 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                     {MOODS.map(item => (
-                        <button key={item.id} onClick={() => setMood(item.id)}
-                            className="flex flex-col items-center gap-2 transition-all group">
-                            <div className={cn(
-                                "relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all shadow-sm",
-                                mood === item.id ? "border-orange-500 ring-2 ring-orange-300 scale-105" : "border-transparent bg-white/50"
-                            )}>
-                                <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <div key={item.id} className="relative aspect-square">
+                            <button key={item.id} onClick={() => setMood(item.id)}
+                                className={cn(
+                                    "w-full h-full rounded-2xl border-2 transition-all relative overflow-hidden p-0",
+                                    mood === item.id ? "border-orange-500 ring-2 ring-orange-300 scale-105" : "border-transparent hover:scale-105"
+                                )}>
+                                <img src={item.image} className="absolute inset-0 w-full h-full object-cover" />
+                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 p-2 text-left">
+                                    <span className={cn("text-xs font-black block text-white drop-shadow-md leading-tight")}>
+                                        {item.labels.en.split('&').shift()?.trim()}
+                                    </span>
+                                </div>
                                 {mood === item.id && (
-                                    <div className="absolute top-1 right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                                    <div className="absolute top-2 right-2 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
                                         <div className="w-2.5 h-2.5 bg-white rounded-full" />
                                     </div>
                                 )}
-                            </div>
-                            <span className={cn("text-[10px] font-black text-center leading-tight", mood === item.id ? "text-orange-800" : "text-slate-600")}>
-                                {item.labels.en.split('&').shift()?.trim()}
-                            </span>
-                        </button>
+                            </button>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -288,52 +357,70 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                     <span className="bg-green-400 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">4</span>
                     Voice Actor 🎙️
                 </h3>
-                <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-3">
+                    {/* Changed from list to grid for better avatar display */}
                     {VOICES.map(item => {
                         const isPremium = item.tier === 'premium';
                         const effectiveCost = isPro ? 0 : item.cost;
+                        const isSelected = voice === item.id;
 
                         return (
-                            <div key={item.id} className="relative flex gap-2">
+                            <div key={item.id} className="relative aspect-square">
                                 <button
                                     onClick={() => {
                                         setVoice(item.id);
                                         setVoiceTier(item.tier as any);
                                     }}
                                     className={cn(
-                                        "flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
-                                        voice === item.id
-                                            ? "border-green-500 bg-green-50 text-green-700"
-                                            : "border-transparent bg-white/50 text-slate-500 hover:bg-white/80"
+                                        "w-full h-full rounded-2xl border-2 transition-all relative overflow-hidden p-0",
+                                        isSelected
+                                            ? "border-green-500 ring-2 ring-green-300 scale-[1.02]"
+                                            : "border-transparent hover:scale-[1.02]"
                                     )}
                                 >
-                                    <item.icon className="w-5 h-5" />
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold block">{item.label}</span>
-                                        </div>
-                                        <span className="text-xs text-slate-400">{item.description}</span>
+                                    {/* Full Image */}
+                                    <img src={item.image} alt={item.label} className="absolute inset-0 w-full h-full object-cover" />
+
+                                    {/* Gradient Overlay for Text Readability */}
+                                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+
+                                    {/* Content Overlay */}
+                                    <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+                                        <span className={cn("text-base font-black block text-white drop-shadow-md")}>{item.label}</span>
+                                        <span className="text-xs text-white/90 font-medium block mt-0.5 drop-shadow-sm">{item.description}</span>
                                     </div>
 
-                                    {/* Cost / Badge Display */}
+                                    {/* Selected Indicator */}
+                                    {isSelected && (
+                                        <div className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 bg-green-500 rounded-full shadow-lg">
+                                            <div className="w-2.5 h-2.5 bg-white rounded-full translate-y-px" />
+                                            {/* <Check className="w-3.5 h-3.5 text-white" /> */}
+                                        </div>
+                                    )}
+
+                                    {/* Cost / Badge Display for Voices */}
                                     {isPremium && (
-                                        <div className='flex items-center gap-1'>
+                                        <div className='absolute top-2 right-9'>
                                             {isPro ? (
-                                                <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">PRO FREE</span>
+                                                <span className="text-[10px] bg-gradient-to-r from-green-400 to-emerald-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm backdrop-blur-sm">PRO FREE</span>
                                             ) : (
-                                                <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold border border-slate-300">
-                                                    -{effectiveCost} ✨
+                                                <span className="text-[10px] bg-black/50 text-white px-2 py-0.5 rounded-full font-bold backdrop-blur-sm border border-white/20">
+                                                    -{effectiveCost} 💎
                                                 </span>
                                             )}
                                         </div>
                                     )}
-                                </button>
-                                <button onClick={() => playVoiceDemo(item)}
-                                    className={cn(
-                                        "p-3 rounded-xl border-2 transition-all",
-                                        playingDemo === item.id ? "bg-purple-100 border-purple-500 text-purple-600" : "bg-white/50 border-transparent text-slate-400"
-                                    )}>
-                                    {playingDemo === item.id ? <Volume className="w-5 h-5 animate-pulse" /> : <Play className="w-5 h-5" />}
+
+                                    {/* Audio Preview Button - Floating Top Left */}
+                                    <div
+                                        onClick={(e) => { e.stopPropagation(); playVoiceDemo(item); }}
+                                        className={cn(
+                                            "absolute top-2 left-2 p-2 rounded-full cursor-pointer backdrop-blur-md transition-all shadow-lg active:scale-95 group",
+                                            playingDemo === item.id ? "bg-green-500 text-white" : "bg-black/30 text-white hover:bg-black/50"
+                                        )}
+                                    >
+                                        {playingDemo === item.id ? <Volume className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4 group-hover:fill-current" />}
+                                    </div>
                                 </button>
                             </div>
                         );
@@ -352,44 +439,60 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                         const isSelected = modelTier === item.tier;
                         const isPremium = item.tier === 'premium';
                         const effectiveCost = isPro ? 0 : item.cost;
+                        // const isStandard = item.id === 'standard'; // Check for standard story
 
                         return (
-                            <button
-                                key={item.id}
-                                onClick={() => {
-                                    setModelTier(item.tier as any);
-                                }}
-                                className={cn(
-                                    "flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
-                                    isSelected
-                                        ? "border-purple-500 bg-purple-50 text-purple-700"
-                                        : "border-transparent bg-white/50 text-slate-500 hover:bg-white/80"
-                                )}
-                            >
-                                <item.icon className={cn("w-5 h-5", isSelected && "animate-pulse")} />
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-bold block">{item.label}</span>
+                            <div key={item.id} className="relative aspect-square">
+                                <button
+                                    onClick={() => {
+                                        setModelTier(item.tier as any);
+                                    }}
+                                    className={cn(
+                                        "w-full h-full rounded-2xl border-2 transition-all relative overflow-hidden p-0",
+                                        isSelected
+                                            ? "border-purple-500 ring-2 ring-purple-300 scale-[1.02]"
+                                            : "border-transparent hover:scale-[1.02]"
+                                    )}
+                                >
+                                    {/* Full Image */}
+                                    <div className="absolute inset-0 w-full h-full bg-slate-100">
+                                        <img src={item.image} className="w-full h-full object-cover" />
                                     </div>
-                                    <span className="text-xs text-slate-400">{item.description}</span>
-                                </div>
-                                {isSelected && !isPremium && (
-                                    <Check className="w-5 h-5 text-purple-600" />
-                                )}
 
-                                {/* Cost / Badge Display for Models */}
-                                {isPremium && (
-                                    <div className='flex items-center gap-1'>
-                                        {isPro ? (
-                                            <span className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">PRO FREE</span>
-                                        ) : (
-                                            <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold border border-slate-300">
-                                                -{effectiveCost} ✨
-                                            </span>
-                                        )}
+                                    {/* Gradient Overlay */}
+                                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+
+                                    {/* Content Overlay */}
+                                    <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+                                        <span className={cn("text-base font-black block text-white drop-shadow-md")}>{item.label}</span>
+                                        <span className="text-xs text-white/90 font-medium block mt-0.5 drop-shadow-sm">{item.description}</span>
                                     </div>
-                                )}
-                            </button>
+
+                                    {isSelected && (
+                                        <div className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 bg-purple-500 rounded-full shadow-lg">
+                                            {/* Custom dot usage consistent with style selection */}
+                                            <div className="w-2.5 h-2.5 bg-white rounded-full translate-y-px" />
+                                        </div>
+                                    )}
+
+                                    {/* Cost / Badge Display for Models */}
+                                    {isPremium ? (
+                                        <div className='absolute top-2 left-2'>
+                                            {isPro ? (
+                                                <span className="text-[10px] bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full font-bold shadow-sm backdrop-blur-sm">PRO FREE</span>
+                                            ) : (
+                                                <span className="text-[10px] bg-black/50 text-white px-2 py-1 rounded-full font-bold backdrop-blur-sm border border-white/20">
+                                                    -{effectiveCost} 💎
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className='absolute top-2 left-2'>
+                                            <span className="text-[10px] bg-green-500 text-white px-2 py-1 rounded-full font-bold shadow-sm backdrop-blur-sm shadow-green-200">FREE ✨</span>
+                                        </div>
+                                    )}
+                                </button>
+                            </div>
                         );
                     })}
                 </div>

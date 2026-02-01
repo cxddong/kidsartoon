@@ -32,7 +32,7 @@ export const PictureBookPage: React.FC = () => {
 
     const goBack = () => {
         sessionStorage.removeItem('book-result');
-        navigate('/generate');
+        navigate('/story-selection');
     };
 
     // Clear stale session on mount to ensure fresh start
@@ -238,7 +238,7 @@ export const PictureBookPage: React.FC = () => {
 
             {/* Header */}
             <header className="w-full relative z-50 flex items-center gap-4 p-4 pointer-events-none">
-                <button onClick={() => navigate('/home')} className="pointer-events-auto p-2 bg-white/20 backdrop-blur-sm rounded-full shadow-sm hover:bg-white/30 transition-colors">
+                <button onClick={() => navigate('/story-selection')} className="pointer-events-auto p-2 bg-white/20 backdrop-blur-sm rounded-full shadow-sm hover:bg-white/30 transition-colors">
                     <ArrowRight className="w-6 h-6 text-white rotate-180" />
                 </button>
                 <div className="flex-1" />
@@ -300,7 +300,7 @@ export const PictureBookPage: React.FC = () => {
                             <div className="mt-8">
                                 <GenerationCancelButton
                                     isGenerating={true}
-                                    onCancel={() => navigate('/generate')}
+                                    onCancel={() => navigate('/story-selection')}
                                 />
                             </div>
                         </motion.div>

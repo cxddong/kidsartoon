@@ -34,12 +34,12 @@ export const DebugResizableBox: React.FC<DebugResizableBoxProps> = ({
     }>({ type: null, startX: 0, startY: 0, startDims: dims });
 
     useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
+        const handleMove = (clientX: number, clientY: number) => {
             if (!draggingRef.current.type || !parentRef.current) return;
 
             const parentRect = parentRef.current.getBoundingClientRect();
-            const dxPx = e.clientX - draggingRef.current.startX;
-            const dyPx = e.clientY - draggingRef.current.startY;
+            const dxPx = clientX - draggingRef.current.startX;
+            const dyPx = clientY - draggingRef.current.startY;
 
             // Convert px delta to % delta
             const dx = (dxPx / parentRect.width) * 100;
@@ -68,32 +68,54 @@ export const DebugResizableBox: React.FC<DebugResizableBoxProps> = ({
                     newDims.t = startDims.t + dy;
                     newDims.h = startDims.h - dy;
                     break;
-                // Add corners if needed, keeping simple for now as requested "4 edges"
             }
 
             setDims(newDims);
             if (onChange) onChange(newDims);
         };
 
-        const handleMouseUp = () => {
+        const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
+        const handleTouchMove = (e: TouchEvent) => {
+            if (e.touches.length > 0) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        };
+
+        const handleEnd = () => {
             draggingRef.current.type = null;
         };
 
         window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('mouseup', handleEnd);
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
+
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('mouseup', handleEnd);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleEnd);
         };
     }, [parentRef]);
 
-    const startDrag = (e: React.MouseEvent, type: any) => {
+    const startDrag = (e: React.MouseEvent | React.TouchEvent, type: any) => {
         e.stopPropagation();
-        e.preventDefault();
+        // e.preventDefault(); // Don't prevent default on touch start immediately or it mimics mouse? 
+        // Actually for direct manipulation we usually want to prevent scrolling.
+
+        let clientX, clientY;
+        if ('touches' in e) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = (e as React.MouseEvent).clientX;
+            clientY = (e as React.MouseEvent).clientY;
+        }
+
         draggingRef.current = {
             type,
-            startX: e.clientX,
-            startY: e.clientY,
+            startX: clientX,
+            startY: clientY,
             startDims: { ...dims }
         };
     };
@@ -111,14 +133,31 @@ export const DebugResizableBox: React.FC<DebugResizableBoxProps> = ({
             {/* Drag Handle (Center) */}
             <div
                 onMouseDown={(e) => startDrag(e, 'move')}
+                onTouchStart={(e) => startDrag(e, 'move')}
                 className="absolute inset-0 cursor-move z-0 hover:bg-red-500/20 active:bg-red-500/30 transition-colors"
             />
 
             {/* Resize Handles - Thicker & Visible */}
-            <div onMouseDown={(e) => startDrag(e, 'n')} className="absolute -top-4 left-0 right-0 h-8 cursor-n-resize z-50 hover:bg-blue-500/50 bg-blue-500/20" />
-            <div onMouseDown={(e) => startDrag(e, 's')} className="absolute -bottom-4 left-0 right-0 h-8 cursor-s-resize z-50 hover:bg-blue-500/50 bg-blue-500/20" />
-            <div onMouseDown={(e) => startDrag(e, 'w')} className="absolute top-0 -left-4 bottom-0 w-8 cursor-w-resize z-50 hover:bg-blue-500/50 bg-blue-500/20" />
-            <div onMouseDown={(e) => startDrag(e, 'e')} className="absolute top-0 -right-4 bottom-0 w-8 cursor-e-resize z-50 hover:bg-blue-500/50 bg-blue-500/20" />
+            <div
+                onMouseDown={(e) => startDrag(e, 'n')}
+                onTouchStart={(e) => startDrag(e, 'n')}
+                className="absolute -top-4 left-0 right-0 h-8 cursor-n-resize z-50 hover:bg-blue-500/50 bg-blue-500/20"
+            />
+            <div
+                onMouseDown={(e) => startDrag(e, 's')}
+                onTouchStart={(e) => startDrag(e, 's')}
+                className="absolute -bottom-4 left-0 right-0 h-8 cursor-s-resize z-50 hover:bg-blue-500/50 bg-blue-500/20"
+            />
+            <div
+                onMouseDown={(e) => startDrag(e, 'w')}
+                onTouchStart={(e) => startDrag(e, 'w')}
+                className="absolute top-0 -left-4 bottom-0 w-8 cursor-w-resize z-50 hover:bg-blue-500/50 bg-blue-500/20"
+            />
+            <div
+                onMouseDown={(e) => startDrag(e, 'e')}
+                onTouchStart={(e) => startDrag(e, 'e')}
+                className="absolute top-0 -right-4 bottom-0 w-8 cursor-e-resize z-50 hover:bg-blue-500/50 bg-blue-500/20"
+            />
 
             {/* Info Badge */}
             <div className="absolute -top-12 left-0 bg-black/80 text-white text-xs p-2 rounded whitespace-nowrap pointer-events-none">

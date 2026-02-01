@@ -869,7 +869,7 @@ export const GreetingCardPage = () => {
                                         <button onClick={() => startCamera('photo')} className="p-3 bg-pink-50 text-pink-500 rounded-2xl mb-2 hover:bg-pink-100">
                                             <Camera className="w-6 h-6" />
                                         </button>
-                                        <span className="text-sm font-bold text-slate-400 text-center leading-tight">Take Selfie</span>
+                                        <span className="text-sm font-bold text-white text-center leading-tight">Take Selfie</span>
                                     </div>
                                 )}
                             </div>

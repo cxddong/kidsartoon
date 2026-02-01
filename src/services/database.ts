@@ -638,6 +638,89 @@ export class DatabaseService {
         }
     }
 
+    // --- Cleanup & Maintenance ---
+    public async cleanupFailedImages(userId?: string): Promise<{ deleted: number, scanned: number }> {
+        try {
+            console.log(userId ? `[Database] Starting cleanup for user: ${userId}` : `[Database] Starting GLOBAL cleanup...`);
+            let query: FirebaseFirestore.Query = adminDb.collection('images');
+
+            if (userId) {
+                query = query.where('userId', '==', userId);
+            } else {
+                query = query.orderBy('createdAt', 'desc').limit(300); // Safety limit for global scan via API
+            }
+
+            const snapshot = await query.get();
+            let deletedCount = 0;
+            const batch = adminDb.batch();
+            let currentBatchSize = 0;
+            const batchLimit = 400;
+
+            console.log(`[Database] Scanning ${snapshot.size} records for dead links...`);
+
+            // Helper for URL check
+            const checkUrl = async (url: string) => {
+                if (!url || !url.startsWith('http')) return false;
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    return res.ok;
+                } catch {
+                    return false;
+                }
+            };
+
+            for (const doc of snapshot.docs) {
+                const data = doc.data() as ImageRecord;
+                const url = data.imageUrl;
+
+                let isDead = false;
+
+                // 1. Syntax Check
+                if (!url || url.length < 10 || url.includes('undefined')) {
+                    isDead = true;
+                }
+                // 2. Content Check for Stories (New)
+                else if (data.type === 'story' || (data.type as string) === 'audio') {
+                    // If it's a story but has no text AND no audio, it's garbage.
+                    const hasStory = !!(data.meta?.story || data.meta?.bookData);
+                    const hasAudio = !!(data.meta?.audioUrl && data.meta.audioUrl.length > 10);
+
+                    if (!hasStory && !hasAudio) {
+                        // console.log(`[Cleanup] Found empty story/audio record: ${data.id}`);
+                        isDead = true;
+                    }
+                }
+                // 3. Active Check (Real deletion of 403/404s)
+                else {
+                    const alive = await checkUrl(url);
+                    if (!alive) isDead = true;
+                }
+
+
+                if (isDead) {
+                    batch.delete(doc.ref);
+                    deletedCount++;
+                    currentBatchSize++;
+                    if (currentBatchSize >= batchLimit) break;
+                }
+            }
+
+            if (currentBatchSize > 0) {
+                await batch.commit();
+            }
+
+            console.log(`[Database] Cleanup finished. Deleted ${deletedCount} records.`);
+            return { deleted: deletedCount, scanned: snapshot.size };
+
+        } catch (e) {
+            console.error('[Database] Cleanup failed:', e);
+            throw e;
+        }
+    }
+
     // --- Rest Reminder: Get Random Story ---
     public async getRandomCommunityStory(): Promise<ImageRecord | null> {
         try {

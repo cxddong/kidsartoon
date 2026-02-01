@@ -38,6 +38,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
     const [showMagicMenu, setShowMagicMenu] = React.useState(false);
     const navigate = useNavigate();
     const comicRef = React.useRef<HTMLDivElement>(null);
+    const [creatorName, setCreatorName] = React.useState<string | null>(null);
 
     const handleDownload = async () => {
         if (image?.type === 'comic' && comicRef.current) {
@@ -81,6 +82,31 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
         }
     };
 
+    // Fetch Creator Name
+    React.useEffect(() => {
+        if (!image) return;
+        setCreatorName(null); // Reset
+
+        const fetchCreator = async () => {
+            if (image.userId === 'mock') {
+                setCreatorName("Community Artist");
+                return;
+            }
+            try {
+                const res = await fetch(`/api/users/${image.userId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setCreatorName(data.name || `Artist ${image.userId.substring(0, 6)}`);
+                } else {
+                    setCreatorName(`Artist ${image.userId.substring(0, 6)}`);
+                }
+            } catch (e) {
+                setCreatorName(`Artist ${image.userId.substring(0, 6)}`);
+            }
+        };
+        fetchCreator();
+    }, [image]);
+
     // Stop speech when modal closes
     React.useEffect(() => {
         return () => {
@@ -98,6 +124,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
     }, [image, initialShowPuzzle]);
 
     const toggleSpeech = (text: string) => {
+        // ... (existing toggleSpeech) ...
         if (isSpeaking) {
             window.speechSynthesis.cancel();
             if (audioRef.current) {
@@ -135,6 +162,12 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
             fallbackTTS(text);
         }
     };
+
+    // ... (rest of methods)
+
+    // ... (in render) ...
+
+
 
     const fallbackTTS = (text: string) => {
         const utterance = new SpeechSynthesisUtterance(text);
@@ -553,8 +586,20 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
 
                     {/* Footer Actions */}
                     <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                        <div className="text-xs text-slate-400 font-medium">
-                            {/* Magic ID removed */}
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                                    {creatorName ? creatorName.charAt(0).toUpperCase() : '?'}
+                                </span>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-slate-700 leading-tight">
+                                        {creatorName || 'Loading...'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                        {image?.createdAt ? new Date(image.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div className="flex gap-2 items-center">
                             {/* Premium Analyze Button */}

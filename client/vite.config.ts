@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: ['react', 'react-dom', 'three', '@react-three/fiber'],
   },
   server: {
     proxy: {
@@ -40,6 +41,7 @@ export default defineConfig({
     },
   },
   build: {
+    target: 'esnext',
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
@@ -50,6 +52,11 @@ export default defineConfig({
           ui: ['framer-motion', 'lucide-react'],
         },
       },
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext',
     },
   },
 })

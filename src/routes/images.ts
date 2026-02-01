@@ -21,7 +21,7 @@ router.get('/public', async (req, res) => {
         // Return valid images (or empty array)
         res.json(images);
 
-        res.json(images);
+
     } catch (error) {
         console.error("Public Images Error:", error);
         res.status(500).json({ error: 'Failed to load public images' });
@@ -40,8 +40,10 @@ router.get('/proxy', async (req, res) => {
 
         const response = await fetch(imageUrl);
         if (!response.ok) {
-            console.error(`[Proxy] Failed to fetch image: ${response.status} ${response.statusText}`);
-            return res.status(response.status).send(`Failed to fetch image: ${response.statusText}`);
+            // console.warn(`[Proxy] Upstream error for ${imageUrl}: ${response.status}`);
+            // Return 404 so frontend handles it silently without red console spam (if possible)
+            // Or serve a transparent 1x1 pixel or placeholder
+            return res.status(404).send('Image not found');
         }
 
         const contentType = response.headers.get('content-type');
@@ -120,3 +122,22 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to delete image' });
     }
 });
+
+// POST /api/images/cleanup
+// Triggers manually because we don't have a cron job yet
+router.post('/cleanup', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        // If userId is provided, clean ONLY that user (safer for users)
+        // If no userId, could imply global cleanup (admin only ideally, but permissive for now as requested)
+
+        console.log(`[API] Triggering cleanup... User: ${userId || 'GLOBAL'}`);
+        const result = await databaseService.cleanupFailedImages(userId);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        console.error("Cleanup Error:", error);
+        res.status(500).json({ error: 'Failed to cleanup images' });
+    }
+});
+
+export default router;

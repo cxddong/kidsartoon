@@ -16,10 +16,10 @@ const ensureDir = (dir: string) => {
 };
 
 // Get User Profile
-router.get('/:userId', (req, res) => {
+router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const profile = databaseService.getUserProfile(userId);
+    const profile = await databaseService.getUserProfile(userId);
     res.json(profile || { points: 0, profileCompleted: false });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load user profile' });

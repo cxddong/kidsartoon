@@ -148,7 +148,7 @@ export const ArtClassCanvas = forwardRef<ArtClassCanvasRef, ArtClassCanvasProps>
 
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing) return;
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
 
         const { x, y } = getCoords(e);
         const newPoint = { x, y };

@@ -84,7 +84,7 @@ export const ComicPage: React.FC = () => {
             const confirmed = window.confirm("Are you sure you want to go back? Your current progress might be lost.");
             if (!confirmed) return;
         }
-        navigate('/generate');
+        navigate('/story-selection');
     };
 
     // Persistence: Restore state on mount
@@ -756,7 +756,7 @@ export const ComicPage: React.FC = () => {
                                 <div className="mt-8">
                                     <GenerationCancelButton
                                         isGenerating={true}
-                                        onCancel={() => navigate('/home')}
+                                        onCancel={() => navigate('/story-selection')}
                                     />
                                 </div>
                             </motion.div>

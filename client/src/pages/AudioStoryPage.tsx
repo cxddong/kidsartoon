@@ -8,12 +8,13 @@ import { useAuth } from '../context/AuthContext';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { playAudioWithPitchShift } from '../lib/audioUtils';
 import { VIPCover } from '../components/ui/VIPCover';
-import mic3Video from '../assets/mic3.mp4';
+
+
 import audioStoryBg from '../assets/audio.mp4';
 
 // const backgroundUrl = '/bg_cartoon_new.jpg';
 
-import { StoryBuilderPanel, type StoryBuilderData, STORY_STYLES, MOODS } from '../components/builder/StoryBuilderPanel';
+import { StoryBuilderPanel, type StoryBuilderData, STORY_STYLES, MOODS, VOICES, CONTENT_TAGS, MODELS } from '../components/builder/StoryBuilderPanel';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
 export const AudioStoryPage: React.FC = () => {
@@ -82,6 +83,7 @@ export const AudioStoryPage: React.FC = () => {
 
     // Removed redundant local story settings state
     const [storyData, setStoryData] = useState<any>(null); // {text, audioUrl}
+    const [usedParams, setUsedParams] = useState<StoryBuilderData | null>(null);
 
     // Audio Player State
     const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
@@ -105,12 +107,9 @@ export const AudioStoryPage: React.FC = () => {
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Read for Cropper
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCropImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            // Use createObjectURL for performance
+            const url = URL.createObjectURL(file);
+            setCropImage(url);
 
             // Clear input
             e.target.value = '';
@@ -184,7 +183,11 @@ export const AudioStoryPage: React.FC = () => {
             setIsPlaying(false);
             return;
         }
-        const utterance = new SpeechSynthesisUtterance(text);
+        const cleanText = text.replace(/[*#_`~]/g, '')
+            .replace(/Title:/i, '')
+            .replace(/\[.*?\]/g, '')
+            .trim();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
         // Try to select a decent voice
         const voices = window.speechSynthesis.getVoices();
         const preferred = voices.find(v => v.name.includes('Google US English') || v.name.includes('Zira'));
@@ -197,6 +200,7 @@ export const AudioStoryPage: React.FC = () => {
 
     const generateStory = async (builderData: StoryBuilderData) => {
         if (!imageFile && !imagePreview) return;
+        setUsedParams(builderData);
         setLoading(true);
         setEstTime('Estimated time: ~45 seconds');
         const interval = runProgress(45);
@@ -214,12 +218,19 @@ export const AudioStoryPage: React.FC = () => {
             const prompt = `
                                     ANALYZE the uploaded image in detail first. Then, create a short, engaging audio story based STRICTLY on the visible characters, setting, and actions in the image.
                                     
-                                    VISUAL ANCHORS (Use these to pull lighting/texture from Context Cache):
+                                    
+                                    Visual Anchors (Use these to pull lighting/texture from Context Cache):
                                     - Scene: ${styleLabel}
                                     - Mood/Vibe: ${moodLabel}
                                     
                                     Narration Voice: ${builderData.voice}
-                                    Rules: Friendly narration tone, short story suitable for children (approx 30-50 words). DO NOT make up generic elements; use what is seen in the picture.
+                                    
+                                    LENGTH INSTRUCTION:
+                                    ${builderData.modelTier === 'premium'
+                    ? 'CRITICAL: Write a LONG, EPIC story (approx 300 words). It should take at least 3 minutes to read. Include dialogue, detailed descriptions, and a complex plot.'
+                    : 'Write a short, punchy story (approx 60-80 words). Keep it simple and quick.'}
+                                    
+                                    Rules: Friendly narration tone. DO NOT make up generic elements; use what is seen in the picture.
                                     `.trim();
 
             const formData = new FormData();
@@ -340,15 +351,14 @@ export const AudioStoryPage: React.FC = () => {
                             {step === 1 && (
                                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-row items-center justify-center gap-8">
                                     <div className={cn(
-                                        "rounded-[130px] flex flex-col items-center justify-center transition-all group cursor-pointer overflow-hidden relative transform hover:scale-95 duration-500 shrink-0 bg-white border-4 border-dashed border-purple-200 shadow-xl",
-                                        !imagePreview ? "w-64 h-64 rotate-3 hover:rotate-0" : "w-64 h-auto"
+                                        "rounded-full flex flex-col items-center justify-center transition-all group cursor-pointer overflow-hidden relative transform hover:scale-95 duration-500 shrink-0 border-4 border-dashed border-purple-200 shadow-xl",
+                                        !imagePreview ? "w-36 h-36 rotate-3 hover:rotate-0 bg-white/50 backdrop-blur-md" : "w-40 h-auto bg-white"
                                     )}
                                         onClick={() => document.getElementById('step1-upload')?.click()}>
 
                                         {/* Background Video (mic3.mp4) - Only show when no image */}
-                                        {!imagePreview && (
-                                            <video src={mic3Video} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" />
-                                        )}
+
+
 
 
                                         <input type="file" id="step1-upload" className="hidden" accept="image/*" onChange={handleUpload} />
@@ -428,6 +438,108 @@ export const AudioStoryPage: React.FC = () => {
                                                 </button>
                                             )}
 
+                                            {/* Story Choices Details */}
+                                            {usedParams && (
+                                                <div className="w-full space-y-3">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        {/* 1. Location (Style) */}
+                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                                                            {(() => {
+                                                                const style = STORY_STYLES.find(s => s.id === usedParams.storyStyle);
+                                                                return (
+                                                                    <>
+                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100">
+                                                                            <img src={style?.image} className="w-full h-full object-cover" />
+                                                                        </div>
+                                                                        <div className="overflow-hidden">
+                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Location</div>
+                                                                            <div className="text-sm font-black text-slate-700 leading-tight truncate">{style?.labels.en}</div>
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+
+                                                        {/* 2. Content Tags */}
+                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                                                <span className="text-lg">🎁</span>
+                                                            </div>
+                                                            <div className="overflow-hidden">
+                                                                <div className="text-[10px] uppercase font-bold text-slate-400">Inside</div>
+                                                                <div className="text-sm font-black text-slate-700 leading-tight truncate">
+                                                                    {usedParams.contentTags.length > 0 ? usedParams.contentTags.join(', ') : 'Surprise me!'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* 3. Vibe (Mood) */}
+                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                                                            {(() => {
+                                                                const mood = MOODS.find(m => m.id === usedParams.mood);
+                                                                return (
+                                                                    <>
+                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100">
+                                                                            <img src={mood?.image} className="w-full h-full object-cover" />
+                                                                        </div>
+                                                                        <div className="overflow-hidden">
+                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Vibe</div>
+                                                                            <div className="text-sm font-black text-slate-700 leading-tight truncate">{mood?.labels.en}</div>
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+
+                                                        {/* 4. Narrator */}
+                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
+                                                            {(() => {
+                                                                const voice = VOICES.find(v => v.id === usedParams.voice);
+                                                                return (
+                                                                    <>
+                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100">
+                                                                            <img src={voice?.image} className="w-full h-full object-cover" />
+                                                                        </div>
+                                                                        <div className="overflow-hidden">
+                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Narrator</div>
+                                                                            <div className="text-sm font-black text-slate-700 leading-tight truncate">{voice?.label}</div>
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+
+                                                        {/* 5. Story Smarts (Model) */}
+                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3 col-span-2">
+                                                            {(() => {
+                                                                const model = MODELS.find(m => m.tier === usedParams.modelTier);
+                                                                return (
+                                                                    <>
+                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100 p-1">
+                                                                            <img src={model?.image} className="w-full h-full object-contain" />
+                                                                        </div>
+                                                                        <div className="overflow-hidden">
+                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Story Mode</div>
+                                                                            <div className="text-sm font-black text-slate-700 leading-tight flex items-center gap-2">
+                                                                                {model?.label}
+                                                                                <span className="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-500 font-bold">{model?.tier === 'premium' ? 'LONG' : 'SHORT'}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Voice Note (Optional) */}
+                                                    {usedParams.voiceNote && (
+                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                            <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Your Special Request</div>
+                                                            <div className="text-sm font-medium text-slate-600 italic">"{usedParams.voiceNote}"</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             {/* Text Preview */}
                                             <div className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 max-h-40 overflow-y-auto">
                                                 <p className="text-sm text-slate-600 italic">"{storyData.story}"</p>

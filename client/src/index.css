@@ -41,14 +41,16 @@ body {
 }
 
 /* HIDE SCROLLBAR UTILITY */
-.scrollbar-none {
+.scrollbar-none,
+.noscrollbar {
   -ms-overflow-style: none;
   /* IE and Edge */
   scrollbar-width: none;
   /* Firefox */
 }
 
-.scrollbar-none::-webkit-scrollbar {
+.scrollbar-none::-webkit-scrollbar,
+.noscrollbar::-webkit-scrollbar {
   display: none;
 }
 

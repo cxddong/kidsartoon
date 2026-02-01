@@ -425,6 +425,14 @@ and user context: ${userVoiceText}.
       }
     }
 
+    // SANITIZATION: Remove Markdown and cleanup text for TTS
+    if (story) {
+      story = story.replace(/[*#_`~]/g, '') // Remove markdown symbols
+        .replace(/Title:/i, '')       // Remove common prefixes
+        .replace(/\[.*?\]/g, '')      // Remove [bracketed notes]
+        .trim();
+    }
+
     // 2. Generate Audio using Voice Tier System
     let audioUrl = '';
     let usedProvider = 'openai'; // standard | minimax | elevenlabs
@@ -541,7 +549,7 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
     // Check VIP Status for Watermark
     const userRecord = await databaseService.getUser(userId);
     const isVIP = (userRecord?.plan as string) === 'pro' || (userRecord?.plan as string) === 'yearly_pro' || (userRecord?.plan as string) === 'admin';
-    const watermark = !isVIP;
+    const watermark = false; // User requested no chinese watermark (AI Generated) for all users
 
     // 1. Points
     const action = 'generate_image';
@@ -741,7 +749,7 @@ router.post('/image-to-video/task', (req, res, next) => {
     // Check VIP Status
     const userRecord = await databaseService.getUser(userId);
     const isVIP = (userRecord?.plan as string) === 'pro' || (userRecord?.plan as string) === 'yearly_pro' || (userRecord?.plan as string) === 'admin';
-    const watermark = !isVIP;
+    const watermark = false; // User requested no chinese watermark (AI Generated) for all users
 
     if (!action) {
       return res.status(400).json({ error: 'Action parameter is required', errorCode: 'MISSING_ACTION' });

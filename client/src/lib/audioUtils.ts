@@ -42,8 +42,15 @@ export const playAudioWithPitchShift = async (
         // Return control object
         return {
             stop: () => {
-                source.stop();
-                audioCtx.close();
+                try {
+                    source.stop();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+
+                if (audioCtx.state !== 'closed') {
+                    audioCtx.close().catch(e => console.warn("Error closing context:", e));
+                }
             }
         };
 

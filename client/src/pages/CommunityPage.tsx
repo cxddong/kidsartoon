@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { HeaderBar } from '../components/home/HeaderBar';
 import { LogoArea } from '../components/home/LogoArea';
 import { FeatureButtonsRow } from '../components/home/FeatureButtonsRow';
-import { ContentGrid } from '../components/home/ContentGrid';
 import ImageModal from '../components/history/ImageModal';
 import type { ImageRecord } from '../components/history/ImageModal';
 import { Sparkles } from 'lucide-react';
@@ -12,9 +11,12 @@ import { motion } from 'framer-motion';
 import { magicFloatVariants } from '../lib/animations';
 import { DailyTreasureMap } from '../components/dashboard/DailyTreasureMap';
 import { RippleEffect } from '../components/ui/RippleEffect';
-
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 
+// R3F Imports
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Image as DreiImage, Text, Float, RoundedBox } from '@react-three/drei';
+import * as THREE from 'three';
 
 const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
     { id: '1', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: false, prompt: 'Space Adventure' },
@@ -22,6 +24,21 @@ const MOCK_PUBLIC_ITEMS: ImageRecord[] = [
     { id: '3', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=600', type: 'generated', createdAt: new Date().toISOString(), favorite: false, prompt: 'Dragon Tale' },
     { id: '4', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1629812456605-4a044aa1d632?q=80&w=600', type: 'animation', createdAt: new Date().toISOString(), favorite: false, prompt: 'Under the Sea' },
     { id: '5', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1615184697985-c9bde1b07da7?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Magical Forest' },
+    { id: '6', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1605415460061-055259463b7d?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: false, prompt: 'Starry Night' },
+    { id: '7', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1634152962476-4b8a00e1915c?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: true, prompt: 'Fantasy Castle' },
+    { id: '8', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1622542796254-5b9c46a3d201?q=80&w=600', type: 'generated', createdAt: new Date().toISOString(), favorite: false, prompt: 'Cute Robot' },
+    { id: '9', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1618588507085-c79565432917?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Sunset Beach' },
+    { id: '10', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: false, prompt: 'Abstract Art' },
+    { id: '11', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1617791160536-598cf32026fb?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Mountain Peak' },
+    { id: '12', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: false, prompt: 'City Lights' },
+    { id: '13', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1614730341194-75c60740a1d3?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Neon Future' },
+    { id: '14', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: false, prompt: 'Deep Ocean' },
+    { id: '15', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1615184697985-c9bde1b07da7?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Magical Forest' },
+    { id: '16', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: false, prompt: 'Abstract Art' },
+    { id: '17', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1617791160536-598cf32026fb?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Mountain Peak' },
+    { id: '18', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1549490349-8643362247b5?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: false, prompt: 'City Lights' },
+    { id: '19', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1614730341194-75c60740a1d3?q=80&w=600', type: 'story', createdAt: new Date().toISOString(), favorite: true, prompt: 'Neon Future' },
+    { id: '20', userId: 'mock', imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600', type: 'comic', createdAt: new Date().toISOString(), favorite: false, prompt: 'Deep Ocean' },
 ];
 
 const PROMO_SLIDES = [
@@ -57,37 +74,6 @@ const PROMO_SLIDES = [
         )
     },
     {
-        id: 1,
-        title: "Magic Mirror 🪞",
-        subtitle: 'See what your drawing reveals!',
-        gradient: "from-indigo-600 to-purple-800",
-        link: '/magic-discovery',
-        decor: (
-            <>
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800')] bg-cover opacity-20 mix-blend-overlay" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <Sparkles className="w-24 h-24 text-cyan-300 animate-pulse drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]" />
-                </div>
-            </>
-        )
-    },
-    {
-        id: 2,
-        title: "Send a Magic Card! 💌",
-        subtitle: 'Turn photos into voice greetings!',
-        gradient: "from-pink-400 to-purple-300",
-        link: '/generate/greeting-card',
-        decor: (
-            <>
-                <div className="absolute top-10 right-10 w-20 h-20 bg-white/30 rounded-full blur-xl animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/10 to-transparent" />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                    <Sparkles className="w-32 h-32 text-white" />
-                </div>
-            </>
-        )
-    },
-    {
         id: 3,
         title: "Premium Membership",
         subtitle: 'Unlock unlimited generations! 🚀',
@@ -116,47 +102,36 @@ const PromoBanner: React.FC = () => {
     };
 
     return (
-        <div className="px-4 mb-8 w-full max-w-4xl mx-auto flex-shrink-0 flex flex-col items-center">
-            {/* Slide Area - Taller */}
+        <div className="px-4 mb-2 w-full max-w-4xl mx-auto flex-shrink-0 flex flex-col items-center z-10 relative">
+            {/* Slide Area - Compact */}
             <div
                 onClick={handleBannerClick}
-                className="w-full h-[200px] relative overflow-hidden rounded-3xl shadow-xl group cursor-pointer border-4 border-white transition-all duration-500 bg-white hover:scale-[1.02]"
+                className="w-full h-[120px] relative overflow-hidden rounded-3xl shadow-xl group cursor-pointer border-2 border-white/20 transition-all duration-500 bg-white/10 hover:scale-[1.02] backdrop-blur-md"
             >
                 {PROMO_SLIDES.map((slide, index) => (
                     <div
                         key={slide.id}
-                        className={`absolute inset-0 bg-gradient-to-r ${slide.gradient} flex items-center justify-center transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                        className={`absolute inset-0 bg-gradient-to-r ${slide.gradient} flex items-center justify-center transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-90 z-10' : 'opacity-0 z-0'
                             }`}
                     >
                         {slide.decor}
                         {slide.title && (
                             <div className="text-center z-20 text-white transform group-hover:scale-105 transition-transform duration-500">
-                                <h2 className="text-4xl font-black drop-shadow-md mb-2">{slide.title}</h2>
-                                <p className="text-xl font-bold opacity-90">{slide.subtitle}</p>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleBannerClick();
-                                    }}
-                                    className="mt-6 px-8 py-3 bg-white text-slate-800 rounded-full font-black shadow-lg hover:bg-yellow-100 transition-colors cursor-pointer"
-                                >
-                                    Explore Now
-                                </button>
+                                <h2 className="text-2xl font-black drop-shadow-md">{slide.title}</h2>
+                                <p className="text-sm font-bold opacity-90">{slide.subtitle}</p>
                             </div>
                         )}
                     </div>
                 ))}
             </div>
-
-            {/* Dots Selector - User Choice */}
-            <div className="flex gap-2 mt-4">
+            {/* Dots */}
+            <div className="flex gap-2 mt-2">
                 {PROMO_SLIDES.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => setCurrentSlide(index)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-blue-500 w-8' : 'bg-slate-300 hover:bg-blue-300'
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-white w-6' : 'bg-white/30 hover:bg-white/50'
                             }`}
-                        aria-label={`Go to slide ${index + 1}`}
                     />
                 ))}
             </div>
@@ -164,78 +139,347 @@ const PromoBanner: React.FC = () => {
     );
 };
 
+// --- 3D Components ---
+
+// Safe Gallery Item using manual TextureLoader
+function SafelyLoadedGalleryItem({ item, position, rotation, onClick }: { item: ImageRecord, position: [number, number, number], rotation: [number, number, number], onClick: (id: string) => void }) {
+    const [texture1, setTexture1] = useState<THREE.Texture | null>(null);
+    const [texture2, setTexture2] = useState<THREE.Texture | null>(null);
+    const [showFirst, setShowFirst] = useState(true);
+    const [hasError, setHasError] = useState(false);
+    const [hovered, setHover] = useState(false);
+    const meshRef = useRef<THREE.Group>(null);
+
+    // Load Textures
+    useEffect(() => {
+        setTexture1(null);
+        setTexture2(null);
+        setHasError(false);
+        setShowFirst(true);
+
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+
+        const loadTex = (url: string, setters: (t: THREE.Texture) => void) => {
+            let loadUrl = url;
+            if (url.startsWith('http')) {
+                loadUrl = `/api/images/proxy?url=${encodeURIComponent(url)}`;
+            }
+            loader.load(
+                loadUrl,
+                (tex) => {
+                    tex.colorSpace = THREE.SRGBColorSpace;
+                    setters(tex);
+                },
+                undefined,
+                () => { if (setters === setTexture1) setHasError(true); } // Only error if main fails
+            );
+        };
+
+        if (item.imageUrl) loadTex(item.imageUrl, setTexture1);
+        if ((item as any).secondaryUrl) loadTex((item as any).secondaryUrl, setTexture2);
+
+    }, [item.imageUrl, (item as any).secondaryUrl, item.id]);
+
+    // Swap Timer
+    useEffect(() => {
+        if (texture1 && texture2) {
+            const timer = setInterval(() => {
+                setShowFirst(prev => !prev);
+            }, 3000);
+            return () => clearInterval(timer);
+        }
+    }, [texture1, texture2]);
+
+    // Generate a stable color based on item ID for the fallback
+    const fallbackColor = useMemo(() => {
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD'];
+        let hash = 0;
+        for (let i = 0; i < item.id.length; i++) {
+            hash = item.id.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    }, [item.id]);
+
+    if (hasError) {
+        // FALLBACK: Render a colorful placeholder card
+        const width = 2.5;
+        const height = 2.5;
+        const scale = hovered ? 1.1 : 1.0;
+
+        return (
+            <group position={position} rotation={rotation} ref={meshRef}>
+                <group
+                    onClick={(e) => { e.stopPropagation(); onClick(item.id); }}
+                    onPointerOver={() => { document.body.style.cursor = 'pointer'; setHover(true); }}
+                    onPointerOut={() => { document.body.style.cursor = 'auto'; setHover(false); }}
+                    scale={[scale, scale, 1]}
+                >
+                    <RoundedBox args={[width, height, 0.1]} radius={0.2} smoothness={4} rotation={[0, Math.PI, 0]}>
+                        <meshStandardMaterial color={fallbackColor} roughness={0.4} />
+                    </RoundedBox>
+                </group>
+            </group>
+        );
+    }
+
+    const activeTexture = (texture2 && !showFirst) ? texture2 : texture1;
+    if (!activeTexture) return null; // Wait for load
+
+    // Uniform "Squircle" Card Style calculations based on PRIMARY texture aspect ratio
+    // We stick to one aspect ratio to avoid jitter during swap
+    // Cast to HTMLImageElement to access width/height safely
+    const img = (texture1?.image || activeTexture.image) as HTMLImageElement;
+    const imgAspect = (img && img.width && img.height) ? (img.width / img.height) : 1;
+
+    let width = 2.5;
+    let height = 2.5;
+
+    if (imgAspect > 1.2) {
+        height = width / 1.2;
+    } else if (imgAspect < 0.8) {
+        width = height * 0.8;
+    }
+
+    const scale = hovered ? 1.1 : 1.0;
+    // Cast type to string to avoid TS union errors if 'audio' is not in the type definition yet
+    const isAudio = item.type === 'story' || (item.type as string) === 'audio';
+
+    return (
+        <group position={position} rotation={rotation} ref={meshRef}>
+            <group
+                onClick={(e) => { e.stopPropagation(); onClick(item.id); }}
+                onPointerOver={() => { document.body.style.cursor = 'pointer'; setHover(true); }}
+                onPointerOut={() => { document.body.style.cursor = 'auto'; setHover(false); }}
+                scale={[scale, scale, 1]}
+            >
+                {/* Rounded Card Geometry */}
+                <RoundedBox args={[width, height, 0.1]} radius={0.2} smoothness={4} rotation={[0, Math.PI, 0]}>
+                    <meshBasicMaterial map={activeTexture} side={THREE.DoubleSide} />
+                </RoundedBox>
+
+                {/* Audio Icon Overlay */}
+                {isAudio && (
+                    <Text
+                        position={[0.8, -height / 2 + 0.5, 0.06]} // Bottom right corner
+                        rotation={[0, Math.PI, 0]}
+                        fontSize={0.8}
+                        color="white"
+                        anchorX="center"
+                        anchorY="middle"
+                        outlineWidth={0.05}
+                        outlineColor="black"
+                    >
+                        🎧
+                    </Text>
+                )}
+            </group>
+
+            {/* Minimal Label on Hover */}
+            {hovered && (
+                <Text
+                    position={[0, -height / 2 - 0.4, -0.2]}
+                    rotation={[0, Math.PI, 0]}
+                    fontSize={0.3}
+                    color="white"
+                    anchorX="center"
+                    anchorY="middle"
+                    outlineWidth={0.03}
+                    outlineColor="black"
+                >
+                    {item.prompt?.slice(0, 15) || 'Untitled'}
+                </Text>
+            )}
+        </group>
+    );
+}
+
+function SphereGallery({ items, onItemClick }: { items: ImageRecord[], onItemClick: (id: string) => void }) {
+    const count = items.length;
+    // Radius 10: Compromise between 8 (too crowded) and 12 (too sparse)
+    const radius = 10;
+
+    const positions = useMemo(() => {
+        const temp = [];
+        // Dense Latitude Rings
+        // Increase rows to fill space better vertically?
+        // 6 rows * ~10-15 items per row = 60-90 items
+        const rowCount = 7;
+        const itemsPerRow = Math.ceil(count / rowCount);
+
+        for (let i = 0; i < count; i++) {
+            // Determine which row (ring) this item belongs to
+            const rowIndex = Math.floor(i / itemsPerRow);
+            const colIndex = i % itemsPerRow;
+
+            // Tighter vertical spread: 0.85 to -0.85
+            const yNorm = 0.85 - (rowIndex / (rowCount - 1)) * 1.7;
+            const y = yNorm * radius;
+
+            // Radius of the ring at this height
+            const ringRadius = Math.sqrt(1 - yNorm * yNorm) * radius;
+
+            // Angle around the ring
+            const theta = (colIndex / itemsPerRow) * 2 * Math.PI;
+
+            const x = Math.cos(theta) * ringRadius;
+            const z = Math.sin(theta) * ringRadius;
+
+            temp.push([x, y, z] as [number, number, number]);
+        }
+        return temp;
+    }, [count, radius]);
+
+    return (
+        <group>
+            {items.map((item, i) => {
+                const pos = positions[i];
+                const dummy = new THREE.Object3D();
+                dummy.position.set(pos[0], pos[1], pos[2]);
+                dummy.lookAt(0, 0, 0);
+
+                return (
+                    // We don't need ErrorBoundary here anymore since SafeLoader handles it locally
+                    <SafelyLoadedGalleryItem
+                        key={item.id}
+                        item={item}
+                        position={pos}
+                        rotation={[dummy.rotation.x, dummy.rotation.y, dummy.rotation.z]}
+                        onClick={onItemClick}
+                    />
+                );
+            })}
+        </group>
+    );
+}
+
+
 export const CommunityPage: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [publicItems, setPublicItems] = useState<ImageRecord[]>([]);
-    const [filteredItems, setFilteredItems] = useState<ImageRecord[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Fetch with timeout/mock fallback
         const fetchPublicGallery = async () => {
             try {
-                const res = await fetch('/api/images/public');
-                if (res.ok) {
-                    const data = await res.json();
-                    // Filter out failed items or invalid images
-                    const validData = Array.isArray(data)
-                        ? data.filter((item: any) => item.imageUrl && item.status !== 'failed')
-                        : [];
+                // 1. Fetch Public Global Gallery
+                const response = await fetch('/api/images/public');
+                let publicData = [];
+                if (response.ok) {
+                    publicData = await response.json();
+                }
 
-                    setPublicItems(validData);
-                    setFilteredItems(validData);
+                // 2. Fetch User's Own Gallery (to ensure they are represented)
+                let userData = [];
+                if (user?.uid) {
+                    try {
+                        const userResponse = await fetch(`/api/images/${user.uid}`);
+                        if (userResponse.ok) {
+                            userData = await userResponse.json();
+                        }
+                    } catch (e) {
+                        console.warn("Failed to fetch user personal gallery for globe", e);
+                    }
+                }
+
+                // 3. Merge & Deduplicate
+                // Prioritize User Data first so it shows up
+                const combined = [...userData, ...publicData];
+                const seen = new Set();
+                const validData: ImageRecord[] = [];
+
+                combined.forEach(item => {
+                    // Filter invalid items immediately
+                    if (!item.id || seen.has(item.id)) return;
+
+                    // Extract User Upload (Input)
+                    let userUrl: string | undefined;
+                    if (item.meta?.originalImageUrl?.startsWith('http')) userUrl = item.meta.originalImageUrl;
+                    else if (item.meta?.inputImageUrl?.startsWith('http')) userUrl = item.meta.inputImageUrl;
+
+                    const displayItem = { ...item };
+
+                    // 1. STORY/AUDIO Handling:
+                    // Requirement: "Directly display user upload + Audio Icon"
+                    if (item.type === 'story' || item.type === 'audio') {
+                        const hasStory = !!(item.meta?.story || item.meta?.bookData);
+                        const hasAudio = !!(item.meta?.audioUrl && item.meta.audioUrl.length > 10);
+                        if (!hasStory && !hasAudio) return; // Skip empty
+
+                        // Prefer User Upload as the main texture
+                        if (userUrl) {
+                            displayItem.imageUrl = userUrl;
+                        }
+                        // If no user upload, keep original imageUrl (likely a generated cover)
+                    }
+                    // 2. GENERATED/ART Handling:
+                    // Requirement: "Interactive swap between User Upload and Result"
+                    else {
+                        // If we have a user upload that matches the concept of "input"
+                        if (userUrl && userUrl !== item.imageUrl) {
+                            // Store secondary URL for swapping
+                            // We attach it to the item object (casting as any since interface isn't updated yet)
+                            (displayItem as any).secondaryUrl = userUrl;
+                        }
+                    }
+
+                    // Validate Final URL
+                    if (!displayItem.imageUrl || !displayItem.imageUrl.startsWith('http') || displayItem.imageUrl.includes('undefined')) {
+                        return; // Skip broken
+                    }
+
+                    seen.add(item.id);
+                    validData.push(displayItem);
+                });
+
+                if (validData.length > 0) {
+                    // --- SMART DENSITY CONTROL ---
+                    // Goal: Ensure the globe always looks "full" using REAL data.
+                    const TARGET_MIN = 40;
+                    const TARGET_MAX = 80;
+
+                    let pool = validData;
+
+                    // REPEAT REAL DATA to fill space, DO NOT use Mocks.
+                    // This creates a "hall of mirrors" effect rather than showing fake content.
+                    while (pool.length < TARGET_MIN) {
+                        pool = [...pool, ...pool];
+                    }
+
+                    // Cap at MAX
+                    const finalItems = pool.slice(0, TARGET_MAX);
+
+                    // Re-map to ensure strictly unique IDs for the final set
+                    const displayData = finalItems.map((item, index) => ({
+                        ...item,
+                        id: `sphere-item-${index}-${item.id}` // Guaranteed unique
+                    }));
+
+                    setPublicItems(displayData);
+                } else {
+                    // Only use minimal info if absolutely NOTHING exists
+                    setPublicItems([]);
                 }
             } catch (error) {
                 console.error("Failed to fetch public gallery", error);
                 setPublicItems([]);
-                setFilteredItems([]);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPublicGallery();
-    }, []);
+    }, [user?.uid]); // Re-run if user logs in
 
-    // Filter Logic
-    useEffect(() => {
-        if (!activeFilter) {
-            setFilteredItems(publicItems);
-        } else {
-            setFilteredItems(publicItems.filter(item => {
-                const t = (item.type || '').toLowerCase();
-
-                if (activeFilter === 'story') {
-                    return t === 'story' || t === 'audio-story';
-                }
-
-                if (activeFilter === 'comic') {
-                    return t === 'comic' || t === 'comic-strip' || t === 'picture-book' || t === 'book' || t === 'cartoon-book';
-                }
-
-                if (activeFilter === 'generated') {
-                    // Greeting Cards
-                    return t === 'greeting-card' || t === 'card' || t === 'generated';
-                }
-
-                if (activeFilter === 'animation') {
-                    return t === 'animation' || t === 'video';
-                }
-
-                return true;
-            }));
-        }
-    }, [activeFilter, publicItems]);
 
     const handleToggleFavorite = async (id: string) => {
         if (!user) {
             alert("Please sign in to collect your favorite artworks!");
             return;
         }
-        // Optimistic update
         setPublicItems(prev => prev.map(item => item.id === id ? { ...item, favorite: !item.favorite } : item));
         try {
             await fetch(`/api/images/${id}/toggle-favorite`, {
@@ -243,99 +487,77 @@ export const CommunityPage: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.uid })
             });
-        } catch (error) { console.error(error); } // Revert if wanted, but simpler to ignore for prototype
+        } catch (error) { console.error(error); }
     };
 
     return (
-        <div className="h-screen w-full flex flex-col relative overflow-hidden bg-[#FAFAFA]">
-            {/* 1. Global Background (Fixed) */}
-            {/* 1. Global Background (Fixed) - WITH RIPPLE */}
+        <div className="h-screen w-full flex flex-col relative overflow-hidden bg-black">
+            {/* 1. Global Background (Fixed) - Video with preserved Ripple Effect (if supported) or just Video */}
             <div className="fixed inset-0 z-0">
-                <RippleEffect
-                    image="/main_bg.jpg"
-                    intensity={4}
-                    rippleCount={3}
-                    rippleInterval={3000}
-                    rippleSize={40}
-                    className="w-full h-full"
-                />
-                <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] pointer-events-none" />
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                >
+                    <source src="/assets/HOME1.mp4" type="video/mp4" />
+                </video>
+                {/* Note: Interactive RippleEffect (jQuery) does not support video sources. 
+                    Disabling it to prioritize the requested video background. */}
             </div>
 
-            {/* 2. Header (Relative) */}
-            <div className="z-20 relative">
-                <HeaderBar />
-            </div>
-
-            {/* 3. Main Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto z-10 relative w-full scrollbar-none">
-                <div className="pb-24 pt-20">
-                    {/* Dev Links - Only visible in development */}
-                    {import.meta.env.DEV && (
-                        <div className="flex justify-center gap-4 mb-2 opacity-50 hover:opacity-100 transition-opacity">
-                            <button onClick={() => navigate('/splash')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Splash</button>
-                            <button onClick={() => navigate('/startup?reset=true')} className="text-[10px] bg-black/10 px-2 py-1 rounded text-red-500 font-bold">dev: Startup</button>
-                            <button onClick={() => window.dispatchEvent(new Event('trigger-debug-rest'))} className="text-[10px] bg-black/10 px-2 py-1 rounded text-green-600 font-bold">dev: Test Rest</button>
-                        </div>
-                    )}
-
-                    {/* Logo Area (Scrolls) */}
-                    <motion.div variants={magicFloatVariants} initial="initial" animate="animate">
-                        <LogoArea />
-                    </motion.div>
-
-                    <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.1 }}>
-                        <PromoBanner />
-                    </motion.div>
-
-                    {/* Daily Check-in Map */}
-                    <div className="mb-8 px-4">
-                        <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.15 }}>
-                            <DailyTreasureMap />
-                        </motion.div>
-                    </div>
-
-                    {/* Filter & Gallery Area - TRANSPARENT */}
-                    <div className="relative min-h-screen">
-
-                        {/* Sticky Filter Bar - TRANSPARENT */}
-                        <div className="sticky top-0 z-30 pt-2 pb-2 px-4">
-                            <FeatureButtonsRow activeFilter={activeFilter} onFilterChange={setActiveFilter} />
-                        </div>
-
-                        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
-                            <div className="flex justify-center py-20">
-                                {loading ? (
-                                    <div className="flex justify-center py-20">
-                                        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                    </div>
-                                ) : filteredItems.length === 0 ? (
-                                    <div className="text-center py-20 bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-gray-300">
-                                        <div className="text-6xl mb-4">🎨</div>
-                                        <h3 className="text-xl font-bold text-gray-700">No masterpieces yet!</h3>
-                                        <p className="text-gray-500">Be the first to share your magic creation.</p>
-                                    </div>
-                                ) : (
-                                    <motion.div variants={magicFloatVariants} initial="initial" animate="animate" transition={{ delay: 0.2 }}>
-                                        <ContentGrid items={filteredItems} onItemClick={(item) => setSelectedId(item.id)} />
-                                    </motion.div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+            {/* 2. Header (Absolute Overlay) */}
+            <div className="z-30 absolute top-0 w-full pointer-events-none">
+                <div className="pointer-events-auto">
+                    <HeaderBar />
                 </div>
             </div>
 
-            {selectedId && (
-                <ImageModal
-                    image={publicItems.find(i => i.id === selectedId) || null}
-                    onClose={() => setSelectedId(null)}
-                    onToggleFavorite={handleToggleFavorite}
-                />
-            )}
+            {/* 3. Helper UI */}
+            <div className="z-20 absolute top-24 w-full flex justify-center pointer-events-none">
+                <div className="pointer-events-auto">
+                    <PromoBanner />
+                </div>
+            </div>
 
-            {/* 4. Magic Floating Capsule Nav */}
-            <MagicNavBar />
-        </div>
+            {/* 4. 3D Scene */}
+            <div className="absolute inset-0 z-10 w-full h-full">
+                <Canvas camera={{ position: [0, 0, 25], fov: 60 }}>
+                    <ambientLight intensity={0.5} />
+                    <pointLight position={[10, 10, 10]} intensity={1} />
+
+                    <Suspense fallback={null}>
+                        <SphereGallery items={publicItems} onItemClick={setSelectedId} />
+                    </Suspense>
+
+                    <OrbitControls
+                        enableZoom={false}
+                        autoRotate={true}
+                        autoRotateSpeed={0.5}
+                        enablePan={false}
+                        minPolarAngle={Math.PI / 4}
+                        maxPolarAngle={Math.PI / 1.5}
+                    />
+                </Canvas>
+            </div>
+
+
+            {/* 5. Detail Modal */}
+            {
+                selectedId && (
+                    <ImageModal
+                        image={publicItems.find(i => i.id === selectedId) || null}
+                        onClose={() => setSelectedId(null)}
+                        onToggleFavorite={handleToggleFavorite}
+                    />
+                )
+            }
+
+            {/* 6. Nav (Fixed Bottom) */}
+            <div className="z-40">
+                <MagicNavBar />
+            </div>
+        </div >
     );
 };

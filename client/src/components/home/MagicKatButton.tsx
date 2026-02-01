@@ -50,7 +50,7 @@ export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
 
     return (
         <motion.div
-            className="flex flex-col items-center justify-center relative no-select"
+            className="flex flex-col items-end justify-end relative no-select"
             onMouseEnter={() => !isTouch && setIsExpanded(true)}
             onMouseLeave={() => !isTouch && setIsExpanded(false)}
             onTouchStart={isTouch ? handleTouch : undefined}
@@ -60,8 +60,8 @@ export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
                 initial="collapsed"
                 animate={isExpanded ? "expanded" : ["collapsed", "wiggle"]}
                 variants={{
-                    collapsed: { width: "5rem", height: "5rem" }, // ~80px Thumbnail
-                    expanded: { width: "14rem", height: "14rem" }, // ~224px Full Size
+                    collapsed: { width: "7rem", height: "7rem" }, // Increased size
+                    expanded: { width: "16rem", height: "16rem" }, // Larger expansion
                     wiggle: {
                         rotate: [0, -5, 5, -5, 5, 0],
                         transition: {
@@ -82,7 +82,7 @@ export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
                     }
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="relative rounded-full shadow-[0_0_30px_rgba(124,58,237,0.4)] border-4 border-white bg-white overflow-hidden z-30 cursor-pointer group hover:shadow-[0_0_50px_rgba(124,58,237,0.6)] transition-shadow"
+                className="relative rounded-full shadow-[0_0_30px_rgba(124,58,237,0.4)] border-4 border-white bg-white overflow-hidden z-30 cursor-pointer group hover:shadow-[0_0_50px_rgba(124,58,237,0.6)] transition-shadow origin-bottom-right"
                 onClick={() => {
                     // tap to expand if collapsed
                     if (!isExpanded) setIsExpanded(true);

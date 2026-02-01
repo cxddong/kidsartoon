@@ -266,15 +266,14 @@ export const MagicMoviePage: React.FC = () => {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Read for Cropper
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCropImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            // Use createObjectURL for performance on mobile
+            const url = URL.createObjectURL(file);
+            setCropImage(url);
 
-            e.target.value = ''; // Reset input
+            // Note: We don't revoke immediately as the modal needs to load it.
+            // Ideally should track and revoke old ones, but browser handles it on page unload usually.
         }
+        e.target.value = ''; // Reset input
     };
 
     const handleCropComplete = (blob: Blob) => {
@@ -658,14 +657,13 @@ export const MagicMoviePage: React.FC = () => {
                             className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-start justify-center gap-12 min-h-[60vh] px-4"
                         >
                             {/* Left Col: Upload Box */}
-                            <div className="flex-1 w-full max-w-xl flex flex-col items-center">
+                            <div className="flex-1 w-full max-w-md mx-auto flex flex-col items-center">
                                 <h2 className="text-xl md:text-3xl font-black text-white mb-8 text-center drop-shadow-lg">First, choose a picture! 📸</h2>
 
                                 <div className="relative w-full aspect-[4/3] bg-slate-800/50 rounded-3xl border-4 border-dashed border-white/20 hover:border-purple-400/50 transition-colors group cursor-pointer overflow-hidden flex flex-col items-center justify-center shadow-2xl"
                                     onClick={() => document.getElementById('anim-upload')?.click()}>
 
-                                    {/* Background Video Hint */}
-                                    <video src={generateVideo} autoPlay loop muted playsInline disablePictureInPicture className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-60 group-hover:opacity-80 transition-opacity" />
+                                    {/* Background Video Hint REMOVED */}
 
                                     <div className="relative z-10 flex flex-col items-center">
                                         <div className="bg-black/50 p-4 rounded-full mb-3 backdrop-blur-sm border border-white/10 group-hover:scale-110 transition-transform">
@@ -684,7 +682,7 @@ export const MagicMoviePage: React.FC = () => {
                                         <p className="text-white/90 text-sm leading-relaxed text-center">
                                             💡 <strong>Tip:</strong> For best results, use colorful drawings! Try{' '}
                                             <button
-                                                onClick={() => navigate('/magic-art', { state: { returnTo: location.pathname } })}
+                                                onClick={() => navigate('/magic-studio', { state: { returnTo: location.pathname } })}
                                                 className="font-bold text-yellow-300 hover:text-yellow-200 underline"
                                             >
                                                 KAT Coloring
@@ -708,7 +706,7 @@ export const MagicMoviePage: React.FC = () => {
                                         <p className="text-white/90 text-xs">
                                             Try coloring your art first in{' '}
                                             <button
-                                                onClick={() => navigate('/magic-art', { state: { returnTo: location.pathname } })}
+                                                onClick={() => navigate('/magic-studio', { state: { returnTo: location.pathname } })}
                                                 className="font-bold text-yellow-300 hover:text-yellow-200 underline transition-colors"
                                             >
                                                 KAT Coloring

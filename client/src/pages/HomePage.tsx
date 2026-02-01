@@ -178,7 +178,7 @@ export const HomePage: React.FC = () => {
                             scale: activeZone === 'academy' ? 1.1 : [0.98, 1.02, 0.98]
                         }}
                         whileHover={{ scale: 1.15, rotate: [0, -2, 2, 0] }}
-                        whileTap={{ scale: 0.95 }}
+                        whileTap={{ scale: 1.25 }}
                         transition={{
                             y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
                             scale: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
@@ -262,7 +262,7 @@ export const HomePage: React.FC = () => {
                             scale: activeZone === 'studio' ? 1.1 : [0.98, 1.02, 0.98]
                         }}
                         whileHover={{ scale: 1.15, rotate: [0, 2, -2, 0] }}
-                        whileTap={{ scale: 0.95 }}
+                        whileTap={{ scale: 1.25 }}
                         transition={{
                             y: { duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 },
                             scale: { duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 },
@@ -323,7 +323,7 @@ export const HomePage: React.FC = () => {
                             scale: activeZone === 'valley' ? 1.1 : [0.98, 1.02, 0.98]
                         }}
                         whileHover={{ scale: 1.15, rotate: [0, -2, 2, 0] }}
-                        whileTap={{ scale: 0.95 }}
+                        whileTap={{ scale: 1.25 }}
                         transition={{
                             y: { duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 },
                             scale: { duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1 },

@@ -109,10 +109,8 @@ export const RippleEffect: React.FC<RippleEffectProps> = ({
     return (
         <div
             ref={containerRef}
-            className={className}
+            className={`w-full h-full ${className || ''}`}
             style={{
-                width: "100%",
-                height: "100%",
                 backgroundImage: `url(${image})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",

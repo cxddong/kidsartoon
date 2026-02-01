@@ -948,9 +948,12 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
                 sceneMood === 'action' ? 'action-packed, dramatic music' :
                     'happy cheerful atmosphere, pleasant background music';
             video_prompt = `Cinematic scene, ${textInput}, ${moodHint}, immersive environment`;
+            if (videoPrompt) video_prompt += `, ${videoPrompt}`;
+
         } else {
             // Default: just video with ambient sound
             video_prompt = textInput || 'Character in a cheerful scene, natural movement';
+            if (videoPrompt) video_prompt += `, ${videoPrompt}`;
         }
 
         // 3. Technical Params - Use CORRECT Seedance 1.5 format
