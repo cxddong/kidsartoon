@@ -14,7 +14,7 @@ import { MagicPencil } from '../components/ui/MagicPencil';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { CAT_LESSON } from '../services/artClass';
 import masterpieceVideo from '../assets/masterpiece.mp4';
-import storyBgVideo from '../assets/story.mp4'; // New Background
+const storyBgVideo = "/assets/story.mp4"; // Served from public/assets
 import magicDeskBg from '../assets/magic_desk.png';
 // Pro Studio Assets (V5.2)
 import studioBgPro from '../assets/studio_bg_pro.png';
