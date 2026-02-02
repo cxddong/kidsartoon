@@ -199,6 +199,15 @@ export const MagicArtClassPage: React.FC = () => {
             setIsPlaying(false);
             playAudioQueue();
         });
+        return () => {
+            if (audioRef.current) {
+                console.log("🛑 Unmounting/Cleanup: Stopping Audio");
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+            isPlayingRef.current = false;
+            audioQueue.current = [];
+        };
     }, []);
 
     // --- Chat System (SSE) ---

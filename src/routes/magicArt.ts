@@ -22,7 +22,8 @@ Your personality:
 - **IMPORTANT**: Do NOT use filler words like "Er", "Um", "Uh", or "Ah". Be direct and clear.
 
 Instructions:
-- Keep responses short (1-2 sentences) so the audio isn't too long.
+- **KEEP IT SHORT**: Maximum 2 sentences. Max 20 words. Be super concise.
+- Start immediately with the action/answer. No "Oh that is nice".
 - Always include some cat-like behavior in *asterisks*.
 - If the user draws something (you will get text description), give specific artistic feedback but keep it fun.
 - **VISION**: If you receive an image description or context, use it! The user might ask "Can you see this?". SAY YES! Describe what you see in the drawing.
@@ -214,6 +215,34 @@ magicArtRouter.post('/chat', async (req, res) => {
         let fullContent = "";
         let sentenceBuffer = "";
         const audioPromiseQueue: Promise<string | null>[] = [];
+        let audioSentCount = 0;
+        let streamFinished = false;
+
+        // Start a parallel loop to send audio as soon as it is ready
+        const sendAudioLoop = async () => {
+            while (true) {
+                if (audioSentCount < audioPromiseQueue.length) {
+                    const nextAudioPromise = audioPromiseQueue[audioSentCount];
+                    try {
+                        const base64 = await nextAudioPromise;
+                        if (base64) {
+                            console.log(`[MagicArt] 📤 Sending audio segment #${audioSentCount + 1} (Parallel)`);
+                            res.write(`data: ${JSON.stringify({ type: 'audio', audio: base64 })}\n\n`);
+                        }
+                    } catch (err) {
+                        console.error("Audio generation failed", err);
+                    }
+                    audioSentCount++;
+                } else {
+                    // Wait for more or break if stream finished
+                    await new Promise(r => setTimeout(r, 100));
+                    if (streamFinished && audioSentCount >= audioPromiseQueue.length) break;
+                }
+            }
+        };
+
+        // Start the sender loop (do not await it yet)
+        const senderPromise = sendAudioLoop();
 
         for await (const chunk of stream) {
             const content = chunk.choices[0]?.delta?.content || "";
@@ -226,59 +255,45 @@ magicArtRouter.post('/chat', async (req, res) => {
             sentenceBuffer += content;
 
             // 2. Detect Sentence Boundry
-            // FIX: Don't split on '...' unless it's at the end of a thought? 
-            // Actually '...' is often a pause, so we SHOULD generate audio there, but we must ensure it's not JUST '...'
-            // Modified Regex to better handle common punctuation without breaking mid-word or on "Er..."
             if (/[.!?。！？\n]/.test(content)) {
-                // Check if it's just a "..." which might be processed as a pause
                 const trimmedSentence = sentenceBuffer.trim();
 
                 // SMARTER BUFFERING:
-                // 1. If it's a newline, we often want to flush regardless of length (paragraph break)
-                // 2. If it's punctuation, ensure we have enough text (e.g. > 15 chars) to make a good audio segment
-                //    This prevents "But first." (length 10) from being sent alone.
+                // Increase minimum length to prevent choppy "Okay." "Yes."
                 const isNewline = content.includes('\n');
-                const isLongEnough = trimmedSentence.length > 8; // Reduced from 18 to 8
+                const isLongEnough = trimmedSentence.length > 15; // Increased from 8 to 15
 
-                // Special case: Short greetings like "Hello!" or "Hi there!" should sail through if they catch a break
-                const isGreeting = /^(Hello|Hi|Hey|Greetings|Welcome)[!.]/i.test(trimmedSentence);
+                // Allow urgent short greetings/confirmations if they are the VERY START
+                const isStart = fullContent.length < 50;
+                const isGreeting = isStart && /^(Hello|Hi|Hey|Yes|No|Wow|Cool)[!.]/i.test(trimmedSentence);
 
-                if ((isLongEnough || isNewline || isGreeting) && !/^(Er|Um|Uh)\.{3,}$/i.test(trimmedSentence)) {
+                // Filler detection
+                const isFiller = /^(Er|Um|Uh|Mm|Ah|Oh|So)[.!?]*$/i.test(trimmedSentence);
+
+                if (((isLongEnough || isNewline || isGreeting) && !isFiller) || trimmedSentence.length > 100) {
                     // Trigger TTS asynchronously
                     console.log(`[MagicArt] ⚡ Queueing TTS (len=${trimmedSentence.length}): "${trimmedSentence.substring(0, 30)}..."`);
                     audioPromiseQueue.push(generateMinimaxAudioSegment(trimmedSentence));
-                    sentenceBuffer = ""; // Reset ONLY if we queued audio
+                    sentenceBuffer = "";
                 } else if (/[.!?。！？]$/.test(trimmedSentence)) {
-                    // If it ended in punctuation but was too short, we KEEP it in the buffer 
-                    // so it attaches to the next sentence.
-                    // e.g. "But first." -> Buffer keeps "But first." -> Next: "Let's draw." -> "But first. Let's draw."
-
-                    // EXCEPT if it's a filler we want to drop
-                    if (/^(Er|Um|Uh|Mm)[.!?]*$/i.test(trimmedSentence)) {
-                        console.log(`[MagicArt] Dropping filler sentence: "${trimmedSentence}"`);
-                        sentenceBuffer = "";
-                    }
+                    // Keep short sentences in buffer to merge
+                    if (isFiller) sentenceBuffer = "";
                 }
             }
         }
 
+        streamFinished = true;
+
         // Flush remaining buffer
         if (sentenceBuffer.trim()) {
             const remaining = sentenceBuffer.trim();
-            // Final check to drop trailing fillers
             if (!/^(Er|Um|Uh)[.!?]*$/i.test(remaining)) {
                 audioPromiseQueue.push(generateMinimaxAudioSegment(remaining));
             }
         }
 
-        // 3. Send audio segments sequentially
-        for (let i = 0; i < audioPromiseQueue.length; i++) {
-            const base64 = await audioPromiseQueue[i];
-            if (base64) {
-                console.log(`[MagicArt] Sending audio segment #${i + 1} to client`);
-                res.write(`data: ${JSON.stringify({ type: 'audio', audio: base64 })}\n\n`);
-            }
-        }
+        // Wait for all audio to be sent
+        await senderPromise;
 
         // Final event
         const finalHistory = [
