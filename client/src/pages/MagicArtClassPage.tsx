@@ -141,7 +141,10 @@ export const MagicArtClassPage: React.FC = () => {
 
     // --- Audio Queue System (MagicLab Style) ---
     const playAudioQueue = useCallback(() => {
-        if (isPlayingRef.current || audioQueue.current.length === 0) return;
+        if (isPlayingRef.current) return; // Only block if actively playing, not if queue empty
+        if (audioQueue.current.length === 0) return;
+
+        console.log("▶️ Playing next audio from queue. Remaining:", audioQueue.current.length);
 
         isPlayingRef.current = true;
         setIsPlaying(true);
@@ -151,6 +154,7 @@ export const MagicArtClassPage: React.FC = () => {
         if (!nextAudioBase64) {
             isPlayingRef.current = false;
             setIsPlaying(false);
+            playAudioQueue(); // Try next if current invalid
             return;
         }
 
@@ -158,21 +162,38 @@ export const MagicArtClassPage: React.FC = () => {
         audioRef.current = audio;
 
         audio.onended = () => {
-            console.log("✅ Audio finished");
+            console.log("✅ Audio chunk finished");
             isPlayingRef.current = false;
             setIsPlaying(false);
             audioRef.current = null;
 
             // Check if queue is empty (end of speech)
             if (audioQueue.current.length === 0) {
-                setAiFeedback(null); // Hide speech bubble
+                console.log("🛑 Audio queue empty. Speech complete.");
+                // setAiFeedback(null); // Keep text visible for readability? Or clear? 
+                // User said "didn't finish sentence", so maybe we simply shouldn't clear too aggressively?
+                // Let's keep the bubble for a moment or let new actions clear it.
             }
 
-            playAudioQueue(); // Play next
+            // Small buffer to prevent cutting off
+            setTimeout(() => {
+                playAudioQueue(); // Play next
+            }, 100);
+        };
+
+        audio.onerror = (err) => {
+            console.error('[Audio] Playback failed/interrupted:', err);
+            isPlayingRef.current = false;
+            setIsPlaying(false);
+
+            // Try next
+            setTimeout(() => {
+                playAudioQueue();
+            }, 100);
         };
 
         audio.play().catch(err => {
-            console.error('[Audio] Playback failed:', err);
+            console.error('[Audio] Playback start failed:', err);
             isPlayingRef.current = false;
             setIsPlaying(false);
             playAudioQueue();
@@ -723,7 +744,7 @@ export const MagicArtClassPage: React.FC = () => {
             <>
                 <MagicNavBar />
                 <div className="fixed inset-0 min-h-[100dvh] transition-all bg-slate-900">
-                    <div className="bg-cover-fixed opacity-50 bg-[url('/assets/paper_texture.jpg')]" />
+                    <div className="bg-cover-fixed opacity-50 bg-[url('/assets/style_paper.jpg')]" />
                     <div className="relative h-full flex flex-col landscape:flex-row items-center justify-center">
 
                         {/* Apple Hello Animation: Full Screen Background (Scaled) */}
@@ -732,8 +753,8 @@ export const MagicArtClassPage: React.FC = () => {
                         </div>
 
                         {/* Avatar: Adjusted for Landscape (Side by Side) - Proportional Scaling via clamp */}
-                        {/* Size: Min 80px, Preferred 25% of height, Max 160px */}
-                        <div className="relative z-20 landscape:mr-10" style={{ width: 'clamp(80px, 25vh, 160px)', height: 'clamp(80px, 25vh, 160px)' }}>
+                        {/* Size: Min 80px, Preferred 30% of height, Max 220px */}
+                        <div className="relative z-20 landscape:mr-10" style={{ width: 'clamp(80px, 30vh, 220px)', height: 'clamp(80px, 30vh, 220px)' }}>
                             <KatTutor
                                 message=""
                                 emotion="happy"
@@ -788,7 +809,7 @@ export const MagicArtClassPage: React.FC = () => {
                     </button>
 
                     {/* CENTER: Avatar - Proportional */}
-                    <div className="relative z-20 -my-4 lg:my-0 landscape:my-0" style={{ transform: 'scale(clamp(0.8, 1.2vh, 1.2))' }}>
+                    <div className="relative z-20 -my-4 lg:my-0 landscape:my-0 w-24 h-24 md:w-32 md:h-32" style={{ transform: 'scale(clamp(0.8, 1.2vh, 1.2))' }}>
                         <KatTutor
                             message=""
                             emotion="thinking"
@@ -826,7 +847,7 @@ export const MagicArtClassPage: React.FC = () => {
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-between p-4 landscape:p-2">
                     <MagicNavBar />
                     <div className="flex-1 flex flex-col items-center justify-center gap-4 landscape:gap-2">
-                        <div style={{ transform: 'scale(clamp(0.7, 1vh, 1))' }}>
+                        <div className="w-24 h-24 md:w-32 md:h-32" style={{ transform: 'scale(clamp(0.7, 1vh, 1))' }}>
                             <KatTutor
                                 message={aiFeedback || (magicWord ? `Say '${magicWord}' to check!` : "Let's pick a magic word!")}
                                 emotion="happy"

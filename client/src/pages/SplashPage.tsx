@@ -36,6 +36,20 @@ export const SplashPage: React.FC = () => {
     }, [navigate]);
 
     const handleEnter = () => {
+        // 1. Unlock all videos (iOS Hack)
+        const videos = document.querySelectorAll('video');
+        videos.forEach(video => {
+            video.muted = true;
+            video.playsInline = true;
+            video.play().catch(err => {
+                console.log('Video unlock failed for:', video, err);
+            });
+        });
+
+        // 2. Set 'Unlocked' flag
+        localStorage.setItem('videoUnlocked', 'true');
+
+        // 3. Navigate
         navigate('/home');
     };
 

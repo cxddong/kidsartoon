@@ -74,13 +74,13 @@ export const KatTutor: React.FC<KatTutorProps> = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className={`${position === 'static' ? 'relative flex-col items-center' : `absolute z-50 flex gap-4 pointer-events-none ${positionClasses[position]}`} ${className}`}
+                className={`${position === 'static' ? 'relative flex-col items-center' : `absolute z-50 flex gap-4 pointer-events-none ${positionClasses[position]}`} ${className} w-full h-full`}
             >
                 {/* Kat Avatar */}
                 {/* Kat Avatar Container Wrapper */}
-                <div className="relative group cursor-pointer" onClick={onSpeak}>
+                <div className="relative group cursor-pointer w-full h-full" onClick={onSpeak}>
                     {/* Main Circular Avatar */}
-                    <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full border-[5px] border-white shadow-xl overflow-hidden bg-white hover:scale-105 transition-transform duration-300">
+                    <div className="relative w-full h-full rounded-full border-[5px] border-white shadow-xl overflow-hidden bg-white hover:scale-105 transition-transform duration-300">
                         {videoSrc ? (
                             <video
                                 ref={videoRef}
@@ -88,10 +88,16 @@ export const KatTutor: React.FC<KatTutorProps> = ({
                                 loop
                                 muted
                                 playsInline
-                                // Classic 'Cover Background' approach + Zoom
-                                className="absolute top-1/2 left-1/2 w-full h-full object-cover origin-center"
+                                // Classic 'Cover Background' approach
+                                className="absolute top-1/2 left-1/2 w-full h-full object-cover origin-center bg-black"
                                 style={{
-                                    transform: 'translate(-50%, -50%) scale(1.8)', // Force zoom to remove black bars
+                                    // Scale down slightly (0.85) to ensure the face (usually center) isn't too close to edges
+                                    // This creates a "safe area" effect inside the circle without black bars if we match bg
+                                    // But wait, if we scale down, we might see background. 
+                                    // User said "shortest side set a circle". That is exactly object-cover.
+                                    // "No zoom" means don't scale UP.
+                                    // Let's stick to standard transform.
+                                    transform: 'translate(-50%, -50%)',
                                     maxWidth: 'none',
                                     maxHeight: 'none'
                                 }}

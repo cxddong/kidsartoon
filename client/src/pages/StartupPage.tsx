@@ -218,6 +218,33 @@ const StartupPage: React.FC = () => {
         setShowCamera(false);
     };
 
+    // --- Sound/Video Unlock Logic --- 
+    const unlockVideos = () => {
+        // 1. Set global flag for other pages
+        localStorage.setItem('videoUnlocked', 'true');
+
+        // 2. Unlock ALL videos currently in DOM (backgrounds, previews, etc)
+        const allVideos = document.querySelectorAll('video');
+        allVideos.forEach(v => {
+            // Reset mutable properties to ensure success
+            v.muted = true;
+            v.playsInline = true;
+            v.play().catch(err => {
+                console.warn("Unlock play failed for video:", v.src, err);
+            });
+        });
+
+        // 3. Create and play a dummy video to warm up the audio/video engine globally
+        // This is the "Nuclear Option" for stubborn iOS versions
+        const dummyVideo = document.createElement('video');
+        dummyVideo.src = ''; // Empty src or a tiny base64 can work, but just the intent counts often
+        dummyVideo.muted = true;
+        dummyVideo.playsInline = true;
+        dummyVideo.play().catch(() => { }); // It will fail on src but triggers the "gesture"
+
+        console.log("🚀 iOS Video/Audio Unlock Triggered");
+    };
+
     // --- Navigation Logic ---
     const handleNext = async () => {
         setError(null);
@@ -229,6 +256,10 @@ const StartupPage: React.FC = () => {
             if (!gender) { setError("Are you a boy or a girl?"); return; }
             setStep(3);
         } else if (step === 3) {
+            // ✅ CRITICAL: Unlock videos IMMEDIATELY on this user click, 
+            // BEFORE any async operations await.
+            unlockVideos();
+
             await handleSaveProfile();
         }
     };

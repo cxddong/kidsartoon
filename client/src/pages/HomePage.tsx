@@ -34,6 +34,20 @@ export const HomePage: React.FC = () => {
     // Background Video Ref
     const bgVideoRef = useRef<HTMLVideoElement>(null);
 
+    // 0. Global Unlock Check (iOS Hack from Splash)
+    useEffect(() => {
+        const isUnlocked = localStorage.getItem('videoUnlocked') === 'true';
+        if (isUnlocked) {
+            console.log("🔓 Global video unlock detected");
+            document.querySelectorAll('video').forEach(v => {
+                // Ensure they are muted/playsinline just in case, though they should be by default
+                v.muted = true;
+                v.playsInline = true;
+                v.play().catch(e => console.log("Global unlock play failed for", v, e));
+            });
+        }
+    }, []);
+
     // Smart Background Logic: Play Audio Only Once Per Hour
     useEffect(() => {
         const video = bgVideoRef.current;
@@ -103,9 +117,24 @@ export const HomePage: React.FC = () => {
         checkIpadLandscape();
         window.addEventListener('resize', checkIpadLandscape);
         return () => window.removeEventListener('resize', checkIpadLandscape);
+        checkIpadLandscape();
+        window.addEventListener('resize', checkIpadLandscape);
+        return () => window.removeEventListener('resize', checkIpadLandscape);
     }, []);
 
-    // Helper to handle clicks on the background/empty space to close menus
+    // 🚀 iOS/iPad Global Video Unlock Check
+    useEffect(() => {
+        const isUnlocked = localStorage.getItem('videoUnlocked') === 'true';
+        if (isUnlocked) {
+            console.log("🔓 [HomePage] Video unlock flag found. Force playing all videos.");
+            const allVideos = document.querySelectorAll('video');
+            allVideos.forEach(v => {
+                if (v.paused) {
+                    v.play().catch(e => console.log("Force play caught:", e));
+                }
+            });
+        }
+    }, [activeZone]); // Re-run when activeZone changes (new videos might appear in menus)
     const handleBackgroundClick = () => {
         setActiveZone(null);
     };
