@@ -744,14 +744,14 @@ export const MagicArtClassPage: React.FC = () => {
         return (
             <>
                 <MagicNavBar />
-                <div className="fixed inset-0 min-h-[100dvh] transition-all bg-slate-900">
+                <div className="fixed inset-0 min-h-[100dvh] transition-all bg-black">
                     <video
                         src={storyBgVideo}
                         autoPlay
                         loop
                         muted
                         playsInline
-                        className="absolute inset-0 w-full h-full object-cover opacity-50"
+                        className="absolute inset-0 w-full h-full object-cover"
                     />
                     <div className="relative h-full flex flex-col landscape:flex-row items-center justify-center">
 
