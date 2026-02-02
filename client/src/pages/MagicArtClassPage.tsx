@@ -14,6 +14,7 @@ import { MagicPencil } from '../components/ui/MagicPencil';
 import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { CAT_LESSON } from '../services/artClass';
 import masterpieceVideo from '../assets/masterpiece.mp4';
+import storyBgVideo from '../assets/story.mp4'; // New Background
 import magicDeskBg from '../assets/magic_desk.png';
 // Pro Studio Assets (V5.2)
 import studioBgPro from '../assets/studio_bg_pro.png';
@@ -744,7 +745,14 @@ export const MagicArtClassPage: React.FC = () => {
             <>
                 <MagicNavBar />
                 <div className="fixed inset-0 min-h-[100dvh] transition-all bg-slate-900">
-                    <div className="bg-cover-fixed opacity-50 bg-[url('/assets/style_paper.jpg')]" />
+                    <video
+                        src={storyBgVideo}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="absolute inset-0 w-full h-full object-cover opacity-50"
+                    />
                     <div className="relative h-full flex flex-col landscape:flex-row items-center justify-center">
 
                         {/* Apple Hello Animation: Full Screen Background (Scaled) */}
