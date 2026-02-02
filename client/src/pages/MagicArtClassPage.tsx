@@ -152,10 +152,12 @@ export const MagicArtClassPage: React.FC = () => {
         const nextAudioBase64 = audioQueue.current.shift();
 
         // Safety check for valid base64
-        if (!nextAudioBase64) {
+        if (!nextAudioBase64 || nextAudioBase64.length < 2000) { // Skip chunks < ~1.5KB (empty/noise)
+            console.log("⚠️ Skipping tiny/empty audio chunk (len=" + nextAudioBase64?.length + ")");
             isPlayingRef.current = false;
             setIsPlaying(false);
-            playAudioQueue(); // Try next if current invalid
+            // Instant retry
+            playAudioQueue();
             return;
         }
 
@@ -313,29 +315,27 @@ export const MagicArtClassPage: React.FC = () => {
         await sendMessage(text);
     }, [sendMessage]);
 
+    // Fix: Use ref to track if we've already started setup to avoid infinite loop with sendMessage dependency
+    const hasStartedSetupRef = useRef(false);
+
     useEffect(() => {
         if (mode === 'real') {
-            if (!magicWord) {
+            if (!magicWord && !hasStartedSetupRef.current) {
                 // Start Setup Flow
                 setSetupStep('listening-for-word');
-                // Give a small delay so the mode switch audio doesn't clash or use a timeout
+                hasStartedSetupRef.current = true; // Mark as started
+
+                // Give a small delay so the mode switch audio doesn't clash
                 setTimeout(() => {
                     setAiFeedback("Let's set a secret password! What should we say to check your art?");
-                    // We need a way to trigger TTS for this system message. 
-                    // Since we don't have a direct TTS function exposed easily without 'sendMessage', 
-                    // we will trigger a "system" prompt via sendMessage or just let the user read it?
-                    // USER REQUEST requires AI to "communicate".
-                    // Let's "pretend" the user asked to setup.
                     sendMessage("Tell the user: 'First, let's pick a magic word! When you finish a drawing, what do you want to say? Tell me the word!'");
                 }, 1000);
-            } else {
+            } else if (magicWord) {
                 setSetupStep('idle');
-                // Normal mode
-                // Maybe remind them?
-                setTimeout(() => {
-                    // sendMessage(`Tell the user: 'I'm ready! Just say ${magicWord} when you want me to look!'`);
-                }, 500);
+                // partial reset if they clear it? For now assume sticking.
             }
+        } else {
+            hasStartedSetupRef.current = false; // Reset if they leave real mode
         }
     }, [mode, magicWord, sendMessage]);
 

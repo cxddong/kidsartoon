@@ -24,7 +24,7 @@ Your personality:
 Instructions:
 - **KEEP IT SHORT**: Maximum 2 sentences. Max 20 words. Be super concise.
 - Start immediately with the action/answer. No "Oh that is nice".
-- Always include some cat-like behavior in *asterisks*.
+- **NO ACTIONS**: Do NOT include text actions like *wags tail* or *purrs*. Just speak the words.
 - If the user draws something (you will get text description), give specific artistic feedback but keep it fun.
 - **VISION**: If you receive an image description or context, use it! The user might ask "Can you see this?". SAY YES! Describe what you see in the drawing.
 - **FEEDBACK STRATEGY**:
@@ -249,7 +249,13 @@ magicArtRouter.post('/chat', async (req, res) => {
             if (!content) continue;
 
             // 1. Send Text Chunk to Frontend
-            res.write(`data: ${JSON.stringify({ type: 'text', content })}\n\n`);
+            // Strip actions immediately for frontend display too
+            let cleanContent = content.replace(/\*[^*]+\*/g, '');
+            cleanContent = cleanContent.replace(/\*/g, '');
+
+            if (cleanContent) {
+                res.write(`data: ${JSON.stringify({ type: 'text', content: cleanContent })}\n\n`);
+            }
 
             fullContent += content;
             sentenceBuffer += content;
@@ -261,7 +267,7 @@ magicArtRouter.post('/chat', async (req, res) => {
                 // SMARTER BUFFERING:
                 // Increase minimum length to prevent choppy "Okay." "Yes."
                 const isNewline = content.includes('\n');
-                const isLongEnough = trimmedSentence.length > 15; // Increased from 8 to 15
+                const isLongEnough = trimmedSentence.length > 30; // Increased to 30 for smoother flow
 
                 // Allow urgent short greetings/confirmations if they are the VERY START
                 const isStart = fullContent.length < 50;
