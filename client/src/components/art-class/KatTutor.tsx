@@ -112,10 +112,7 @@ export const KatTutor: React.FC<KatTutorProps> = ({
                         )}
                     </div>
 
-                    {/* Speaker Icon Badge - OUTSIDE the overflow-hidden avatar */}
-                    <div className="absolute -bottom-1 -right-1 bg-yellow-400 p-1.5 rounded-full border-2 border-white z-10 shadow-sm pointer-events-none group-hover:scale-110 transition-transform">
-                        <Volume2 className="w-4 h-4 text-yellow-900" />
-                    </div>
+
                 </div>
 
                 {/* Speech Bubble */}
