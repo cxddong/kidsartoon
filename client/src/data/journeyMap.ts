@@ -45,7 +45,7 @@ export const LEVEL_NODES: LevelNode[] = [
         label: "Art Studio",
         icon: '🖌️',
         x: '21.4%', y: '66.8%',
-        path: '/magic-art',
+        path: '/magic-studio', // Fixed: Was /magic-art
         videoSrc: magicLabVid,
         shortDesc: "Sketch to Art",
         description: "Turn simple sketches into artistic masterpieces like a pro."
@@ -123,6 +123,17 @@ export const LEVEL_NODES: LevelNode[] = [
         videoSrc: videoVid,
         shortDesc: "Make it Move!",
         description: "Turn your still drawing into a 5s-10s animation movie!"
+    },
+    {
+        id: 'magic-toy',
+        label: "Magic Toy Maker",
+        icon: '🧸',
+        x: '68%', y: '28%',
+        size: 'lg',
+        path: '/magic-toy',
+        videoSrc: cartoonVid, // Reuse cartoon video as placeholder
+        shortDesc: "Drawings to 3D",
+        description: "Turn your drawings into real 3D toys you can spin and look at from all sides! 🧸✨"
     },
     {
         id: 'ask-kat',

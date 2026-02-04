@@ -134,12 +134,13 @@ export const PictureBookPage: React.FC = () => {
 
         const progressInterval = setInterval(() => {
             setProgress(prev => {
-                if (prev >= 98) return prev;
-                // Slower progress stages
-                if (prev < 20) { setStatusMessage("Analyzing characters..."); return prev + 1; }
-                if (prev < 40) { setStatusMessage("Writing story script..."); return prev + 0.5; }
-                if (prev < 80) { setStatusMessage("Painting illustrations..."); return prev + 0.2; }
-                return prev + 0.1;
+                if (prev >= 95) return prev; // Stop at 95% until server responds
+                // Smoother progress stages
+                if (prev < 20) { setStatusMessage("Analyzing characters..."); return prev + 1.2; }
+                if (prev < 40) { setStatusMessage("Writing story script..."); return prev + 0.8; }
+                if (prev < 65) { setStatusMessage("Painting illustrations..."); return prev + 0.5; }
+                if (prev < 85) { setStatusMessage("Adding final touches..."); return prev + 0.3; }
+                return prev + 0.15; // Very slow near end
             });
         }, 300);
 
@@ -171,7 +172,9 @@ export const PictureBookPage: React.FC = () => {
                     vibe: builderData.vibe,
                     character: builderData.character,
                     storyText: builderData.storyText,
-                    profileId: activeProfile?.id
+                    profileId: activeProfile?.id,
+                    profileName: activeProfile?.name,
+                    profileGender: activeProfile?.gender
                 }),
             });
 

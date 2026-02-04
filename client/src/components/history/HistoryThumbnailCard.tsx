@@ -14,7 +14,7 @@ interface HistoryThumbnailCardProps {
     onToggle?: () => void;
 }
 
-const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onClick, viewMode = 'grid', isSelectionMode, isSelected, onToggle }) => {
+const HistoryThumbnailCard = React.forwardRef<HTMLDivElement, HistoryThumbnailCardProps>(({ image, onClick, viewMode = 'grid', isSelectionMode, isSelected, onToggle }, ref) => {
     // Determine the best thumbnail URL
     const getThumbnailUrl = () => {
         // Handle Animations (video content)
@@ -75,12 +75,13 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
             case 'animation':
                 return { icon: <Play size={20} className="fill-current" />, color: 'bg-purple-500', label: 'Magic Cinema' };
             case 'picturebook':
-                return { icon: <BookOpen size={20} />, color: 'bg-orange-500', label: 'Storybook' };
+                return { icon: <BookOpen size={20} />, color: 'bg-orange-500', label: 'Picture Book' };
             case 'comic':
-                return { icon: <BookOpen size={20} />, color: 'bg-red-500', label: 'Comic' };
+                return { icon: <BookOpen size={20} />, color: 'bg-red-500', label: 'Comic Strip' };
             case 'story':
-                // Audio Story - Use Play icon, distinct from Book
-                return { icon: <Play size={20} />, color: 'bg-indigo-500', label: 'Audio Story' };
+                // Wrapper for Audio vs Text Story
+                if (image.meta?.audioUrl) return { icon: <Play size={20} />, color: 'bg-indigo-500', label: 'Audio Story' };
+                return { icon: <BookOpen size={20} />, color: 'bg-indigo-500', label: 'Story' };
             case 'generated':
                 // Magic Art (Single Image)
                 return { icon: <ImageIcon size={20} />, color: 'bg-blue-500', label: 'Magic Art' };
@@ -92,7 +93,7 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
                 return { icon: <ImageIcon size={20} />, color: 'bg-amber-500', label: 'Magic Paint' };
             case 'graphic-novel':
             case 'cartoon-book':
-                return { icon: <BookOpen size={20} />, color: 'bg-rose-500', label: 'Cartoon Book' };
+                return { icon: <BookOpen size={20} />, color: 'bg-rose-500', label: 'Novel Book' };
             default:
                 return { icon: <ImageIcon size={20} />, color: 'bg-slate-500', label: 'Artwork' };
         }
@@ -112,6 +113,8 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
         return (
             <motion.div
                 layout
+                // @ts-ignore
+                ref={ref}
                 variants={slideAndSkewVariants}
                 className={cn(
                     "group w-full flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm border hover:shadow-md transition-all cursor-pointer",
@@ -159,6 +162,8 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
     return (
         <motion.div
             layout
+            // @ts-ignore
+            ref={ref}
             variants={slideAndSkewVariants}
             whileHover={{ y: -4, transition: { duration: 0.2 } }}
             className={cn(
@@ -212,6 +217,8 @@ const HistoryThumbnailCard: React.FC<HistoryThumbnailCardProps> = ({ image, onCl
             </div>
         </motion.div>
     );
-};
+});
+
+HistoryThumbnailCard.displayName = 'HistoryThumbnailCard';
 
 export default HistoryThumbnailCard;

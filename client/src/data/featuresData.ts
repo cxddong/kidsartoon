@@ -69,5 +69,10 @@ export const FEATURES_TOOLTIPS = {
         label: "Art Studio",
         shortDesc: "Sketch to Art",
         desc: "Turn simple sketches into artistic masterpieces like a pro."
+    },
+    magic_toy: {
+        label: "Magic Toy Maker",
+        shortDesc: "Drawings to 3D",
+        desc: "Turn your drawings into real 3D toys you can spin and look at from all sides! 🧸✨"
     }
 };

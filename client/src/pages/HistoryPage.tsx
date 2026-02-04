@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import HistoryGrid from '../components/history/HistoryGrid';
 import ImageModal, { type ImageRecord } from '../components/history/ImageModal';
 
-const FILTERS = ['All', 'Uploaded', 'Generated', 'Comic', 'Animation'];
+const FILTERS = ['All', 'Uploaded', 'Generated', 'Story', 'Audio Story', 'Animation'];
 
 const HistoryPage: React.FC = () => {
     const { user } = useAuth();
@@ -37,7 +37,8 @@ const HistoryPage: React.FC = () => {
             if (selectedFilter === 'All') return true;
             if (selectedFilter === 'Uploaded') return img.type === 'upload';
             if (selectedFilter === 'Generated') return img.type === 'generated';
-            if (selectedFilter === 'Comic') return img.type === 'comic' || img.type === 'story';
+            if (selectedFilter === 'Story') return img.type === 'story' || img.type === 'comic' || img.type === 'picturebook' || img.type === 'graphic-novel' || img.type === 'cartoon-book';
+            if (selectedFilter === 'Audio Story') return img.type === 'story' && img.meta?.audioUrl; // Use specific type or property check
             if (selectedFilter === 'Animation') return img.type === 'animation';
             return true;
         })

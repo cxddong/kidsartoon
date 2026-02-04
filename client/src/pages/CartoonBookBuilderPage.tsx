@@ -7,6 +7,7 @@ import { ArrowLeft, BookOpen, Wand2, Loader2, Sparkles, Plus, Mic, X } from 'luc
 import { incrementUsage } from '../components/FeedbackWidget';
 import { motion } from 'framer-motion';
 import { AssetUploadModal } from '../components/cartoon-book/AssetUploadModal';
+import { MagicNavBar } from '../components/ui/MagicNavBar';
 import cartoonBookBg from '../assets/cartoon book.mp4';
 
 type Step = 'vibe' | 'assets' | 'configure' | 'generating' | 'complete';
@@ -647,6 +648,9 @@ export const CartoonBookBuilderPage: React.FC = () => {
                     />
                 )}
             </div>
+
+            {/* Navigation Bar */}
+            <MagicNavBar />
         </div>
     );
 };

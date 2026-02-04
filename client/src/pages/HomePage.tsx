@@ -262,7 +262,7 @@ export const HomePage: React.FC = () => {
                                     icon: "🏫"
                                 },
                                 {
-                                    label: FEATURES_TOOLTIPS.art_studio.label,
+                                    label: FEATURES_TOOLTIPS.art_studio.label, // Art Studio
                                     shortDesc: FEATURES_TOOLTIPS.art_studio.shortDesc,
                                     to: '/magic-studio',
                                     videoSrc: magicLabVid,
@@ -329,6 +329,7 @@ export const HomePage: React.FC = () => {
                                 { label: FEATURES_TOOLTIPS.animation_studio.label, shortDesc: FEATURES_TOOLTIPS.animation_studio.shortDesc, to: '/make-cartoon', videoSrc: cartoonVid, description: FEATURES_TOOLTIPS.animation_studio.desc },
                                 { label: FEATURES_TOOLTIPS.video.label, shortDesc: FEATURES_TOOLTIPS.video.shortDesc, to: '/generate/video', videoSrc: videoVid, description: FEATURES_TOOLTIPS.video.desc },
                                 { label: FEATURES_TOOLTIPS.comic.label, shortDesc: FEATURES_TOOLTIPS.comic.shortDesc, to: '/generate/comic', videoSrc: comicVid, description: FEATURES_TOOLTIPS.comic.desc },
+                                { label: FEATURES_TOOLTIPS.magic_toy.label, shortDesc: FEATURES_TOOLTIPS.magic_toy.shortDesc, to: '/magic-toy', videoSrc: cartoonVid, description: FEATURES_TOOLTIPS.magic_toy.desc, icon: "🧸" },
                                 { label: FEATURES_TOOLTIPS.audio.label, shortDesc: FEATURES_TOOLTIPS.audio.shortDesc, to: '/generate/audio', videoSrc: audioVid, description: FEATURES_TOOLTIPS.audio.desc, isFree: true }
                             ]}
                             position="surround"

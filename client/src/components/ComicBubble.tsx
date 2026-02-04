@@ -10,7 +10,7 @@ interface ComicBubbleProps {
 
 export const ComicBubble: React.FC<ComicBubbleProps> = ({
     text,
-    position = 'bottom',
+    position = 'top',
     type = 'speech',
     emotion = 'happy',
     onClick
@@ -118,14 +118,14 @@ export const ComicBubbleGrid: React.FC<ComicBubbleGridProps> = ({ panels, onBubb
     return (
         <div className={`absolute inset-0 grid ${getGridClass(panels.length)} w-full h-full pointer-events-none`}>
             {panels.map((panel, i) => {
-                const position = (panel.bubblePosition || 'bottom') as any;
+                const position = (panel.bubblePosition || 'top') as any;
                 const type = (panel.bubbleType || 'speech') as any;
                 const emotion = panel.emotion || 'happy';
 
                 return (
                     <div
                         key={i}
-                        className={`relative w-full h-full flex flex-col p-1 md:p-2 ${positionClasses[position] || positionClasses['bottom']}`}
+                        className={`relative w-full h-full flex flex-col p-1 md:p-2 ${positionClasses[position] || positionClasses['top']}`}
                     >
                         <ComicBubble
                             text={panel.caption}

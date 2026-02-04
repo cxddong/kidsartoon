@@ -545,7 +545,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                                                 <img
                                                     src={image.imageUrl}
                                                     alt="Generated Result"
-                                                    className="w-full h-auto object-contain"
+                                                    className="max-w-full max-h-full object-contain mx-auto shadow-sm"
                                                 />
                                                 {/* Architecture C: Static Comic Overlays in Modal */}
                                                 {image.type === 'comic' && !image.meta?.isTextBurnedIn && (
@@ -601,112 +601,109 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-2 items-center">
-                            {/* Premium Analyze Button */}
+                        <div className="flex flex-wrap gap-2 items-center justify-end">
+                            {/* Analyze */}
                             <button
                                 onClick={handleAiReview}
-                                className="w-16 h-16 transition-transform hover:scale-110 active:scale-95 drop-shadow-md hover:drop-shadow-xl"
-                                title="Magic Analysis"
+                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
                             >
-                                <img src="/assets/btn_magic_analyze.png" alt="Analyze" className="w-full h-full object-contain" />
+                                Analyze
                             </button>
 
-                            {/* Share Button (Styled to Match) */}
+                            {/* Save */}
+                            <button
+                                onClick={handleDownload}
+                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
+                            >
+                                Save
+                            </button>
+
+                            {/* Share */}
                             <button
                                 onClick={() => setShowShare(true)}
-                                className="w-10 h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-full flex items-center justify-center transition-colors shadow-sm mx-1"
-                                title="Share Magic Pass"
+                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
                             >
-                                <Share2 size={20} />
+                                Share
                             </button>
 
+                            {/* Favorite */}
                             <button
                                 onClick={() => onToggleFavorite(image.id)}
                                 className={cn(
-                                    "p-3 rounded-full transition-all shadow-md hover:scale-110 mx-1",
+                                    "px-3 py-2 rounded-lg text-xs font-bold transition-colors",
                                     image.favorite
-                                        ? "bg-pink-500 text-white"
-                                        : "bg-white text-slate-400 hover:text-pink-500"
+                                        ? "bg-pink-100 text-pink-600"
+                                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                                 )}
-                                title={image.favorite ? "Remove from favorites" : "Add to favorites"}
                             >
-                                <Heart className={cn("w-5 h-5", image.favorite && "fill-current")} />
+                                {image.favorite ? 'Saved' : 'Like'}
                             </button>
 
-                            {/* Magic Create Menu */}
-                            <div className="relative mx-1">
+                            {/* Create Magic Menu */}
+                            <div className="relative">
                                 <button
                                     onClick={() => setShowMagicMenu(!showMagicMenu)}
-                                    className="px-4 h-10 flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:from-purple-700 hover:to-pink-600 border-0 transition-all shadow-sm font-bold text-sm animate-pulse hover:animate-none"
-                                    title="Create Magic with this"
+                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
                                 >
-                                    <Wand2 size={16} />
-                                    <span className="hidden sm:inline">Create...</span>
+                                    Create
                                 </button>
 
                                 {showMagicMenu && (
-                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in">
-                                        <div className="p-1">
-                                            {onRegenerate && (
-                                                <button
-                                                    onClick={() => { onRegenerate(image); setShowMagicMenu(false); }}
-                                                    className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
-                                                >
-                                                    <RefreshCw size={14} className="text-slate-400" />
-                                                    Remix This
-                                                </button>
-                                            )}
-                                            <div className="h-px bg-slate-100 my-1" />
+                                    <div className="absolute bottom-full right-0 mb-2 w-40 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in">
+                                        <div className="p-1 flex flex-col gap-1">
+                                            {/* 1. Remix -> Jump Into Art */}
+                                            <button
+                                                onClick={() => { navigate('/jump-into-art', { state: { remixImage: image.imageUrl } }); setShowMagicMenu(false); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
+                                            >
+                                                Remix
+                                            </button>
+
+                                            {/* 2. Audio -> Audio Story */}
+                                            <button
+                                                onClick={() => { navigate('/generate/audio', { state: { remixImage: image.imageUrl } }); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
+                                            >
+                                                Audio
+                                            </button>
+
+                                            {/* 3. Story -> Story Selection */}
+                                            <button
+                                                onClick={() => { navigate('/story-selection', { state: { remixImage: image.imageUrl } }); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
+                                            >
+                                                Story
+                                            </button>
+
+                                            {/* 4. Video -> Magic Movie */}
                                             <button
                                                 onClick={() => { navigate('/generate/video', { state: { remixImage: image.imageUrl } }); }}
-                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
                                             >
-                                                <Video size={14} className="text-blue-500" />
-                                                Magic Video
+                                                Video
                                             </button>
+
+                                            {/* 5. Cart -> Make Cartoon */}
                                             <button
-                                                onClick={() => { navigate('/generate/greeting-card', { state: { remixImage: image.imageUrl } }); }}
-                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
+                                                onClick={() => { navigate('/make-cartoon', { state: { remixImage: image.imageUrl } }); }}
+                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700"
                                             >
-                                                <Mail size={14} className="text-pink-500" />
-                                                Greeting Card
-                                            </button>
-                                            <button
-                                                onClick={() => { setShowPuzzle(true); setShowMagicMenu(false); }}
-                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
-                                            >
-                                                <Puzzle size={14} className="text-amber-500" />
-                                                Puzzle Game
-                                            </button>
-                                            <button
-                                                onClick={() => { navigate('/generate/comic', { state: { remixImage: image.imageUrl } }); }}
-                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 flex items-center gap-2"
-                                            >
-                                                <BookOpen size={14} className="text-indigo-500" />
-                                                Comic Panel
+                                                Cart
                                             </button>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
+                            {/* Delete */}
                             {onDelete && (
                                 <button
                                     onClick={() => onDelete(image.id)}
-                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-slate-400 hover:text-red-500 border border-slate-200 transition-all shadow-sm mx-1"
+                                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-xs font-bold transition-colors"
                                 >
-                                    <Trash2 size={18} />
+                                    Delete
                                 </button>
                             )}
-
-                            {/* Premium Download Button */}
-                            <button
-                                onClick={handleDownload}
-                                className="w-16 h-16 transition-transform hover:scale-110 active:scale-95 drop-shadow-md hover:drop-shadow-xl -mr-2"
-                                title="Save to Device"
-                            >
-                                <img src="/assets/btn_magic_save.png" alt="Save" className="w-full h-full object-contain" />
-                            </button>
 
                         </div>
                     </div>

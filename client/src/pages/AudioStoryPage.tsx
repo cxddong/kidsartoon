@@ -14,13 +14,19 @@ import audioStoryBg from '../assets/audio.mp4';
 
 // const backgroundUrl = '/bg_cartoon_new.jpg';
 
-import { StoryBuilderPanel, type StoryBuilderData, STORY_STYLES, MOODS, VOICES, CONTENT_TAGS, MODELS } from '../components/builder/StoryBuilderPanel';
+import { STORY_STYLES, MOODS, VOICES, CONTENT_TAGS, MODELS, type StoryBuilderData } from '../data/storyOptions';
+import { StoryBuilderPanel } from '../components/builder/StoryBuilderPanel';
 import { ImageCropperModal } from '../components/ImageCropperModal';
+import { VoiceRecorderModal } from '../components/modals/VoiceRecorderModal';
 
 export const AudioStoryPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, activeProfile } = useAuth();
+
+    // Voice Cloning State
+    const [isRecorderOpen, setIsRecorderOpen] = useState(false);
+    const [justClonedVoiceId, setJustClonedVoiceId] = useState<string | null>(null); // To auto-retry generation
 
     // Steps: 1:Upload, 2:Audio/Story, 3:Result
     const [step, setStep] = useState(1);
@@ -77,7 +83,7 @@ export const AudioStoryPage: React.FC = () => {
         if (imgUrl) {
             console.log("[AudioStory] 📥 Received Auto-Fill Image");
             setImagePreview(imgUrl);
-            setStep(2); // Auto-advance if image found
+            // setStep(2); // Auto-advance removed
         }
     }, [location]);
 
@@ -109,7 +115,9 @@ export const AudioStoryPage: React.FC = () => {
         if (file) {
             // Use createObjectURL for performance
             const url = URL.createObjectURL(file);
-            setCropImage(url);
+            // Bypass cropper - direct upload
+            setImagePreview(url);
+            setImageFile(file);
 
             // Clear input
             e.target.value = '';
@@ -159,13 +167,8 @@ export const AudioStoryPage: React.FC = () => {
     // playVoiceDemo logic moved to StoryBuilderPanel.tsx
 
     const goBack = () => {
-        if (step > 1) {
-            const confirmed = window.confirm("Are you sure you want to go back? Your current selections for this step might be lost.");
-            if (!confirmed) return;
-            setStep(prev => prev - 1);
-        } else {
-            navigate('/home');
-        }
+        // Unified layout: Go directly home
+        navigate('/home');
     };
 
     const stopAudio = () => {
@@ -199,6 +202,16 @@ export const AudioStoryPage: React.FC = () => {
     };
 
     const generateStory = async (builderData: StoryBuilderData) => {
+        // 1. Check for My Voice
+        if (builderData.voice === 'my_voice') {
+            const hasCustomVoice = user?.customVoice?.voiceId || justClonedVoiceId;
+            if (!hasCustomVoice) {
+                // Open Recorder
+                setIsRecorderOpen(true);
+                return; // Stop flow
+            }
+        }
+
         if (!imageFile && !imagePreview) return;
         setUsedParams(builderData);
         setLoading(true);
@@ -214,10 +227,20 @@ export const AudioStoryPage: React.FC = () => {
             const styleLabel = STORY_STYLES.find(s => s.id === builderData.storyStyle)?.labels.en || builderData.storyStyle;
             const moodLabel = MOODS.find(m => m.id === builderData.mood)?.labels?.en || builderData.mood;
 
+            // Gender Logic
+            const userGender = activeProfile?.gender || user?.gender || 'child';
+            const genderInstruction = userGender.toLowerCase() === 'boy' || userGender.toLowerCase() === 'male'
+                ? "User is a BOY. Protagonist MUST be a BOY in the story. Use 'he/him'. Avoid feminine descriptions like 'long hair' or 'dress' unless visible."
+                : userGender.toLowerCase() === 'girl' || userGender.toLowerCase() === 'female'
+                    ? "User is a GIRL. Protagonist MUST be a GIRL in the story. Use 'she/her'."
+                    : "Protagonist gender is neutral or based on image.";
+
             // Updated Prompt to emphasize Image Context + Visual Anchors
             const prompt = `
                                     ANALYZE the uploaded image in detail first. Then, create a short, engaging audio story based STRICTLY on the visible characters, setting, and actions in the image.
                                     
+                                    User Context:
+                                    - ${genderInstruction}
                                     
                                     Visual Anchors (Use these to pull lighting/texture from Context Cache):
                                     - Scene: ${styleLabel}
@@ -241,6 +264,24 @@ export const AudioStoryPage: React.FC = () => {
             }
             formData.append('voiceText', prompt);
             formData.append('voice', builderData.voice);
+            if (builderData.voice === 'my_voice') {
+                // Robust Custom Voice Lookup
+                let myVoiceId = justClonedVoiceId;
+
+                // Check Array (New Schema)
+                if (!myVoiceId && user?.customVoices && Array.isArray(user.customVoices) && user.customVoices.length > 0) {
+                    const lastVoice = user.customVoices[user.customVoices.length - 1];
+                    myVoiceId = lastVoice.voiceId || lastVoice.id;
+                }
+
+                // Fallback to Legacy Object
+                if (!myVoiceId) {
+                    myVoiceId = user?.customVoice?.voiceId || '';
+                }
+
+                formData.append('customVoiceId', myVoiceId);
+                console.log('[Frontend] Resolving My Voice ID:', myVoiceId);
+            }
             formData.append('voiceTier', builderData.voiceTier);
             formData.append('modelTier', builderData.modelTier);
             formData.append('userId', user?.uid || 'demo');
@@ -289,7 +330,7 @@ export const AudioStoryPage: React.FC = () => {
         if (scrollRef.current) {
             scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }, [step]);
+    }, [storyData]);
 
     return (
         <div className="fixed inset-0 w-full h-full bg-slate-50 flex flex-col z-[50]">
@@ -315,253 +356,109 @@ export const AudioStoryPage: React.FC = () => {
                     />
                 </div>
 
-                {/* Left Sidebar Removed for Cleaner Layout */}
-
                 {/* Main Center Column */}
                 <div ref={scrollRef} className="flex-1 h-full overflow-y-auto relative pb-24">
-                    <div className="relative z-10 p-6 pt-24 max-w-lg mx-auto min-h-full flex flex-col">
+                    <div className="relative z-10 p-6 pt-24 max-w-lg mx-auto min-h-full flex flex-col gap-8">
 
-                        {/* Progress Indicatior (Simpler for 2 Steps) */}
-                        <div className="flex items-center justify-center gap-4 mb-8">
-                            <div className="flex flex-col items-center gap-1">
-                                <div className={cn(
-                                    "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all",
-                                    step >= 1 ? "bg-purple-600 text-white shadow-md scale-110" : "bg-slate-200 text-slate-400"
-                                )}>
-                                    1
-                                </div>
-                                <span className="text-[10px] uppercase font-bold text-slate-400">Upload</span>
-                            </div>
-                            <div className="w-12 h-0.5 bg-slate-200" />
-                            <div className="flex flex-col items-center gap-1">
-                                <div className={cn(
-                                    "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all",
-                                    step >= 2 ? "bg-purple-600 text-white shadow-md scale-110" : "bg-slate-200 text-slate-400"
-                                )}>
-                                    2
-                                </div>
-                                <span className="text-[10px] uppercase font-bold text-slate-400">Create</span>
-                            </div>
-                        </div>
-
-                        {/* Step Content */}
                         <AnimatePresence mode="wait">
+                            {/* RESULT VIEW: If story generated, show result */}
+                            {storyData ? (
+                                <motion.div key="result" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white/90 backdrop-blur-md p-6 rounded-3xl shadow-xl flex flex-col items-center gap-6">
+                                    <div className="text-center w-full flex flex-col items-center">
+                                        <div className="w-48 h-48 mb-6 shadow-2xl rounded-2xl">
+                                            <VIPCover
+                                                imageUrl={imagePreview!}
+                                                isVIP={user?.plan === 'pro' || user?.plan === 'yearly_pro' || user?.plan === 'admin'}
+                                                childName={user?.name}
+                                                aspectRatio="square"
+                                            />
+                                        </div>
+                                        <h3 className="text-xl font-black text-slate-800">Story Ready!</h3>
+                                        <p className="text-slate-500 text-sm font-bold mt-1">Listen to your story</p>
+                                    </div>
 
-                            {/* STEP 1: Upload */}
-                            {step === 1 && (
-                                <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-row items-center justify-center gap-8">
-                                    <div className={cn(
-                                        "rounded-full flex flex-col items-center justify-center transition-all group cursor-pointer overflow-hidden relative transform hover:scale-95 duration-500 shrink-0 border-4 border-dashed border-purple-200 shadow-xl",
-                                        !imagePreview ? "w-36 h-36 rotate-3 hover:rotate-0 bg-white/50 backdrop-blur-md" : "w-40 h-auto bg-white"
+                                    {/* Audio Player */}
+                                    {storyData.audioUrl ? (
+                                        <button
+                                            onClick={() => toggleAudio(storyData.audioUrl)}
+                                            className="w-full py-6 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center gap-3 text-white shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                        >
+                                            {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current" />}
+                                            <span className="font-black text-xl">{isPlaying ? "Pause Story" : "Play Story"}</span>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => speakBrowser(storyData.story)}
+                                            className="w-full py-6 bg-indigo-100/50 border-2 border-indigo-200 rounded-2xl flex items-center justify-center gap-3 text-indigo-600 shadow-sm hover:bg-indigo-100 transition-all"
+                                        >
+                                            {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Volume2 className="w-8 h-8" />}
+                                            <span className="font-black text-xl">{isPlaying ? "Stop Reading" : "Read for Me (Browser)"}</span>
+                                        </button>
                                     )}
-                                        onClick={() => document.getElementById('step1-upload')?.click()}>
 
-                                        {/* Background Video (mic3.mp4) - Only show when no image */}
+                                    {/* Actions */}
+                                    <div className="w-full flex gap-3 mt-2">
+                                        <button
+                                            onClick={() => { setStoryData(null); stopAudio(); }}
+                                            className="flex-1 py-3 bg-white border-2 border-slate-200 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                                        >
+                                            <RotateCw className="w-4 h-4" /> Make Another
+                                        </button>
+                                        <button
+                                            onClick={() => navigate('/home')}
+                                            className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-bold hover:bg-indigo-200 transition-colors"
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                /* INPUT VIEW: Upload + Builder */
+                                <motion.div key="input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-8">
 
+                                    {/* 1. Upload Section */}
+                                    <div className="flex flex-col items-center gap-4">
+                                        <div className={cn(
+                                            "rounded-3xl flex flex-col items-center justify-center transition-all bg-white relative overflow-hidden shadow-xl border-4 border-white",
+                                            !imagePreview ? "w-full aspect-video border-dashed border-purple-200 bg-white/50 backdrop-blur-md hover:bg-white/80 cursor-pointer" : "w-full aspect-square"
+                                        )}
+                                            onClick={() => document.getElementById('step1-upload')?.click()}
+                                        >
+                                            <input type="file" id="step1-upload" className="hidden" accept="image/*" onChange={handleUpload} />
 
-
-
-                                        <input type="file" id="step1-upload" className="hidden" accept="image/*" onChange={handleUpload} />
-                                        {imagePreview ? (
-                                            <div className="relative max-w-full">
-                                                <img src={imagePreview} className="max-w-full max-h-[60vh] w-auto h-auto object-contain block" />
-                                                <div className="absolute inset-x-0 bottom-0 p-2 bg-black/50 text-white text-xs text-center font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    Click to Change
+                                            {imagePreview ? (
+                                                <img src={imagePreview} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-2 text-purple-400">
+                                                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                                                        <CloudUpload className="w-8 h-8 text-purple-600" />
+                                                    </div>
+                                                    <span className="font-black text-lg">Click to Upload Image</span>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center transition-all relative z-10 -rotate-3 group-hover:rotate-0 duration-500">
-                                                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-purple-600 opacity-50 group-hover:opacity-100 transition-opacity">
-                                                    <CloudUpload className="w-10 h-10" />
-                                                </div>
-                                            </div>
+                                            )}
+                                        </div>
+
+                                        {/* Reset Upload Button (Small Text) only if needed */}
+                                        {imagePreview && (
+                                            <button
+                                                onClick={() => { setImagePreview(null); setImageFile(null); }}
+                                                className="text-xs font-bold text-slate-400 underline hover:text-red-500"
+                                            >
+                                                Change Image
+                                            </button>
                                         )}
                                     </div>
 
-                                    <button
-                                        disabled={!imageFile && !imagePreview}
-                                        onClick={() => setStep(2)}
-                                        className="w-24 h-24 rounded-full bg-purple-600 text-white font-black text-sm disabled:opacity-50 disabled:grayscale transition-all shadow-lg hover:bg-purple-700 flex items-center justify-center hover:scale-110 active:scale-95 shrink-0"
-                                    >
-                                        Next ➡️
-                                    </button>
-                                </motion.div>
-                            )}
+                                    {/* 2. Builder Panel */}
+                                    <StoryBuilderPanel
+                                        imageUploaded={!!imageFile || !!imagePreview}
+                                        onGenerate={generateStory}
+                                        userId={user?.uid}
+                                        isRecharging={isRecharging}
+                                        rechargeTime={rechargeTime}
+                                        userPlan={user?.plan}
+                                    />
 
-                            {/* STEP 2: Story Settings */}
-                            {step === 2 && (
-                                <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-
-                                    {!storyData ? (
-                                        <>
-                                            <StoryBuilderPanel
-                                                imageUploaded={!!imageFile || !!imagePreview}
-                                                onGenerate={generateStory}
-                                                userId={user?.uid}
-                                                isRecharging={isRecharging}
-                                                rechargeTime={rechargeTime}
-                                                userPlan={user?.plan}
-                                            />
-                                        </>
-                                    ) : (
-                                        /* Result View: Play & Confirm */
-                                        <div className="bg-white/90 backdrop-blur-md p-6 rounded-3xl shadow-xl flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-4">
-                                            <div className="text-center w-full flex flex-col items-center">
-                                                <div className="w-48 h-48 mb-6 shadow-2xl rounded-2xl">
-                                                    <VIPCover
-                                                        imageUrl={imagePreview!}
-                                                        isVIP={user?.plan === 'pro' || user?.plan === 'yearly_pro' || user?.plan === 'admin'}
-                                                        childName={user?.name}
-                                                        aspectRatio="square"
-                                                    />
-                                                </div>
-                                                <h3 className="text-xl font-black text-slate-800">Story Ready!</h3>
-                                                <p className="text-slate-500 text-sm font-bold mt-1">Listen to your story</p>
-                                            </div>
-
-                                            {/* Audio Player */}
-                                            {storyData.audioUrl ? (
-                                                <button
-                                                    onClick={() => toggleAudio(storyData.audioUrl)}
-                                                    className="w-full py-6 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center gap-3 text-white shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                                >
-                                                    {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current" />}
-                                                    <span className="font-black text-xl">{isPlaying ? "Pause Story" : "Play Story"}</span>
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => speakBrowser(storyData.story)}
-                                                    className="w-full py-6 bg-indigo-100/50 border-2 border-indigo-200 rounded-2xl flex items-center justify-center gap-3 text-indigo-600 shadow-sm hover:bg-indigo-100 transition-all"
-                                                >
-                                                    {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Volume2 className="w-8 h-8" />}
-                                                    <span className="font-black text-xl">{isPlaying ? "Stop Reading" : "Read for Me (Browser)"}</span>
-                                                </button>
-                                            )}
-
-                                            {/* Story Choices Details */}
-                                            {usedParams && (
-                                                <div className="w-full space-y-3">
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        {/* 1. Location (Style) */}
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
-                                                            {(() => {
-                                                                const style = STORY_STYLES.find(s => s.id === usedParams.storyStyle);
-                                                                return (
-                                                                    <>
-                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100">
-                                                                            <img src={style?.image} className="w-full h-full object-cover" />
-                                                                        </div>
-                                                                        <div className="overflow-hidden">
-                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Location</div>
-                                                                            <div className="text-sm font-black text-slate-700 leading-tight truncate">{style?.labels.en}</div>
-                                                                        </div>
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                        </div>
-
-                                                        {/* 2. Content Tags */}
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                                                                <span className="text-lg">🎁</span>
-                                                            </div>
-                                                            <div className="overflow-hidden">
-                                                                <div className="text-[10px] uppercase font-bold text-slate-400">Inside</div>
-                                                                <div className="text-sm font-black text-slate-700 leading-tight truncate">
-                                                                    {usedParams.contentTags.length > 0 ? usedParams.contentTags.join(', ') : 'Surprise me!'}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* 3. Vibe (Mood) */}
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
-                                                            {(() => {
-                                                                const mood = MOODS.find(m => m.id === usedParams.mood);
-                                                                return (
-                                                                    <>
-                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100">
-                                                                            <img src={mood?.image} className="w-full h-full object-cover" />
-                                                                        </div>
-                                                                        <div className="overflow-hidden">
-                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Vibe</div>
-                                                                            <div className="text-sm font-black text-slate-700 leading-tight truncate">{mood?.labels.en}</div>
-                                                                        </div>
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                        </div>
-
-                                                        {/* 4. Narrator */}
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3">
-                                                            {(() => {
-                                                                const voice = VOICES.find(v => v.id === usedParams.voice);
-                                                                return (
-                                                                    <>
-                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100">
-                                                                            <img src={voice?.image} className="w-full h-full object-cover" />
-                                                                        </div>
-                                                                        <div className="overflow-hidden">
-                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Narrator</div>
-                                                                            <div className="text-sm font-black text-slate-700 leading-tight truncate">{voice?.label}</div>
-                                                                        </div>
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                        </div>
-
-                                                        {/* 5. Story Smarts (Model) */}
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-3 col-span-2">
-                                                            {(() => {
-                                                                const model = MODELS.find(m => m.tier === usedParams.modelTier);
-                                                                return (
-                                                                    <>
-                                                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm shrink-0 border border-slate-100 p-1">
-                                                                            <img src={model?.image} className="w-full h-full object-contain" />
-                                                                        </div>
-                                                                        <div className="overflow-hidden">
-                                                                            <div className="text-[10px] uppercase font-bold text-slate-400">Story Mode</div>
-                                                                            <div className="text-sm font-black text-slate-700 leading-tight flex items-center gap-2">
-                                                                                {model?.label}
-                                                                                <span className="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-500 font-bold">{model?.tier === 'premium' ? 'LONG' : 'SHORT'}</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Voice Note (Optional) */}
-                                                    {usedParams.voiceNote && (
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Your Special Request</div>
-                                                            <div className="text-sm font-medium text-slate-600 italic">"{usedParams.voiceNote}"</div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                            {/* Text Preview */}
-                                            <div className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 max-h-40 overflow-y-auto">
-                                                <p className="text-sm text-slate-600 italic">"{storyData.story}"</p>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="w-full flex gap-3 mt-2">
-                                                <button
-                                                    onClick={() => { setStoryData(null); stopAudio(); }}
-                                                    className="flex-1 py-3 bg-white border-2 border-slate-200 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <RotateCw className="w-4 h-4" /> Try Again
-                                                </button>
-                                                <button
-                                                    onClick={() => navigate('/home')}
-                                                    className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-bold hover:bg-indigo-200 transition-colors"
-                                                >
-                                                    Done (Go Home)
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -577,8 +474,6 @@ export const AudioStoryPage: React.FC = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Right Sidebar Removed for Cleaner Layout */}
 
             </div>
 
@@ -602,16 +497,22 @@ export const AudioStoryPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Cropper Modal */}
-            {cropImage && (
-                <ImageCropperModal
-                    imageUrl={cropImage}
-                    onCrop={handleCropComplete}
-                    onCancel={() => setCropImage(null)}
-                    aspectRatio={1} // Or flexible? Story covers usually square or portrait. Let's start with Square.
-                />
-            )}
+
+            {/* Cropper Modal Removed */}
+
+            {/* Voice Recorder Modal */}
+            <VoiceRecorderModal
+                isOpen={isRecorderOpen}
+                onClose={() => setIsRecorderOpen(false)}
+                userId={user?.uid || ''}
+                onVoiceCloned={(id) => {
+                    setJustClonedVoiceId(id);
+                    // Optional: Auto-trigger generation or show success
+                    alert("Voice Cloned! Click 'Generate' again to use your new voice.");
+                }}
+            />
+
             <MagicNavBar />
-        </div>
+        </div >
     );
 };

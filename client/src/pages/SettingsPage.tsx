@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, User, Globe, CreditCard, Info, LogOut, Star, X, History, ScrollText } from 'lucide-react';
+import { ArrowLeft, User, Globe, CreditCard, Info, LogOut, Star, X, History, ScrollText, Gift } from 'lucide-react';
+import { usePointAnimation } from '../context/PointAnimationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Mock Interests List (Ideally shared)
@@ -27,6 +28,13 @@ const SettingsPage: React.FC = () => {
     const [showHistory, setShowHistory] = useState(false);
     const [logs, setLogs] = useState<any[]>([]);
 
+    // Redeem State
+    const [showRedeem, setShowRedeem] = useState(false);
+    const [promoCode, setPromoCode] = useState('');
+    const [redeemStatus, setRedeemStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [redeemMsg, setRedeemMsg] = useState('');
+    const { triggerPointAnimation } = usePointAnimation();
+
     // Protection check
     useEffect(() => {
         if (!user) navigate('/login');
@@ -45,6 +53,44 @@ const SettingsPage: React.FC = () => {
                 .catch(console.error);
         }
     }, [showHistory, user]);
+
+
+    const handleRedeem = async () => {
+        if (!promoCode.trim()) return;
+
+        setRedeemStatus('loading');
+        setRedeemMsg('');
+
+        try {
+            const res = await fetch('/api/points/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user?.uid, code: promoCode })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setRedeemStatus('success');
+                setRedeemMsg(`Success! You got ${data.pointsAdded} points! 🎉`);
+                triggerPointAnimation(data.pointsAdded, window.innerWidth / 2, window.innerHeight / 2);
+                setTimeout(() => {
+                    setShowRedeem(false);
+                    setPromoCode('');
+                    setRedeemStatus('idle');
+                }, 2000);
+            } else {
+                setRedeemStatus('error');
+                let msg = 'Invalid Code';
+                if (data.error === 'ALREADY_REDEEMED') msg = 'You already used this code!';
+                if (data.error === 'CODE_EXPIRED') msg = 'This code has expired.';
+                if (data.error === 'CODE_FULLY_REDEEMED') msg = 'This code is fully claimed.';
+                setRedeemMsg(msg);
+            }
+        } catch (e) {
+            setRedeemStatus('error');
+            setRedeemMsg('Connection failed');
+        }
+    };
 
     const handleLogout = async () => {
         await logout();
@@ -135,21 +181,7 @@ const SettingsPage: React.FC = () => {
                             </div>
                         </button>
 
-                        {/* Parent Center (Points History) */}
-                        <button
-                            onClick={() => setShowHistory(true)}
-                            className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors text-left group"
-                        >
-                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 group-hover:scale-110 transition-transform">
-                                <History className="w-6 h-6" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-slate-700 text-lg">History</h3>
-                                <p className="text-slate-400 text-sm">
-                                    View your activity & points
-                                </p>
-                            </div>
-                        </button>
+
 
                         {/* Subscription */}
                         <button onClick={() => navigate('/subscription')} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors text-left group">
@@ -159,6 +191,20 @@ const SettingsPage: React.FC = () => {
                             <div className="flex-1">
                                 <h3 className="font-bold text-slate-700 text-lg">Subscription</h3>
                                 <p className="text-slate-400 text-sm">Free Member</p>
+                            </div>
+                        </button>
+
+                        {/* Redeem Code */}
+                        <button
+                            onClick={() => setShowRedeem(true)}
+                            className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors text-left group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                                <Gift className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-slate-700 text-lg">Redeem Code</h3>
+                                <p className="text-slate-400 text-sm">Got a gift code?</p>
                             </div>
                         </button>
 
@@ -279,6 +325,61 @@ const SettingsPage: React.FC = () => {
                                             </div>
                                         ))
                                     )}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Redeem Modal */}
+                <AnimatePresence>
+                    {showRedeem && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl relative text-center"
+                            >
+                                <button onClick={() => setShowRedeem(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200">
+                                    <X className="w-5 h-5" />
+                                </button>
+
+                                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Gift className="w-8 h-8" />
+                                </div>
+
+                                <h2 className="text-2xl font-black text-slate-800 mb-2">Redeem Code</h2>
+                                <p className="text-slate-400 text-sm mb-6">Enter your code to get free gems!</p>
+
+                                <div className="space-y-4">
+                                    <input
+                                        type="text"
+                                        value={promoCode}
+                                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                        placeholder="ENTER CODE HERE"
+                                        className="w-full text-center text-2xl font-black tracking-widest p-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none uppercase placeholder:text-slate-300"
+                                    />
+
+                                    {redeemStatus === 'error' && (
+                                        <p className="text-red-500 font-bold text-sm animate-shake">{redeemMsg}</p>
+                                    )}
+                                    {redeemStatus === 'success' && (
+                                        <p className="text-green-500 font-bold text-sm animate-bounce">{redeemMsg}</p>
+                                    )}
+
+                                    <button
+                                        onClick={handleRedeem}
+                                        disabled={redeemStatus === 'loading' || redeemStatus === 'success' || !promoCode}
+                                        className="w-full py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl font-bold shadow-lg shadow-pink-200 disabled:opacity-50 hover:scale-105 transition-transform"
+                                    >
+                                        {redeemStatus === 'loading' ? 'Checking...' : 'Claim Reward 🎁'}
+                                    </button>
                                 </div>
                             </motion.div>
                         </motion.div>

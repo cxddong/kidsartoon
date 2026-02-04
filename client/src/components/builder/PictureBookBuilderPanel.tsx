@@ -185,10 +185,7 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                                 )}
 
                                 {/* Text at Bottom Inside Button */}
-                                <div className={cn(
-                                    "absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-2 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-200",
-                                    theme === item.id || "opacity-0 group-hover:opacity-100"
-                                )}>
+                                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-2 bg-gradient-to-t from-black/70 to-transparent">
                                     <item.icon className="w-3 h-3 text-white" />
                                     <span className="text-xs font-bold text-white drop-shadow-lg">{item.label}</span>
                                 </div>
@@ -207,31 +204,29 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                             <button
                                 key={item.value}
                                 onClick={() => setPageCount(item.value)}
-                                className="flex flex-col items-center gap-2 group w-[47%]"
-                            >
-                                <div className={cn(
-                                    "relative w-full aspect-square rounded-2xl border-3 transition-all bg-white overflow-hidden",
+                                className={cn(
+                                    "relative w-[47%] aspect-square rounded-2xl border-3 transition-all bg-white overflow-hidden group",
                                     pageCount === item.value
                                         ? "border-amber-500 shadow-xl ring-4 ring-amber-200"
                                         : "border-slate-200 shadow-md hover:border-amber-300"
-                                )}>
-                                    <img
-                                        src={item.image}
-                                        alt={item.label}
-                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                    />
-                                    {pageCount === item.value && (
-                                        <div className="absolute top-2 right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg">
-                                            <svg className="w-4 h-4 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path d="M5 13l4 4L19 7"></path>
-                                            </svg>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
+                            >
+                                <img
+                                    src={item.image}
+                                    alt={item.label}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                                {pageCount === item.value && (
+                                    <div className="absolute top-2 right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <svg className="w-4 h-4 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                )}
 
-                                {/* Text Below Button */}
-                                <div className="flex flex-col items-center">
-                                    <span className={cn("text-[10px] sm:text-xs font-black drop-shadow-lg text-center leading-tight", pageCount === item.value ? "text-amber-400" : "text-white")}>{item.label}</span>
+                                {/* Text at Bottom Inside Button */}
+                                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-2 bg-gradient-to-t from-black/80 to-transparent">
+                                    <span className="text-xs font-bold text-white drop-shadow-lg">{item.label}</span>
                                 </div>
                             </button>
                         ))}
@@ -312,10 +307,7 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                                 )}
 
                                 {/* Text at Bottom Inside Button */}
-                                <div className={cn(
-                                    "absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-1 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200",
-                                    illustrationStyle === item.id || "opacity-0 group-hover:opacity-100"
-                                )}>
+                                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-1 bg-gradient-to-t from-black/80 to-transparent">
                                     <item.icon className="w-3 h-3 text-white" />
                                     <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-lg">{item.label}</span>
                                 </div>
@@ -356,10 +348,7 @@ export const PictureBookBuilderPanel: React.FC<Props> = ({ onGenerate, imageUplo
                                 )}
 
                                 {/* Text at Bottom Inside Button */}
-                                <div className={cn(
-                                    "absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-1 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200",
-                                    vibe === item.id || "opacity-0 group-hover:opacity-100"
-                                )}>
+                                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-1 bg-gradient-to-t from-black/80 to-transparent">
                                     <item.icon className="w-3 h-3 text-white" />
                                     <span className="text-[10px] font-bold text-white drop-shadow-lg">{item.label}</span>
                                 </div>

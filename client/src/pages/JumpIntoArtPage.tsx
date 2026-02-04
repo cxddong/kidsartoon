@@ -201,8 +201,16 @@ export const JumpIntoArtPage: React.FC = () => {
                 artUrl = await getDownloadURL(artSnapshot.ref);
             }
 
-            // 3. Call backend API
-            setGenerationProgress('✨ Creating magical fusion... (This may take 15-25 seconds)');
+            // 3. Call backend API with detailed progress tracking
+            setGenerationProgress('🤖 Step 1/3: Analyzing your facial features with AI...');
+
+            // Add a slight delay to show progress
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            setGenerationProgress('🎨 Step 2/3: Analyzing artwork style and character...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            setGenerationProgress('✨ Step 3/3: Creating magical fusion... (This may take 15-25 seconds)');
             const response = await fetch('/api/jump-into-art/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -450,6 +458,7 @@ export const JumpIntoArtPage: React.FC = () => {
                                 <div className="text-center mb-8">
                                     <h2 className="text-3xl font-bold text-slate-800 mb-2">Choose Your Magic</h2>
                                     <p className="text-slate-500">How do you want to blend these worlds?</p>
+                                    <p className="text-xs text-white font-semibold mt-2 bg-black/60 px-4 py-2 rounded-full inline-block backdrop-blur-sm">✨ AI creates artistic versions that resemble you - not exact copies!</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 max-w-4xl mx-auto w-full">
@@ -466,8 +475,8 @@ export const JumpIntoArtPage: React.FC = () => {
                                             <div className="w-12 h-12 bg-purple-500 text-white rounded-xl flex items-center justify-center mb-4 shadow-md">
                                                 <ImageIcon className="w-6 h-6" />
                                             </div>
-                                            <h3 className="text-xl font-bold text-slate-800">Jump Into Drawing</h3>
-                                            <p className="text-sm text-slate-500 mt-2">You enter the world of your art. You become a cartoon!</p>
+                                            <h3 className="text-xl font-bold text-slate-800">Transform to Art Style</h3>
+                                            <p className="text-sm text-slate-500 mt-2">AI creates a cartoon version of you matching the artwork's style - an artistic interpretation!</p>
                                         </div>
                                         {selectedMode === 'A' && <div className="absolute top-4 right-4 bg-purple-500 text-white p-1 rounded-full"><Sparkles size={16} /></div>}
                                     </button>
@@ -485,8 +494,8 @@ export const JumpIntoArtPage: React.FC = () => {
                                             <div className="w-12 h-12 bg-blue-500 text-white rounded-xl flex items-center justify-center mb-4 shadow-md">
                                                 <Zap className="w-6 h-6" />
                                             </div>
-                                            <h3 className="text-xl font-bold text-slate-800">Bring Art to Life</h3>
-                                            <p className="text-sm text-slate-500 mt-2">Your drawing jumps into reality next to you!</p>
+                                            <h3 className="text-xl font-bold text-slate-800">Art to Life</h3>
+                                            <p className="text-sm text-slate-500 mt-2">AI creates a realistic scene with you and the art character - like a magical photo!</p>
                                         </div>
                                         {selectedMode === 'B' && <div className="absolute top-4 right-4 bg-blue-500 text-white p-1 rounded-full"><Sparkles size={16} /></div>}
                                     </button>

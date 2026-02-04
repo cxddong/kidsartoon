@@ -11,7 +11,8 @@ const STORY_TYPES = [
         desc: 'Create fun comic strips with multiple panels and speech bubbles!',
         icon: <MessageCircle size={48} />,
         color: '#60A5FA', // Blue-400
-        path: '/generate/comic'
+        path: '/generate/comic',
+        image: '/assets/story_select_3.jpg' // 4-panel girl
     },
     {
         id: 'picture',
@@ -20,7 +21,8 @@ const STORY_TYPES = [
         desc: 'Write a classic storybook with full-page illustrations.',
         icon: <BookOpen size={48} />,
         color: '#FB923C', // Orange-400
-        path: '/generate/picture'
+        path: '/generate/picture',
+        image: '/assets/story_select_1.jpg' // Single scene girl+llama
     },
     {
         id: 'novel',
@@ -29,7 +31,8 @@ const STORY_TYPES = [
         desc: 'Build a longer cartoon book with chapters and detailed scenes.',
         icon: <FileVideo size={48} />,
         color: '#A78BFA', // Purple-400
-        path: '/cartoon-book/builder'
+        path: '/cartoon-book/builder',
+        image: '/assets/story_select_2.jpg' // Cat spread
     }
 ];
 
@@ -38,7 +41,7 @@ export const StoryFormatSelectionPage = () => {
     const [activeId, setActiveId] = useState<string | null>(null);
 
     return (
-        <div className="min-h-screen bg-[#FFF5E6] relative overflow-hidden flex flex-col justify-between">
+        <div className="h-screen w-screen overflow-hidden fixed inset-0 bg-[#FFF5E6] flex flex-col justify-between">
             {/* Video Background */}
             <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
                 <video
@@ -65,7 +68,7 @@ export const StoryFormatSelectionPage = () => {
 
             {/* Main Title Area (Visible when no selection is active) */}
             <motion.div
-                className="relative z-10 flex-1 flex flex-col items-center justify-center text-center p-6 -mt-20 pointer-events-none"
+                className="relative z-10 flex-1 flex flex-col items-center justify-center text-center p-6 mt-10 pointer-events-none"
                 animate={{ opacity: activeId ? 0 : 1 }}
                 transition={{ duration: 0.3 }}
             >
@@ -78,8 +81,8 @@ export const StoryFormatSelectionPage = () => {
             </motion.div>
 
             {/* Bottom Interaction Area - Vertical Expanding Buttons */}
-            <div className="relative z-10 w-full max-w-5xl mx-auto px-4 pb-10">
-                <div className="flex items-end justify-between gap-4 w-full h-[600px]"> {/* Fixed height container to allow expansion */}
+            <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pb-0 h-[70vh] flex items-end">
+                <div className="flex items-end justify-between gap-4 w-full h-full">
                     {STORY_TYPES.map((type) => {
                         const isActive = activeId === type.id;
                         return (
@@ -91,57 +94,64 @@ export const StoryFormatSelectionPage = () => {
                                     style={{
                                         backgroundColor: type.color,
                                         borderRadius: '32px',
-                                        // height is controlled by animate prop or standard conditional style
+                                        zIndex: isActive ? 50 : 1
                                     }}
-                                    animate={{ height: isActive ? 'auto' : 120 }}
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    animate={{ height: isActive ? '100%' : 140 }}
+                                    transition={{ type: "spring", stiffness: 250, damping: 25 }}
                                 >
                                     {/* Content Container */}
-                                    <div className="relative p-6 flex flex-col h-full text-white">
+                                    <div className={`relative flex flex-col h-full text-white ${isActive ? 'p-0' : 'p-4 md:p-6'}`}>
 
-                                        {/* Icon & Title Area */}
-                                        {/* When inactive: Center content. When active: Move to top. */}
+                                        {/* Icon & Title Area - Compact when active */}
                                         <motion.div
                                             layout
-                                            className={`flex items-center gap-3 w-full ${isActive ? 'mb-4 flex-row justify-start' : 'h-full flex-col justify-center'}`}
+                                            className={`flex items-center gap-3 w-full shrink-0 ${isActive ? 'p-4 pb-2 flex-row justify-start' : 'h-full flex-col justify-center'}`}
                                         >
                                             <motion.span layout className="text-white drop-shadow-md">
-                                                {type.icon}
+                                                {/* Scale down icon when active */}
+                                                {isActive ? React.cloneElement(type.icon as React.ReactElement, { size: 28 }) : type.icon}
                                             </motion.span>
                                             <motion.span
                                                 layout
-                                                className={`font-black uppercase drop-shadow-md text-center ${isActive ? 'text-2xl' : 'text-sm mt-2'}`}
+                                                className={`font-black uppercase drop-shadow-md text-center ${isActive ? 'text-2xl md:text-3xl' : 'text-sm md:text-base mt-2'}`}
                                             >
                                                 {isActive ? type.title : type.shortTitle}
                                             </motion.span>
                                         </motion.div>
 
                                         {/* Expanded Content */}
-                                        <AnimatePresence>
+                                        <AnimatePresence mode="popLayout">
                                             {isActive && (
                                                 <motion.div
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
                                                     exit={{ opacity: 0 }}
-                                                    className="flex-1 flex flex-col justify-between"
+                                                    className="flex-1 flex flex-col min-h-0"
                                                 >
-                                                    <div className="bg-black/20 rounded-2xl p-6 mb-4 border border-white/10">
-                                                        <p className="text-lg leading-relaxed font-medium">{type.desc}</p>
-                                                        <p className="mt-4 italic text-yellow-200 text-base font-bold flex items-center gap-2">
-                                                            <span>✨</span> Your magic starts here!
-                                                        </p>
+                                                    {/* Image Preview - Full Bleed but Contained (No Cutting) */}
+                                                    <div className="w-full flex-1 min-h-0 overflow-hidden bg-black/10 relative group">
+                                                        <img
+                                                            src={type.image}
+                                                            alt={type.title}
+                                                            className="absolute inset-0 w-full h-full object-cover transition-all duration-200"
+                                                            onError={(e) => {
+                                                                console.error("Image failed to load:", type.image);
+                                                            }}
+                                                        />
                                                     </div>
 
-                                                    {/* GO Button */}
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            navigate(type.path);
-                                                        }}
-                                                        className="w-full bg-white text-slate-900 py-4 rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-transform hover:bg-yellow-50 flex items-center justify-center gap-2 flex-shrink-0"
-                                                    >
-                                                        GO! 🚀
-                                                    </button>
+                                                    {/* GO Button Container */}
+                                                    <div className="p-4 pt-2 shrink-0">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigate(type.path);
+                                                            }}
+                                                            className="w-full bg-white text-slate-900 py-3 md:py-4 rounded-2xl font-black text-xl shadow-xl active:scale-95 transition-transform hover:bg-yellow-50 flex items-center justify-center gap-2"
+                                                        >
+                                                            GO! 🚀
+                                                        </button>
+                                                    </div>
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>

@@ -8,7 +8,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import maleVideo from '../assets/male.mp4';
 import femaleVideo from '../assets/female.mp4';
-import { MagicNavBar } from '../components/ui/MagicNavBar';
+
 
 const EditProfilePage: React.FC = () => {
     const navigate = useNavigate();
@@ -389,36 +389,7 @@ const EditProfilePage: React.FC = () => {
                         </button>
                     )}
 
-                    {/* Import History Button - Only for Child Profiles */}
-                    {activeProfile && (
-                        <button
-                            onClick={async () => {
-                                if (window.confirm(`Import all Parent history into ${activeProfile.name}'s profile?`)) {
-                                    setIsSaving(true);
-                                    try {
-                                        const res = await fetch(`/api/users/${user?.uid}/profiles/${activeProfile.id}/import`, { method: 'POST' });
-                                        const data = await res.json();
 
-                                        if (!res.ok) {
-                                            throw new Error(data.error || 'Import failed');
-                                        }
-
-                                        const count = data.count ?? 0;
-                                        alert(`Success! Transferred ${count} items to ${activeProfile.name}.`);
-                                    } catch (e: any) {
-                                        console.error(e);
-                                        alert(`Import failed: ${e.message}`);
-                                    } finally {
-                                        setIsSaving(false);
-                                    }
-                                }
-                            }}
-                            className="flex-none px-4 py-3 rounded-xl font-bold text-blue-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
-                            title="Import Parent History"
-                        >
-                            <span className="text-xl">📥</span>
-                        </button>
-                    )}
 
                     <button
                         onClick={handleSave}
@@ -442,10 +413,10 @@ const EditProfilePage: React.FC = () => {
                 />
             )}
 
-            {/* Navigation Bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-50">
+            {/* Navigation Bar - REMOVED for consistency */}
+            {/* <div className="fixed bottom-0 left-0 right-0 z-50">
                 <MagicNavBar />
-            </div>
+            </div> */}
         </div>
     );
 };

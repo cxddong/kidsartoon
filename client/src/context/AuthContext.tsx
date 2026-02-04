@@ -41,6 +41,10 @@ export interface User {
     uiMode?: 'visual' | 'standard';
     plan?: 'free' | 'basic' | 'pro' | 'yearly_pro' | 'admin';
     lastPointsReset?: string;
+    customVoice?: {
+        voiceId: string;
+        status: string;
+    }; // New Custom Voice Field
 
     // Child Profile Support
     profiles?: ChildProfile[];
@@ -140,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             interests: userData.interests || [],
                             profileCompleted: userData.profileCompleted || false,
                             uiMode: userData.uiMode || 'standard',
+                            customVoice: userData.customVoice, // Map customVoice
                             profiles: userData.profiles || [],
                             currentProfileId: userData.currentProfileId
                         });

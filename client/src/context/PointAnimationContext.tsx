@@ -4,7 +4,7 @@ import { Sparkles, CircleDollarSign } from 'lucide-react';
 
 interface PointAnimationContextType {
     animatePoints: (start: { x: number; y: number }, amount: number) => void;
-    targetRef: React.RefObject<HTMLDivElement | null>;
+    targetRef: React.RefObject<HTMLDivElement>;
 }
 
 const PointAnimationContext = createContext<PointAnimationContextType | null>(null);

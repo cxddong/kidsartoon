@@ -57,25 +57,43 @@ export const MagicArtScannerPage: React.FC = () => {
         if (selectedFiles.length === 0 || !user) return;
 
         setIsAnalyzing(true);
-        setUploadProgress(10);
+        setUploadProgress(0);
 
         try {
-            // 1. Real Upload (MULTIPART)
-            const formData = new FormData();
-            formData.append('userId', user.uid);
-            selectedFiles.forEach(item => {
-                formData.append('images', item.file);
-            });
+            // 1. Batch Upload (MULTIPART) to avoid 413 Errors
+            const BATCH_SIZE = 5;
+            const allImageIds: string[] = [];
+            const filesToUpload = selectedFiles;
+            const totalBatches = Math.ceil(filesToUpload.length / BATCH_SIZE);
 
-            const uploadRes = await fetch('/api/audit/upload', {
-                method: 'POST',
-                body: formData
-            });
+            for (let i = 0; i < totalBatches; i++) {
+                const start = i * BATCH_SIZE;
+                const end = Math.min(start + BATCH_SIZE, filesToUpload.length);
+                const batch = filesToUpload.slice(start, end);
 
-            if (!uploadRes.ok) throw new Error("Upload failed");
+                const formData = new FormData();
+                formData.append('userId', user.uid);
+                batch.forEach(item => {
+                    formData.append('images', item.file);
+                });
 
-            const { imageIds } = await uploadRes.json();
-            setUploadProgress(40);
+                // Progress Calculation: 80% assigned to uploading
+                const progressPerBatch = 80 / totalBatches;
+
+                const uploadRes = await fetch('/api/audit/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadRes.ok) throw new Error(`Batch ${i + 1}/${totalBatches} upload failed`);
+
+                const { imageIds } = await uploadRes.json();
+                allImageIds.push(...imageIds);
+
+                setUploadProgress(prev => Math.min(prev + progressPerBatch, 80));
+            }
+
+            setUploadProgress(90);
 
             // 2. Call Analyze
             // @ts-ignore
@@ -86,7 +104,7 @@ export const MagicArtScannerPage: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: user.uid,
-                    imageIds,
+                    imageIds: allImageIds,
                     childName
                 })
             });
@@ -151,7 +169,14 @@ export const MagicArtScannerPage: React.FC = () => {
                             <Upload className="w-10 h-10 text-indigo-400" />
                         </div>
                         <h2 className="text-2xl font-black text-slate-800 mb-2">Select Artwork Portfolio</h2>
-                        <p className="text-slate-500 font-medium">Drag & drop or click to pick up to 50 drawings</p>
+                        <p className="text-slate-500 font-medium mb-4">Drag & drop or click to pick up to 50 drawings</p>
+
+                        <div className="max-w-md mx-auto bg-indigo-50/50 rounded-2xl p-4 mb-2 text-sm text-indigo-800/80 font-medium text-left">
+                            <p>
+                                Already have a collection of masterpieces? Upload them here (up to 50)!
+                                Magic Kat will analyze their unique artistic style, characteristics, and provide a multi-faceted growth report.
+                            </p>
+                        </div>
 
                         {selectedFiles.length > 0 && (
                             <motion.div

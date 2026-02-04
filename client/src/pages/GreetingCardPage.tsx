@@ -131,7 +131,7 @@ const TEXT_STYLES = [
 ];
 
 const SELFIE_ROLES = [
-    { id: 'myself', label: 'Just Me', prompt: 'the user as themselves', image: null },
+    { id: 'myself', label: 'Just Me', prompt: 'the user as themselves', image: '/assets/role_icons/filter_beauty.jpg' },
     { id: 'superhero', label: 'Superhero', prompt: 'a brave superhero, comic book style', image: '/assets/role_icons/role_superhero.jpg' },
     { id: 'elf', label: 'Elf', prompt: 'a magical elf, fantasy forest style', image: '/assets/role_icons/role_elf.jpg' },
     { id: 'princess', label: 'Princess', prompt: 'a beautiful princess, royal fantasy style', image: '/assets/role_icons/role_princess.jpg' },
@@ -440,24 +440,16 @@ export const GreetingCardPage = () => {
 
     // --- Handlers: Downloads (Composite) ---
     const handleSaveImage = async () => {
-        if (!generatedImage || !cardResultRef.current) return;
+        if (!generatedImage) return;
 
         setLoading(true);
         setLoadingMsg('Saving your card...');
+
         try {
-            // Wait a moment for images to be fully ready
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            const canvas = await html2canvas(cardResultRef.current, {
-                useCORS: true,
-                scale: 2, // High res
-                backgroundColor: null,
-                logging: false
-            });
-
+            // Direct download approach - no html2canvas needed
             const link = document.createElement('a');
             link.download = `kidsart-card-${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = generatedImage;
             link.click();
         } catch (err: any) {
             console.error("Save failed:", err);
@@ -909,12 +901,12 @@ export const GreetingCardPage = () => {
                                             ) : (
                                                 <div className="flex flex-col items-center justify-center w-full h-full gap-1">
                                                     <span className="text-2xl">{f.icon}</span>
-                                                    <span className="text-[10px] font-bold">{f.label.split(' ')[0]}</span>
+                                                    <span className="text-xs font-bold">{f.label.split(' ')[0]}</span>
                                                 </div>
                                             )}
 
                                             {(f as any).image && (
-                                                <div className="absolute bottom-0 inset-x-0 p-1 bg-black/50 text-white text-[10px] font-bold text-center truncate">
+                                                <div className="absolute bottom-0 inset-x-0 p-1 bg-black/50 text-white text-xs font-bold text-center truncate">
                                                     {f.label}
                                                 </div>
                                             )}
@@ -957,7 +949,7 @@ export const GreetingCardPage = () => {
                                             )}
 
                                             <div className={cn(
-                                                "absolute bottom-0 inset-x-0 p-1.5 text-[10px] font-bold text-center truncate backdrop-blur-md transition-colors",
+                                                "absolute bottom-0 inset-x-0 p-1.5 text-xs font-bold text-center truncate backdrop-blur-md transition-colors",
                                                 role.image ? "bg-black/50 text-white group-hover:bg-black/60" : "bg-indigo-100/80 text-indigo-700"
                                             )}>
                                                 {role.label}
@@ -1015,7 +1007,7 @@ export const GreetingCardPage = () => {
                                         ) : (
                                             <div className="relative z-10 flex flex-col items-center gap-1">
                                                 <span className="text-xl">{(occ as any).icon || '💝'}</span>
-                                                <span className="leading-tight text-[10px] font-bold">{occ.label}</span>
+                                                <span className="leading-tight text-xs font-bold">{occ.label}</span>
                                             </div>
                                         )}
                                     </button>
@@ -1072,7 +1064,7 @@ export const GreetingCardPage = () => {
                                                     {(occ as any).image ? (
                                                         <span className={cn(
                                                             "absolute inset-0 flex items-end justify-center pb-2",
-                                                            "text-[11px] font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                                                            "text-sm font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                                                         )}>
                                                             {occ.label}
                                                         </span>

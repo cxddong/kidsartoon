@@ -201,7 +201,7 @@ export const ProfilePage: React.FC = () => {
     const [images, setImages] = useState<ImageRecord[]>([]);
     const [loadingImages, setLoadingImages] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [activeTab, setActiveTab] = useState<'all' | 'videos' | 'books' | 'comics' | 'cards' | 'art' | 'likes' | 'studio'>('all');
+    const [activeTab, setActiveTab] = useState<'all' | 'videos' | 'stories' | 'audio' | 'cards' | 'likes' | 'studio'>('all');
     const [selectedImage, setSelectedImage] = useState<ImageRecord | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [searchExpanded, setSearchExpanded] = useState(false);
@@ -390,8 +390,8 @@ export const ProfilePage: React.FC = () => {
 
         switch (activeTab) {
             case 'videos': return images.filter(img => img.type === 'animation');
-            case 'books': return images.filter(img => img.type === 'picturebook' || img.type === 'story');
-            case 'comics': return images.filter(img => img.type === 'comic' || img.type === 'graphic-novel' || img.type === 'cartoon-book');
+            case 'stories': return images.filter(img => img.type === 'picturebook' || img.type === 'comic' || img.type === 'graphic-novel' || img.type === 'cartoon-book');
+            case 'audio': return images.filter(img => img.type === 'story'); // Audio Stories
             case 'cards': return images.filter(img => img.type === 'cards');
             case 'studio': return images.filter(img => img.type === 'generated' && img.meta?.source === 'magic-art-studio');
             default: return images;
@@ -582,9 +582,9 @@ export const ProfilePage: React.FC = () => {
                         <div className="flex flex-wrap gap-2 bg-white/70 backdrop-blur-sm p-1.5 rounded-2xl shadow-sm border border-slate-200">
                             {[
                                 { id: 'all', label: 'All', icon: Grid },
-                                { id: 'videos', label: 'Magic Cinema', icon: Video }, // Requires Video icon import
-                                { id: 'books', label: 'Stories', icon: BookOpen },
-                                { id: 'comics', label: 'Comics', icon: BookOpen }, // Reuse BookOpen or import new
+                                { id: 'videos', label: 'Magic Cinema', icon: Video },
+                                { id: 'stories', label: 'Stories', icon: BookOpen }, // Merged Story + Comic
+                                { id: 'audio', label: 'Audio Stories', icon: Mic }, // New Audio Story Tab
                                 { id: 'cards', label: 'Cards', icon: Sparkles },
                                 { id: 'studio', label: 'My Studio', icon: Palette },
                                 { id: 'likes', label: 'Likes', icon: Heart }
@@ -592,15 +592,15 @@ export const ProfilePage: React.FC = () => {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id as any)}
+                                    title={tab.label}
                                     className={cn(
-                                        "px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
+                                        "px-4 py-3 rounded-xl transition-all flex items-center justify-center",
                                         activeTab === tab.id
                                             ? "bg-blue-500 text-white shadow-md scale-105"
                                             : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                                     )}
                                 >
-                                    {tab.id === 'likes' ? <tab.icon className="w-4 h-4 fill-current" /> : <tab.icon className="w-4 h-4" />}
-                                    {tab.label}
+                                    {tab.id === 'likes' ? <tab.icon className="w-5 h-5 fill-current" /> : <tab.icon className="w-5 h-5" />}
                                 </button>
                             ))}
                         </div>

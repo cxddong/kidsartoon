@@ -79,6 +79,51 @@ export const ComicPage: React.FC = () => {
     // Share dialog state
     const [showShareDialog, setShowShareDialog] = useState(false);
 
+    // Ref for capturing the full comic composition
+    const comicRef = React.useRef<HTMLDivElement>(null);
+
+    const handleDownload = async () => {
+        if (!comicRef.current) return;
+
+        try {
+            // Find the image element within the comic container
+            const imgElement = comicRef.current.querySelector('img');
+            if (!imgElement) {
+                throw new Error('Comic image not found');
+            }
+
+            // Create a canvas and draw the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not get canvas context');
+
+            // Set canvas size to match image
+            canvas.width = imgElement.naturalWidth || imgElement.width;
+            canvas.height = imgElement.naturalHeight || imgElement.height;
+
+            // Draw the image onto canvas
+            ctx.drawImage(imgElement as HTMLImageElement, 0, 0);
+
+            // Download the canvas as PNG
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    throw new Error('Failed to create image blob');
+                }
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = `magic-comic-${Date.now()}.png`;
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        } catch (e) {
+            console.error("Comic download failed", e);
+            alert("Oops! Could not save the comic perfectly. Try taking a screenshot!");
+        }
+    };
+
     const goBack = () => {
         if (imageFile || imagePreview || resultData) {
             const confirmed = window.confirm("Are you sure you want to go back? Your current progress might be lost.");
@@ -352,6 +397,8 @@ export const ComicPage: React.FC = () => {
             formData.append('prompt', compositePrompt);
             formData.append('userId', user?.uid || 'demo-user');
             if (activeProfile?.id) formData.append('profileId', activeProfile.id);
+            if (activeProfile?.name) formData.append('profileName', activeProfile.name);
+            if (activeProfile?.gender) formData.append('profileGender', activeProfile.gender);
             formData.append('pageCount', '4');
 
             const res = await fetch('/api/media/generate-magic-comic', {
@@ -589,7 +636,7 @@ export const ComicPage: React.FC = () => {
                                     });
                                 }}
                             >
-                                <div className="relative aspect-square max-h-[90vh] w-auto shadow-sm">
+                                <div ref={comicRef} className="relative aspect-square max-h-[90vh] w-auto shadow-sm bg-white">
                                     <img
                                         src={resultData.gridImageUrl || resultData.coverImageUrl || resultData.pages?.[0]?.imageUrl}
                                         className="w-full h-full object-cover rounded-sm"
@@ -691,6 +738,17 @@ export const ComicPage: React.FC = () => {
                                 >
                                     <Star className="w-4 h-4 fill-current" />
                                     <span>Art Teacher</span>
+                                </button>
+
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDownload();
+                                    }}
+                                    className="col-span-1 bg-teal-600 text-white px-4 py-3 rounded-2xl font-bold shadow-lg text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-center gap-2 hover:bg-teal-700 transition-colors"
+                                >
+                                    <Download className="w-5 h-5" />
+                                    <span>Download</span>
                                 </button>
                             </div>
 

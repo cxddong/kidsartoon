@@ -6,6 +6,7 @@ import { ToastProvider } from './context/ToastContext';
 import { PointAnimationProvider } from './context/PointAnimationContext';
 import { SoundManager } from './components/SoundManager';
 import { LandscapePrompt } from './components/ui/LandscapePrompt';
+import { FeedbackWidget } from './components/FeedbackWidget';
 
 // Existing Pages
 import { SplashPage } from './pages/SplashPage';
@@ -45,6 +46,7 @@ import { ParentReportPage } from './pages/ParentReportPage';
 import MagicPressPage from './pages/MagicPressPage';
 import PublicShowcasePage from './pages/PublicShowcasePage';
 import { MagicArtStudioPage } from './pages/MagicArtStudioPage';
+import { MagicToyMakerPage } from './pages/MagicToyMakerPage';
 import { MagicArtClassPage } from './pages/MagicArtClassPage';
 import { ScreenTimeManager } from './components/ScreenTimeManager';
 import { ImageAdjustDebugPage } from './pages/ImageAdjustDebugPage';
@@ -131,6 +133,7 @@ const AppRoutes = () => {
         <Route path="/generate/greeting-card" element={<GreetingCardPage />} />
         <Route path="/jump-into-art" element={<JumpIntoArtPage />} />
         <Route path="/magic-art" element={<MagicMirrorPage />} />
+        <Route path="/magic-toy" element={<MagicToyMakerPage />} />
         <Route path="/magic-studio" element={<MagicArtStudioPage />} />
         <Route path="/art-class" element={<MagicArtClassPage />} />
 
@@ -166,6 +169,7 @@ function App() {
             <ScreenTimeManager>
               <SoundManager />
               <LandscapePrompt />
+              <FeedbackWidget />
               <AppRoutes />
             </ScreenTimeManager>
           </PointAnimationProvider>
