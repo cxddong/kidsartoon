@@ -439,7 +439,13 @@ export const MagicMoviePage: React.FC = () => {
                                 effect,
                                 spell: selectedSpell,
                                 duration: durationMap[selectedSpell],
-                                credits: calculateCredits()
+                                credits: calculateCredits(),
+                                subjectType,
+                                audioMode,
+                                voiceStyle,
+                                sceneMood,
+                                isSoundOn,
+                                textInput: textInput.trim()
                             }
                         });
                         setStep('finished');
@@ -1152,22 +1158,63 @@ export const MagicMoviePage: React.FC = () => {
                                         {/* Generation Parameters */}
                                         {resultData?.params && (
                                             <div className="flex flex-wrap gap-2 justify-center mb-6">
-                                                <span className="px-3 py-1.5 bg-blue-500/20 border border-blue-500/50 rounded-full text-blue-200 text-sm font-bold flex items-center gap-1">
-                                                    🎬 {MAGIC_ACTIONS.find(a => a.id === resultData.params?.action)?.label || 'Dance'}
+                                                {/* Subject Tag */}
+                                                <span className="px-3 py-1.5 bg-slate-500/20 border border-slate-500/50 rounded-full text-slate-200 text-sm font-bold flex items-center gap-1">
+                                                    {resultData.params.subjectType === 'character' ? '🦁 Character' : '🏰 Object'}
                                                 </span>
+
+                                                {/* Action Tag */}
+                                                <span className="px-3 py-1.5 bg-blue-500/20 border border-blue-500/50 rounded-full text-blue-200 text-sm font-bold flex items-center gap-1">
+                                                    🎬 {(subjectType === 'character' ? MAGIC_ACTIONS : OBJECT_ACTIONS).find(a => a.id === resultData.params?.action)?.label || 'Action'}
+                                                </span>
+
+                                                {/* Style Tag */}
                                                 {resultData.params?.style && (
                                                     <span className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/50 rounded-full text-emerald-200 text-sm font-bold flex items-center gap-1">
                                                         🎨 {MAGIC_STYLES.find(s => s.id === resultData.params?.style)?.label}
                                                     </span>
                                                 )}
+
+                                                {/* Effect Tag */}
                                                 {resultData.params?.effect && (
                                                     <span className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-200 text-sm font-bold flex items-center gap-1">
                                                         ✨ {MAGIC_EFFECTS.find(e => e.id === resultData.params?.effect)?.label}
                                                     </span>
                                                 )}
+
+                                                {/* Spell/Duration Tag */}
                                                 <span className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/50 rounded-full text-purple-200 text-sm font-bold flex items-center gap-1">
-                                                    🪄 {resultData.params?.spell && (SPELLS as any)[resultData.params.spell as string]?.name} ({resultData.params?.duration}s)
+                                                    🪄 {(SPELLS as any)[resultData.params.spell]?.name} ({resultData.params?.duration}s)
                                                 </span>
+
+                                                {/* Audio/Voice/Mood Tags */}
+                                                {!resultData.params.isSoundOn ? (
+                                                    <span className="px-3 py-1.5 bg-red-500/20 border border-red-500/50 rounded-full text-red-200 text-sm font-bold flex items-center gap-1">
+                                                        🔇 Sound Off
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <span className="px-3 py-1.5 bg-pink-500/20 border border-pink-500/50 rounded-full text-pink-200 text-sm font-bold flex items-center gap-1">
+                                                            {resultData.params.audioMode === 'talk' ? '🎙️ Talk' : '🎵 Scene'}
+                                                        </span>
+                                                        {resultData.params.audioMode === 'talk' ? (
+                                                            <span className="px-3 py-1.5 bg-pink-400/20 border border-pink-400/50 rounded-full text-pink-100 text-sm font-bold flex items-center gap-1 uppercase">
+                                                                🗣️ {resultData.params.voiceStyle}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/50 rounded-full text-cyan-200 text-sm font-bold flex items-center gap-1 uppercase">
+                                                                🎭 {resultData.params.sceneMood}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+
+                                                {/* Text Input Snippet */}
+                                                {resultData.params.textInput && (
+                                                    <span className="px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/50 rounded-full text-indigo-200 text-sm font-bold flex items-center gap-1 italic max-w-xs truncate">
+                                                        💬 "{resultData.params.textInput}"
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
 
