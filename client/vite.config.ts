@@ -55,6 +55,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
+    include: ['@google/model-viewer'],
     esbuildOptions: {
       target: 'esnext',
     },
