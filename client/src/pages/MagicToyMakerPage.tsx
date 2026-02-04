@@ -5,10 +5,6 @@ import { ArrowLeft, Upload, Loader2, Sparkles, AlertCircle, Save, Share2, Rotate
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FileUpload from '../components/common/FileUpload';
-// Note: We use the web component directly. React might complain about custom elements.
-// We'll suppress schema warning or import it.
-// @ts-ignore
-import '@google/model-viewer';
 
 // Extend JSX for model-viewer
 declare global {
