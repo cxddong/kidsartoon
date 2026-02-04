@@ -33,7 +33,7 @@ const SettingsPage: React.FC = () => {
     const [promoCode, setPromoCode] = useState('');
     const [redeemStatus, setRedeemStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [redeemMsg, setRedeemMsg] = useState('');
-    const { triggerPointAnimation } = usePointAnimation();
+    const { animatePoints } = usePointAnimation();
 
     // Protection check
     useEffect(() => {
@@ -72,7 +72,8 @@ const SettingsPage: React.FC = () => {
             if (data.success) {
                 setRedeemStatus('success');
                 setRedeemMsg(`Success! You got ${data.pointsAdded} points! 🎉`);
-                triggerPointAnimation(data.pointsAdded, window.innerWidth / 2, window.innerHeight / 2);
+                setRedeemMsg(`Success! You got ${data.pointsAdded} points! 🎉`);
+                animatePoints({ x: window.innerWidth / 2, y: window.innerHeight / 2 }, data.pointsAdded);
                 setTimeout(() => {
                     setShowRedeem(false);
                     setPromoCode('');

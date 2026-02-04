@@ -45,6 +45,7 @@ export interface User {
         voiceId: string;
         status: string;
     }; // New Custom Voice Field
+    customVoices?: any[]; // Array support
 
     // Child Profile Support
     profiles?: ChildProfile[];
@@ -388,6 +389,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.profiles !== undefined) firestoreData.profiles = data.profiles;
         if (data.currentProfileId !== undefined) firestoreData.currentProfileId = data.currentProfileId; // Allow setting null
         if (data.parentPin !== undefined) firestoreData.parentPin = data.parentPin;
+        if (data.customVoice !== undefined) firestoreData.customVoice = data.customVoice;
 
         await setDoc(doc(db, 'users', auth.currentUser.uid), firestoreData, { merge: true });
     };
