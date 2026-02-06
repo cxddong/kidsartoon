@@ -152,14 +152,14 @@ export default function JourneyWorld() {
                                 style={{
                                     width: '100%',
                                     height: '100%',
-                                    backgroundImage: 'url(/assets/bg1.png?v=fill)',
+                                    backgroundImage: 'url(/newback.png?v=fill)',
                                     backgroundRepeat: 'no-repeat',
                                     backgroundPosition: 'center',
                                     backgroundSize: '100% 100%' // Force fit entire image to container
                                 }}
                             />
                         ) : (
-                            <img src="/assets/bg.png" className="w-full h-full object-cover" alt="Journey Map" />
+                            <img src="/newback.png" className="w-full h-full object-cover" alt="Journey Map" />
                         )}
                     </div>
 

@@ -20,6 +20,7 @@ import path from 'path';
 import { Readable } from 'stream';
 
 import { adminStorageService } from '../services/adminStorage.js';
+import { adminDb } from '../services/firebaseAdmin.js';
 
 export const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -485,66 +486,55 @@ and user context: ${userVoiceText}.
       const outputDir = path.join(process.cwd(), 'client', 'public', 'generated');
       if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
 
+      // 1. Explicit OpenAI Selection (Standard Tier)
+      if (voiceId === 'openai') {
+        usedProvider = 'openai';
+        // it will fall through to the OpenAI generation block below if we don't handle it here
+      }
+
       if (voiceTier === 'premium') {
 
-        // 1. Minimax Handling (Kiki, Aiai, Titi) OR Custom Voices (MiniMax Cloning)
-        const customId = req.body.customVoiceId; // ID from frontend for 'my_voice'
-        const isMiniMaxStandard = voiceId === 'kiki' || voiceId === 'aiai' || voiceId === 'titi';
-        const isDirectCustomId = typeof voiceId === 'string' && voiceId.startsWith('custom_');
-        // Fix: Only use MiniMax service if the custom ID explicitly looks like a MiniMax ID (starts with 'custom_')
-        const isMiniMaxCustom = customId && String(customId).startsWith('custom_');
+        // 1. Minimax Handling (Archetypes & Legacy)
+        const customId = req.body.customVoiceId;
+        const targetId = customId || voiceId;
 
-        if (isMiniMaxStandard || isMiniMaxCustom || isDirectCustomId) {
+        // NEW V2.0: Handle "My Voice" matched config
+        let finalId = targetId;
+        let finalPitch = 0;
+        let finalSpeed = 1.0;
+
+        if (targetId === 'my_voice' || targetId === 'my voice' || targetId === 'custom_lab') {
           try {
-            const targetId = customId || voiceId;
-            console.log(`[TTS] Generating MiniMax Audio for ${targetId}...`);
-            audioBuffer = await minimaxService.generateSpeech(story, targetId);
-
-            const filename = `audio-${id}.mp3`;
-            const outputPath = path.join(outputDir, filename);
-            fs.writeFileSync(outputPath, audioBuffer);
-            audioUrl = `/generated/${filename}`;
-            usedProvider = 'minimax';
-            console.log('[TTS] MiniMax Audio Generated successfully:', audioUrl);
-          } catch (mmErr: any) {
-            console.error(`[TTS] MiniMax Failed for ${voiceId}:`, mmErr.message);
-            // Fallback to Qwen or OpenAI below
-            console.log(`[TTS] Falling back to Qwen/OpenAI due to MiniMax error.`);
+            const userDoc = await adminDb.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              if (userData?.myVoiceConfig?.isReady) {
+                finalId = userData.myVoiceConfig.archetypeId;
+                finalPitch = userData.myVoiceConfig.pitch || 0;
+                finalSpeed = userData.myVoiceConfig.speed || 1.0;
+                console.log(`[TTS] Using MyVoiceConfig for ${userId}: ${finalId} (p=${finalPitch}, s=${finalSpeed})`);
+              }
+            }
+          } catch (pErr) {
+            console.warn("[TTS] Failed to fetch myVoiceConfig:", pErr);
           }
         }
 
-        // 2. Qwen CosyVoice Handling for others or fallback
-        if (!audioUrl) {
-          const qwenVoiceId = resolveVoiceId(voiceId, req.body.customVoiceId);
-          // Only use Qwen if it's NOT one of the MiniMax ones we just failed on (unless we want Qwen as fallback for MiniMax?)
-          // The user wants "revert to MiniMax". If MiniMax fails, fallback to Qwen/OpenAI is good.
+        console.log(`[TTS] Generating MiniMax Audio for ${finalId}...`);
 
-          if (qwenVoiceId) {
-            try {
-              console.log(`[TTS] Attempting Qwen CosyVoice: ${qwenVoiceId}...`);
-              // Note: DashScope might return wav or mp3. We requested mp3 in config.
-              audioBuffer = await dashscopeService.generateSpeech({
-                text: story,
-                voice: qwenVoiceId,
-                format: 'mp3',
-                volume: (qwenVoiceId === 'boy_funny' || voiceId.toUpperCase() === 'TITI') ? 0.9 : 1.0
-              });
+        try {
+          audioBuffer = await minimaxService.generateSpeech(story, finalId, finalPitch, finalSpeed);
 
-              const filename = `audio-${id}.mp3`;
-              const outputPath = path.join(outputDir, filename);
-              fs.writeFileSync(outputPath, audioBuffer);
-              audioUrl = `/generated/${filename}`;
-              usedProvider = 'dashscope-cosyvoice';
-              console.log('[TTS] Qwen Audio Generated successfully:', audioUrl);
-
-            } catch (qErr: any) {
-              console.error(`[TTS] Qwen Failed for ${voiceId}:`, qErr.message);
-              import('fs').then(fs => {
-                fs.appendFileSync('qwen_debug.log', `[${new Date().toISOString()}] FAILED for ${voiceId}: ${qErr.message}\n`);
-              });
-              // Fallback to OpenAI below
-            }
-          }
+          const filename = `audio-${id}.mp3`;
+          const outputPath = path.join(outputDir, filename);
+          fs.writeFileSync(outputPath, audioBuffer);
+          audioUrl = `/generated/${filename}`;
+          usedProvider = 'minimax';
+          console.log('[TTS] MiniMax Audio Generated successfully:', audioUrl);
+        } catch (mmErr: any) {
+          console.error(`[TTS] MiniMax Failed for ${targetId}:`, mmErr.message);
+          // Fallback to OpenAI (Nova HD) will happen automatically if audioUrl is empty
+          console.log(`[TTS] Falling back to OpenAI due to MiniMax error.`);
         }
       }
 
@@ -3053,19 +3043,28 @@ router.post('/image-to-3d', upload.single('image'), async (req, res) => {
   }
 
   try {
-    // 0. Check Points (Scheme A: 50 Gems for high quality default)
-    // Actually, user suggested "Preview (10) + High Qual (30)".
-    // Backend Implementation: We charge 50 for the whole generation for simplicity now (Scheme A).
-    // Or we charge 10 for task creation? 
-    // Let's implement Scheme A (50 gems) for now to get it working.
-    const action = 'generate_3d_model';
-    // We need to add 'generate_3d_model' to point costs or reuse an existing one like 'generate_video' (50).
-    // I'll assume 'generate_video' cost or similar. Or just hardcode logic elsewhere.
-    // For now, I'll attempt to consume 'generate_image'. No, 3D is more expensive.
-    // I'll use 'generate_video' (50 points).
+    // 0. Determine Pricing based on User Plan
+    let action = 'generate_3d_model'; // Default Free/Visitor (80 Gems)
 
-    // Check balance
-    const deduction = await pointsService.consumePoints(userId, 'generate_video_5s'); // 50 pts
+    try {
+      if (userId && userId !== 'demo') {
+        const userRecord = await databaseService.getUser(userId);
+        const plan = userRecord?.plan as string;
+
+        if (plan === 'pro' || plan === 'yearly_pro' || plan === 'admin') {
+          action = 'generate_3d_model_pro'; // 40 Gems
+        } else if (plan === 'basic') {
+          action = 'generate_3d_model_basic'; // 50 Gems
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch user plan for pricing, using default:', e);
+    }
+
+    console.log(`[Media] 3D Generation Cost Action: ${action}`);
+
+    // Check balance and deduct points
+    const deduction = await pointsService.consumePoints(userId, action);
     if (!deduction.success) {
       if (deduction.error === 'NOT_ENOUGH_POINTS') {
         return res.status(200).json({ success: false, errorCode: 'NOT_ENOUGH_POINTS' });
@@ -3098,7 +3097,15 @@ router.post('/image-to-3d', upload.single('image'), async (req, res) => {
     console.error('[Media] 3D Task Failed:', error);
     // Refund?
     try {
-      await pointsService.refundPoints(userId, 'generate_video_5s', '3d_failed');
+      // Re-calculate action for correct refund amount
+      let refundAction = 'generate_3d_model';
+      try {
+        const u = await databaseService.getUser(userId);
+        if (u?.plan === 'pro' || u?.plan === 'yearly_pro' || u?.plan === 'admin') refundAction = 'generate_3d_model_pro';
+        else if (u?.plan === 'basic') refundAction = 'generate_3d_model_basic';
+      } catch (e) { }
+
+      await pointsService.refundPoints(userId, refundAction, '3d_task_creation_failed');
     } catch (refundErr) {
       console.error('[Media] Refund failed after 3D error:', refundErr);
     }

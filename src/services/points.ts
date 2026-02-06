@@ -43,7 +43,9 @@ export const POINTS_COSTS: Record<string, number> = {
     'magic_mentor_step': 25,      // Point cost for each step in Art Coach
     'masterpiece_match': 25,
     'generate_video_5s': 50,
-    'generate_3d_model': 50
+    'generate_3d_model': 80,
+    'generate_3d_model_basic': 50,
+    'generate_3d_model_pro': 40
 };
 
 export interface PointLog {
@@ -69,14 +71,75 @@ export class PointsService {
     async getBalance(userId: string): Promise<number> {
         if (!userId) return 0;
         try {
-            const userSnap = await adminDb.collection('users').doc(userId).get();
-            if (userSnap.exists) {
-                const data = userSnap.data();
-                return data?.points || 0;
+            const userRef = adminDb.collection('users').doc(userId);
+            const userSnap = await userRef.get();
+
+            // 1. New User / Guest Initialization (100 Gems)
+            if (!userSnap.exists) {
+                console.log(`[Points] New Guest Detected: ${userId}. Initializing with 100 Gems.`);
+                // Create user doc
+                await userRef.set({
+                    points: 100,
+                    createdAt: new Date().toISOString(),
+                    lastDailyCheckIn: new Date().toISOString()
+                });
+
+                // Log Gift
+                try {
+                    await adminDb.collection('points_logs').doc(uuidv4()).set({
+                        logId: uuidv4(),
+                        userId,
+                        action: 'welcome_gift',
+                        pointsChange: 100,
+                        beforePoints: 0,
+                        afterPoints: 100,
+                        reason: 'Awakening Gift (Guest Init)',
+                        createdAt: new Date().toISOString()
+                    });
+                } catch (logErr) { console.error('Log failed', logErr); }
+
+                return 100;
             }
-            return 0;
+
+            // 2. Existing User Logic
+            const data = userSnap.data();
+            let points = data?.points;
+
+            if (points === undefined) {
+                // Fix missing points field for existing users
+                points = 100;
+                await userRef.update({ points: 100 });
+            }
+
+            // 3. Daily Check-in (+10 Gems)
+            const lastCheckIn = data?.lastDailyCheckIn;
+            const now = new Date();
+            const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+            let lastDate = '';
+            if (lastCheckIn) {
+                // Handle Firestore Timestamp or string
+                const d = (lastCheckIn && typeof lastCheckIn.toDate === 'function') ? lastCheckIn.toDate() : new Date(lastCheckIn);
+                // Check if valid date
+                if (!isNaN(d.getTime())) {
+                    lastDate = d.toISOString().split('T')[0];
+                }
+            }
+
+            // Grant +10 if new day
+            if (lastDate !== today) {
+                console.log(`[Points] Daily Check-in for ${userId}: +10 Gems`);
+                // Use grantPoints to handle logging and update
+                await this.grantPoints(userId, 10, 'daily_checkin', 'Daily Login Bonus');
+
+                // Update timestamp
+                await userRef.update({ lastDailyCheckIn: now.toISOString() });
+                points += 10;
+            }
+
+            return points || 0;
         } catch (error) {
-            console.error('[Points] Get Balance Error:', error);
+            console.error('[Points] Get Balance/Init Error:', error);
             return 0;
         }
     }

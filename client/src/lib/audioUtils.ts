@@ -57,6 +57,15 @@ export const playAudioWithPitchShift = async (
     } catch (error) {
         console.error("Advanced audio playback failed, falling back to simple mode:", error);
 
+        // Debug: Log what we tried to decode
+        if (typeof arrayBuffer !== 'undefined') {
+            console.log(`[AudioDebug] ArrayBuffer size: ${arrayBuffer.byteLength}`);
+            if (arrayBuffer.byteLength > 4) {
+                const view = new Uint8Array(arrayBuffer.slice(0, 4));
+                console.log(`[AudioDebug] Header (Hex): ${Array.from(view).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+            }
+        }
+
         // Fallback: use simple Audio element if Web Audio API fails
         const audio = new Audio(url);
         if (onEnded) {

@@ -44,11 +44,10 @@ export const dashscopeService = {
         // Detect Custom Voice for logging and optional delay
         const isCustomVoice = params.voice?.includes("qwen-tts-vc") || params.voice?.startsWith("v") || (params.voice?.length ?? 0) > 20;
 
-        if (isCustomVoice && !params.model) {
-            // FIX: Use 'cosyvoice-v3-plus' for high-fidelity cloning (User Feedback: "Not my voice")
-            // This requires the Beijing region key (which we are using)
-            model = "cosyvoice-v3-plus";
-        }
+        // if (isCustomVoice && !params.model) {
+        //     // Revert: cosyvoice-v3-plus synthesis is failing (URL error). qwen3-tts-flash works.
+        //     // model = "cosyvoice-v3-plus";
+        // }
 
         // Propagation buffer for newly enrolled voices
         if (isCustomVoice) {
@@ -112,7 +111,7 @@ export const dashscopeService = {
                 // DEBUG: Log every chunk to prove we are receiving data
                 try {
                     if (!fs.existsSync('d:/KAT/KAT/logs')) fs.mkdirSync('d:/KAT/KAT/logs');
-                    fs.appendFileSync('d:/KAT/KAT/logs/raw_stream_debug.log', `[${new Date().toISOString()}] Chunk (${chunk.length}b): ${text.substring(0, 100)}...\n`);
+                    fs.appendFileSync('d:/KAT/KAT/logs/raw_stream_debug.log', `[${new Date().toISOString()}] Chunk (${chunk.length}b): ${text}\n`);
                 } catch (e) { }
 
                 try {
@@ -147,10 +146,26 @@ export const dashscopeService = {
 
                                 // Extract Base64 Audio
                                 // V3 returns output.audio.data, while some other models return output.audio_bin
-                                const audioData = obj.output?.audio?.data || obj.output?.audio_bin;
+
+                                // DEBUG: Log the full output structure
+                                try {
+                                    fs.appendFileSync('d:/KAT/KAT/logs/json_structure.log', `[${new Date().toISOString()}] OUTPUT KEYS: ${Object.keys(obj.output || {}).join(', ')}\n`);
+                                    if (obj.output?.audio) {
+                                        fs.appendFileSync('d:/KAT/KAT/logs/json_structure.log', `[${new Date().toISOString()}] AUDIO KEYS: ${Object.keys(obj.output.audio).join(', ')}\n`);
+                                    }
+                                } catch (e) { }
+
+                                let audioData = obj.output?.audio?.data || obj.output?.audio_bin;
                                 if (audioData) {
+                                    // Plan B Hardening: Ensure no "data:audio/..." prefix exists
+                                    // User Request: const cleanBase64 = rawBase64.replace(/^data:audio\/\w+;base64,/, "");
+                                    audioData = audioData.replace(/^data:audio\/\w+;base64,/, "").replace(/^data:application\/\w+;base64,/, "");
+                                    if (audioData.startsWith('data:')) {
+                                        audioData = audioData.split(',')[1];
+                                    }
                                     const bin = Buffer.from(audioData, 'base64');
                                     audioChunks.push(bin);
+
                                     totalReceived += bin.length;
                                 }
 

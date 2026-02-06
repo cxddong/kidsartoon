@@ -5,7 +5,7 @@ import { MagicNavBar } from '../components/ui/MagicNavBar';
 import { FanMenuV2 } from '../components/home/FanMenuV2';
 import { MagicKatButton } from '../components/home/MagicKatButton';
 import mentorVideo from '../assets/mentor journey.mp4';
-import backgroundVideo from '../assets/backgournd.mp4'; // Typo preserved
+// import backgroundVideo from '../assets/backgournd.mp4'; // Removed per user request
 import creativeJourneyVid from '../assets/creative journey.mp4';
 import artStudioVid from '../assets/art studio.mp4';
 import magicLabVid from '../assets/magiclab.mp4';
@@ -15,7 +15,6 @@ import pictureBookVid from '../assets/picturebook.mp4';
 import cartoonVid from '../assets/cartoon.mp4';
 import videoVid from '../assets/video.mp4';
 import comicVid from '../assets/comic.mp4';
-import mirrorBtnVid from '../assets/mirrorbtn.mp4';
 import jumpVid from '../assets/jump into art.mp4';
 import cardVid from '../assets/greetingcard.mp4';
 import audioVid from '../assets/audio.mp4';
@@ -31,71 +30,7 @@ export const HomePage: React.FC = () => {
     const [showTreasure, setShowTreasure] = useState(false);
     const [isIpadLandscape, setIsIpadLandscape] = useState(false);
 
-    // Background Video Ref
-    const bgVideoRef = useRef<HTMLVideoElement>(null);
-
-    // 0. Global Unlock Check (iOS Hack from Splash)
-    useEffect(() => {
-        const isUnlocked = localStorage.getItem('videoUnlocked') === 'true';
-        if (isUnlocked) {
-            console.log("🔓 Global video unlock detected");
-            document.querySelectorAll('video').forEach(v => {
-                // Ensure they are muted/playsinline just in case, though they should be by default
-                v.muted = true;
-                v.playsInline = true;
-                v.play().catch(e => console.log("Global unlock play failed for", v, e));
-            });
-        }
-    }, []);
-
-    // Smart Background Logic: Play Audio Only Once Per Hour
-    useEffect(() => {
-        const video = bgVideoRef.current;
-        if (!video) return;
-
-        const COOLDOWN_MS = 60 * 60 * 1000; // 1 Hour
-        const now = Date.now();
-        const lastPlayedStr = localStorage.getItem('home_audio_last_played');
-        const lastPlayed = lastPlayedStr ? parseInt(lastPlayedStr, 10) : 0;
-
-        const shouldPlayAudio = !lastPlayed || (now - lastPlayed > COOLDOWN_MS);
-
-        if (shouldPlayAudio) {
-            console.log("🔊 [HomePage] Starting with Audio (First time/After cooldown)");
-            // Mark as played immediately
-            localStorage.setItem('home_audio_last_played', now.toString());
-
-            // 1. Play with Sound
-            video.muted = false;
-            video.loop = false;
-
-            // 2. Switch to Muted Loop on End
-            const handleEnded = () => {
-                console.log("🔊 -> 🔇 Audio finished. Switching to muted loop.");
-                video.muted = true;
-                video.loop = true;
-                video.play().catch(e => console.log("Loop play failed", e));
-            };
-            video.addEventListener('ended', handleEnded);
-
-            video.play().catch(err => {
-                console.warn("Autoplay with sound blocked:", err);
-                // Fallback
-                video.muted = true;
-                video.loop = true;
-                video.play();
-            });
-
-            return () => video.removeEventListener('ended', handleEnded);
-
-        } else {
-            console.log("🔇 [HomePage] Audio cooldown active. Starting muted.");
-            // 3. Play Muted Loop Immediately
-            video.muted = true;
-            video.loop = true;
-            video.play().catch(e => console.log("Muted autoplay failed", e));
-        }
-    }, [isIpadLandscape]); // Re-run if we switch back from iPad mode to ensure video plays
+    // Audio Logic Removed - Static Background Only
 
     // iPad Landscape Detection Logic
     useEffect(() => {
@@ -166,7 +101,7 @@ export const HomePage: React.FC = () => {
                         style={{
                             width: '100%',
                             height: '100%',
-                            backgroundImage: 'url(/assets/bg1.png?v=tile_mode)',
+                            backgroundImage: 'url(/newback.png?v=tile_mode)',
                             backgroundRepeat: 'repeat', // "平铺" = Tile
                             backgroundPosition: 'top left',
                             backgroundSize: 'auto', // Original size, no stretch
@@ -174,14 +109,13 @@ export const HomePage: React.FC = () => {
                         }}
                     />
                 ) : (
-                    <video
-                        src={backgroundVideo}
-                        playsInline
-                        disablePictureInPicture
-                        disableRemotePlayback
-                        onContextMenu={(e) => e.preventDefault()}
-                        className="bg-cover-fixed"
-                        style={{ userSelect: 'none' }}
+                    <div
+                        className="w-full h-full bg-cover bg-center bg-no-repeat"
+                        style={{
+                            backgroundImage: 'url(/back1.png)',
+                            position: 'absolute',
+                            inset: 0
+                        }}
                     />
                 )}
             </div>
@@ -386,14 +320,6 @@ export const HomePage: React.FC = () => {
                     {activeZone === 'valley' && (
                         <FanMenuV2
                             items={[
-                                {
-                                    label: FEATURES_TOOLTIPS.mirror.label,
-                                    shortDesc: FEATURES_TOOLTIPS.mirror.shortDesc,
-                                    to: '/magic-art',
-                                    videoSrc: mirrorBtnVid,
-                                    description: FEATURES_TOOLTIPS.mirror.desc,
-                                    icon: "🪞"
-                                },
                                 {
                                     label: FEATURES_TOOLTIPS.jump_into_art.label,
                                     shortDesc: FEATURES_TOOLTIPS.jump_into_art.shortDesc,

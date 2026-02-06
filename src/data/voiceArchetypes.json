@@ -1,0 +1,82 @@
+[
+    {
+        "id": "female-shaonv",
+        "label": "Sweet Fairy",
+        "archetype": "arch_01",
+        "gender": "female",
+        "tone": "high",
+        "speed": "normal"
+    },
+    {
+        "id": "female-yujie",
+        "label": "Soft Petal",
+        "archetype": "arch_02",
+        "gender": "female",
+        "tone": "medium",
+        "speed": "slow"
+    },
+    {
+        "id": "male-qn-qingse",
+        "label": "Little Hero",
+        "archetype": "arch_03",
+        "gender": "male",
+        "tone": "medium",
+        "speed": "normal"
+    },
+    {
+        "id": "male-qn-shaonian",
+        "label": "Calm Sea",
+        "archetype": "arch_04",
+        "gender": "male",
+        "tone": "low",
+        "speed": "steady"
+    },
+    {
+        "id": "presenter_female",
+        "label": "Golden Mom",
+        "archetype": "arch_05",
+        "gender": "female",
+        "tone": "medium",
+        "speed": "professional"
+    },
+    {
+        "id": "female-baoma",
+        "label": "Warm Earth",
+        "archetype": "arch_06",
+        "gender": "female",
+        "tone": "warm",
+        "speed": "nurturing"
+    },
+    {
+        "id": "male-qn-kaixuan",
+        "label": "Brave Dad",
+        "archetype": "arch_07",
+        "gender": "male",
+        "tone": "strong",
+        "speed": "confident"
+    },
+    {
+        "id": "male-qn-huoli",
+        "label": "Sunny Day",
+        "archetype": "arch_08",
+        "gender": "male",
+        "tone": "high",
+        "speed": "energetic"
+    },
+    {
+        "id": "male-laonian",
+        "label": "Silver Wisdom",
+        "archetype": "arch_09",
+        "gender": "male",
+        "tone": "low",
+        "speed": "slow"
+    },
+    {
+        "id": "presenter_male",
+        "label": "Story Narrator",
+        "archetype": "arch_10",
+        "gender": "male",
+        "tone": "deep",
+        "speed": "rhythmic"
+    }
+]

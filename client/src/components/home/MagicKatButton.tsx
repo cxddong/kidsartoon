@@ -58,31 +58,48 @@ export const MagicKatButton: React.FC<MagicKatButtonProps> = ({ videoSrc }) => {
             {/* Main Circular Frame (Collapsible) */}
             <motion.div
                 initial="collapsed"
-                animate={isExpanded ? "expanded" : ["collapsed", "wiggle"]}
+                animate={isExpanded ? "expanded" : ["collapsed", "bounce"]}
                 variants={{
-                    collapsed: { width: "7rem", height: "7rem" }, // Increased size
-                    expanded: { width: "16rem", height: "16rem" }, // Larger expansion
-                    wiggle: {
-                        rotate: [0, -5, 5, -5, 5, 0],
+                    collapsed: { width: "7rem", height: "7rem", scale: 1, y: 0, rotate: 0 },
+                    expanded: { width: "16rem", height: "16rem", scale: 1, y: 0, rotate: 0 },
+                    bounce: {
+                        scale: [1, 1.25, 1],
+                        y: [0, -40, 0],
+                        rotate: [0, -5, 5, 0],
+                        boxShadow: [
+                            "0 0 30px rgba(124,58,237,0.4)",
+                            "0 0 60px rgba(124,58,237,0.8)",
+                            "0 0 30px rgba(124,58,237,0.4)"
+                        ],
                         transition: {
-                            rotate: {
-                                delay: 3, // Wait 3 seconds
-                                duration: 0.5, // Wiggle for 0.5s
-                                repeat: Infinity,
-                                repeatDelay: 5 // Repeat every 5 seconds + 0.5 wiggle
-                            },
                             scale: {
-                                duration: 2,
+                                duration: 1.2,
                                 repeat: Infinity,
-                                repeatType: "reverse",
+                                repeatType: "mirror",
+                                ease: "anticipate"
+                            },
+                            y: {
+                                duration: 0.8,
+                                repeat: Infinity,
+                                repeatType: "mirror",
+                                ease: "easeOut"
+                            },
+                            rotate: {
+                                duration: 1,
+                                repeat: Infinity,
+                                repeatType: "mirror",
                                 ease: "easeInOut"
+                            },
+                            boxShadow: {
+                                duration: 1.2,
+                                repeat: Infinity,
+                                repeatType: "mirror"
                             }
-                        },
-                        scale: [1, 1.05, 1]
+                        }
                     }
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="relative rounded-full shadow-[0_0_30px_rgba(124,58,237,0.4)] border-4 border-white bg-white overflow-hidden z-30 cursor-pointer group hover:shadow-[0_0_50px_rgba(124,58,237,0.6)] transition-shadow origin-bottom-right"
+                className="relative rounded-full shadow-[0_0_30px_rgba(124,58,237,0.4)] border-4 border-white bg-white overflow-hidden z-30 cursor-pointer group hover:shadow-[0_0_70px_rgba(124,58,237,0.8)] transition-shadow origin-bottom-right"
                 onClick={() => {
                     // tap to expand if collapsed
                     if (!isExpanded) setIsExpanded(true);

@@ -48,18 +48,17 @@ export const ossService = {
 
             console.log('[OSS] Upload success. Result:', result);
 
-            // Construct public URL
-            // Format: https://<bucket>.<region>.aliyuncs.com/<path>
-            // result.url is usually http or https depending on config, but best to be safe
-            // If the bucket has a custom domain, standard OSS url might differ, but for basic usage:
-            let url = result.url;
+            // Generate Signed URL for private bucket access (DashScope needs to download it)
+            // Expires in 3600 seconds (1 hour)
+            const signedUrl = ossClient.signatureUrl(destinationPath, { expires: 3600 });
 
-            // Force HTTPS if not present (although secure: true usually handles this)
-            if (url && url.startsWith('http:')) {
-                url = url.replace('http:', 'https:');
+            // Ensure HTTPS
+            let finalUrl = signedUrl;
+            if (finalUrl.startsWith('http:')) {
+                finalUrl = finalUrl.replace('http:', 'https:');
             }
 
-            return url;
+            return finalUrl;
         } catch (error: any) {
             console.error('[OSS] Upload failed:', error);
             throw new Error(`OSS Upload Failed: ${error.message}`);

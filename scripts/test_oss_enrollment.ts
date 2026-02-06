@@ -1,11 +1,11 @@
+import 'dotenv/config'; // Load env vars before other imports
 import { ossService } from '../src/services/ossService';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 
-// Load env vars
-dotenv.config();
+// Load env vars (legacy method removed)
+// dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

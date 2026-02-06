@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pointsService, POINTS_COSTS } from '../services/points.js';
+import { databaseService } from '../services/database.js';
 
 export const router = Router();
 
@@ -9,7 +10,17 @@ router.get('/balance', async (req, res) => {
     if (!userId) return res.status(400).json({ error: 'userId required' });
 
     const points = await pointsService.getBalance(userId);
-    res.json({ success: true, points });
+
+    // Fetch plan info for frontend display
+    let plan = 'free';
+    try {
+        const user = await databaseService.getUser(userId);
+        plan = user?.plan || 'free';
+    } catch (e) {
+        console.warn('[Points] Failed to fetch user plan for balance:', e);
+    }
+
+    res.json({ success: true, points, plan });
 });
 
 // POST /api/points/consume

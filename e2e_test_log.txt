@@ -1,0 +1,16 @@
+[2026-02-06T06:27:16.237Z] 🚀 Starting End-to-End Voice Cloning Test (Local -> OSS -> DashScope) 
+[2026-02-06T06:27:16.238Z] 📂 Source Audio: "D:\\KAT\\KAT\\client\\public\\assets\\audio_demos\\kiki_preview.mp3"
+[2026-02-06T06:27:16.239Z] 
+--- Step 1: Enrolling Voice --- 
+[2026-02-06T06:27:16.240Z] Calling dashscopeService.registerCustomVoice... 
+[2026-02-06T06:27:31.294Z] ✅ Voice Enrolled Successfully! 
+[2026-02-06T06:27:31.295Z] 🆔 Voice ID: "cosyvoice-v3-plus-vc803abpbn-4a9bca30835242168b5b2467bd18eff1"
+[2026-02-06T06:27:31.296Z] 
+--- Step 2: Generating Speech (Synthesis) --- 
+[2026-02-06T06:27:31.297Z] Synthesizing: "Hello! I am your new custom voice, cloned via Alibaba Cloud OSS. This is a successful test." 
+[2026-02-06T06:27:31.298Z] Attempting synthesis with model: cosyvoice-v1 
+[2026-02-06T06:27:34.019Z] ⚠️ Failed with cosyvoice-v1: "No audio data recovered from stream."
+[2026-02-06T06:27:34.020Z] Attempting synthesis with model: qwen3-tts-flash 
+[2026-02-06T06:27:38.128Z] ✅ Speech Generated Successfully with qwen3-tts-flash! 
+[2026-02-06T06:27:38.129Z] 💾 Output saved to: "D:\\KAT\\KAT\\test_output_qwen3-tts-flash.mp3"
+[2026-02-06T06:27:38.130Z] 📊 Output Size: 433920 bytes 

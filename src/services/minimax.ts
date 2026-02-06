@@ -11,13 +11,50 @@ import FormData from 'form-data';
 
 // Voice Mappings
 // Voice Mappings
+// Voice Archetypes (Global Specs 2026)
+export const VOICE_ARCHETYPES = {
+    "arch_01": { "id": "female-shaonv", "label": "Sweet Fairy" },
+    "arch_02": { "id": "female-yujie", "label": "Soft Petal" },
+    "arch_03": { "id": "male-qn-qingse", "label": "Little Hero" },
+    "arch_04": { "id": "male-qn-shaonian", "label": "Calm Sea" },
+    "arch_05": { "id": "presenter_female", "label": "Golden Mom" },
+    "arch_06": { "id": "female-baoma", "label": "Warm Earth" },
+    "arch_07": { "id": "male-qn-kaixuan", "label": "Brave Dad" },
+    "arch_08": { "id": "male-qn-huoli", "label": "Sunny Day" },
+    "arch_09": { "id": "male-laonian", "label": "Silver Wisdom" },
+    "arch_10": { "id": "presenter_male", "label": "Story Narrator" }
+};
+
+// Voice Mappings
 const VOICE_MAP: Record<string, string> = {
-    'kiki': 'English_PlayfulGirl',       // Kiki: Playful & Energetic
-    'aiai': 'English_Soft-spokenGirl',   // Aiai: Sweet & Caring
-    'titi': 'English_CaptivatingStoryteller', // Titi: Gentle & Calm (Male)
-    'female-shaonv': 'English_PlayfulGirl',
-    'male-qn-2': 'English_CaptivatingStoryteller',
-    'kiki_v2': 'English_PlayfulGirl',
+    // Legacy support
+    'kiki': 'female-shaonv',       // Sweet Fairy
+    'aiai': 'female-baoma',        // Warm Earth
+    'titi': 'male-qn-qingse',      // Little Hero
+
+    // Direct checks
+    'female-shaonv': 'female-shaonv',
+    'female-yujie': 'female-yujie',
+    'male-qn-qingse': 'male-qn-qingse',
+    'male-qn-shaonian': 'male-qn-shaonian',
+    'presenter_female': 'presenter_female',
+    'female-baoma': 'female-baoma',
+    'male-qn-kaixuan': 'male-qn-kaixuan',
+    'male-qn-huoli': 'male-qn-huoli',
+    'male-laonian': 'male-laonian',
+    'presenter_male': 'presenter_male',
+
+    // Archetype access
+    'arch_01': 'female-shaonv',
+    'arch_02': 'female-yujie',
+    'arch_03': 'male-qn-qingse',
+    'arch_04': 'male-qn-shaonian',
+    'arch_05': 'presenter_female',
+    'arch_06': 'female-baoma',
+    'arch_07': 'male-qn-kaixuan',
+    'arch_08': 'male-qn-huoli',
+    'arch_09': 'male-laonian',
+    'arch_10': 'presenter_male'
 };
 
 export class MinimaxService {
@@ -103,7 +140,7 @@ export class MinimaxService {
     /**
      * Generate speech using Minimax T2A V2
      */
-    async generateSpeech(text: string, voiceKey: string, outputFilename: string = 'output.mp3'): Promise<Buffer> {
+    async generateSpeech(text: string, voiceKey: string, pitch: number = 0, speed: number = 1.0): Promise<Buffer> {
         // Late binding for environment variables to ensure they are loaded
         const MINIMAX_API_URL = process.env.MINIMAX_API_URL || 'https://api.minimax.io/v1/t2a_v2';
         const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || '';
@@ -111,16 +148,13 @@ export class MinimaxService {
 
         try {
             const voiceId = VOICE_MAP[voiceKey] || voiceKey || 'English_PlayfulGirl'; // Fallback to key or default
-            console.log(`[Minimax] Generating speech for voice: ${voiceKey} -> ${voiceId}`);
+            console.log(`[Minimax] Generating speech for voice: ${voiceKey} -> ${voiceId} (Pitch: ${pitch}, Speed: ${speed})`);
             console.log(`[Minimax] Text length: ${text.length} characters`);
-            console.log(`[Minimax] 📝 Exact text to speak: "${text}"`);
 
             if (!MINIMAX_API_KEY || !MINIMAX_GROUP_ID) {
                 console.error("[Minimax] Missing credentials - API_KEY:", !!MINIMAX_API_KEY, "GROUP_ID:", !!MINIMAX_GROUP_ID);
                 throw new Error("Missing Minimax API Key or Group ID in environment variables");
             }
-            console.log(`[Minimax] Using API URL: ${MINIMAX_API_URL}`);
-            console.log(`[Minimax] Group ID: ${MINIMAX_GROUP_ID.substring(0, 10)}...`);
 
             const payload = {
                 model: "speech-01-turbo",
@@ -128,9 +162,9 @@ export class MinimaxService {
                 stream: false,
                 voice_setting: {
                     voice_id: voiceId,
-                    speed: 1.0,
+                    speed: speed,
                     vol: 1.0,
-                    pitch: 0
+                    pitch: pitch
                 },
                 audio_setting: {
                     sample_rate: 32000,
@@ -149,7 +183,6 @@ export class MinimaxService {
 
             if (response.status === 200 && response.data) {
                 const json = response.data;
-                // console.log('[Minimax] Response keys:', Object.keys(json)); // Debug
 
                 if (json.base_resp && json.base_resp.status_code === 0 && json.data && json.data.audio) {
                     // Convert Hex string to Buffer
@@ -162,7 +195,6 @@ export class MinimaxService {
             } else {
                 throw new Error(`Minimax HTTP Error: ${response.status}`);
             }
-
 
         } catch (error: any) {
             console.error('[Minimax] Generation failed:', error.message);

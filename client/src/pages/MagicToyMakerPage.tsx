@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Upload, Loader2, Sparkles, AlertCircle, Save, Share2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Upload, Loader2, Sparkles, AlertCircle, Save, Share2, RotateCcw, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FileUpload from '../components/common/FileUpload';
@@ -15,6 +15,9 @@ declare global {
     }
 }
 
+const BASE_COST = 80; // Standard cost for 3D generation
+const ESTIMATED_TIME = 120; // Estimated time in seconds (2 minutes average)
+
 export const MagicToyMakerPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -27,6 +30,14 @@ export const MagicToyMakerPage: React.FC = () => {
     const [taskId, setTaskId] = useState<string | null>(null);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    const [userPoints, setUserPoints] = useState<number | null>(null);
+    const [userPlan, setUserPlan] = useState<string>('free');
+    const [elapsedTime, setElapsedTime] = useState(0); // Elapsed time in seconds
+
+    // Calculate effective cost based on plan
+    let effectiveCost = BASE_COST;
+    if (userPlan === 'basic') effectiveCost = 50;
+    if (userPlan === 'pro' || userPlan === 'yearly_pro' || userPlan === 'admin') effectiveCost = 40;
 
     // Tips for waiting
     const LOADING_TIPS = [
@@ -37,6 +48,38 @@ export const MagicToyMakerPage: React.FC = () => {
         "Polishing the surfaces... 🧹"
     ];
     const [tipIndex, setTipIndex] = useState(0);
+
+    // Fetch user points on mount
+    useEffect(() => {
+        const fetchPoints = async () => {
+            if (!user?.uid) return;
+            try {
+                const res = await fetch('/api/points/balance', {
+                    headers: { 'x-user-id': user.uid }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setUserPoints(data.points);
+                    if (data.plan) setUserPlan(data.plan);
+                }
+            } catch (err) {
+                console.error('Failed to fetch points:', err);
+            }
+        };
+        fetchPoints();
+    }, [user?.uid]);
+
+    // Elapsed time tracker
+    useEffect(() => {
+        let timer: any;
+        if (step === 'generating') {
+            setElapsedTime(0);
+            timer = setInterval(() => {
+                setElapsedTime(prev => prev + 1);
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [step]);
 
     // Tip rotation
     useEffect(() => {
@@ -94,6 +137,12 @@ export const MagicToyMakerPage: React.FC = () => {
     const handleGenerate = async () => {
         if (!selectedImage || !user) return;
 
+        // Check if user has enough points
+        if (userPoints !== null && userPoints < effectiveCost) {
+            setError(`Not enough gems! You need ${effectiveCost} gems but only have ${userPoints}. Please purchase more gems to continue.`);
+            return;
+        }
+
         try {
             setStep('generating');
             setProgress(10);
@@ -114,11 +163,18 @@ export const MagicToyMakerPage: React.FC = () => {
 
             if (!res.ok || !data.success) {
                 // Check for point error
+                if (data.errorCode === 'NOT_ENOUGH_POINTS') {
+                    throw new Error(`Not enough gems! You need ${effectiveCost} gems. Please purchase more.`);
+                }
                 const errMsg = data.details ? `${data.error}: ${data.details}` : (data.error || 'Failed to start magic.');
                 throw new Error(errMsg);
             }
 
             setTaskId(data.taskId);
+            // Deduct points from local state (will be refreshed later)
+            if (userPoints !== null) {
+                setUserPoints(prev => (prev !== null ? prev - effectiveCost : 0));
+            }
 
         } catch (e: any) {
             console.error(e);
@@ -175,21 +231,60 @@ export const MagicToyMakerPage: React.FC = () => {
 
                             {imagePreview && (
                                 <motion.div className="w-full flex flex-col items-center space-y-4">
-                                    <div className="bg-yellow-400/20 text-yellow-200 px-4 py-2 rounded-full text-sm font-semibold border border-yellow-400/30 flex items-center">
-                                        <Sparkles className="w-4 h-4 mr-2" />
-                                        Magic Cost: 50 Gems
+                                    {/* User Points Balance */}
+                                    {userPoints !== null && (
+                                        <div className="w-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-4 py-3 rounded-xl border border-purple-400/30">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-white/80 text-sm">Your Balance:</span>
+                                                <span className="text-yellow-200 font-bold text-lg">{userPoints} Gems</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Cost & Time Warning */}
+                                    <div className="w-full space-y-2">
+                                        <div className="bg-yellow-400/20 text-yellow-200 px-4 py-2 rounded-full text-sm font-semibold border border-yellow-400/30 flex items-center justify-center">
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            Magic Cost: {effectiveCost < BASE_COST ? (
+                                                <span className="flex items-center">
+                                                    <span className="line-through opacity-60 mr-2 text-xs">{BASE_COST}</span>
+                                                    <span className="font-bold">{effectiveCost} Gems</span>
+                                                    <span className="ml-1 text-xs bg-white/20 px-1 rounded">PRO</span>
+                                                </span>
+                                            ) : (
+                                                <span>{BASE_COST} Gems</span>
+                                            )}
+                                        </div>
+                                        <div className="bg-blue-400/20 text-blue-200 px-4 py-2 rounded-lg text-xs border border-blue-400/30 flex items-center">
+                                            <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
+                                            <span>⏱️ 3D generation takes 1-3 minutes due to complex calculations. Please be patient!</span>
+                                        </div>
                                     </div>
 
                                     {error && (
-                                        <div className="bg-red-500/20 text-red-100 px-4 py-2 rounded-lg text-sm border border-red-500/30 flex items-center">
-                                            <AlertCircle className="w-4 h-4 mr-2" />
-                                            {error}
+                                        <div className="w-full bg-red-500/20 text-red-100 px-4 py-3 rounded-lg text-sm border border-red-500/30 flex items-start">
+                                            <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                                            <div className="flex-1">
+                                                <p>{error}</p>
+                                                {error.includes('Not enough gems') && (
+                                                    <button
+                                                        onClick={() => navigate('/subscription')}
+                                                        className="mt-2 text-xs underline hover:text-red-200"
+                                                    >
+                                                        Purchase More Gems →
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
                                     <button
                                         onClick={handleGenerate}
-                                        className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl font-bold text-lg shadow-lg hover:scale-105 transition-transform flex items-center justify-center space-x-2"
+                                        disabled={userPoints !== null && userPoints < effectiveCost}
+                                        className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg transition-all flex items-center justify-center space-x-2 ${userPoints !== null && userPoints < effectiveCost
+                                                ? 'bg-gray-500 cursor-not-allowed opacity-50'
+                                                : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:scale-105'
+                                            }`}
                                     >
                                         <span>Bring it to Life!</span>
                                         <Sparkles className="w-5 h-5 fill-white" />
@@ -207,35 +302,59 @@ export const MagicToyMakerPage: React.FC = () => {
                             exit={{ opacity: 0 }}
                             className="flex flex-col items-center justify-center text-center space-y-8"
                         >
-                            <div className="relative w-64 h-64">
+                            {/* Circular Progress Indicator */}
+                            <div className="relative w-72 h-72">
+                                {/* Background Ring */}
+                                <div className="absolute inset-0 border-8 border-purple-950/50 rounded-full" />
+
+                                {/* Animated Spinning Gradient Ring */}
                                 <motion.div
-                                    className="absolute inset-0 border-8 border-purple-500/30 rounded-full"
-                                />
-                                <motion.div
-                                    className="absolute inset-0 border-8 border-t-purple-400 border-r-pink-400 border-b-transparent border-l-transparent rounded-full"
+                                    className="absolute inset-0 rounded-full"
+                                    style={{
+                                        background: 'conic-gradient(from 0deg, #f093fb 0%, #f5576c 30%, #4facfe 60%, #f093fb 100%)',
+                                    }}
                                     animate={{ rotate: 360 }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                />
-                                {imagePreview && (
-                                    <div className="absolute inset-4 rounded-full overflow-hidden border-4 border-white/20">
-                                        <img src={imagePreview} className="w-full h-full object-cover opacity-50 blur-sm" />
+                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                >
+                                    <div className="w-full h-full rounded-full" style={{
+                                        maskImage: 'radial-gradient(circle, transparent 48%, black 50%)',
+                                        WebkitMaskImage: 'radial-gradient(circle, transparent 48%, black 50%)'
+                                    }} />
+                                </motion.div>
+
+                                {/* Center Content */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    {imagePreview && (
+                                        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/20 mb-4">
+                                            <img src={imagePreview} className="w-full h-full object-cover opacity-60 blur-sm" alt="Preview" />
+                                        </div>
+                                    )}
+
+                                    {/* Elapsed Time */}
+                                    <div className="text-3xl font-bold text-white drop-shadow-lg">
+                                        {Math.floor(elapsedTime / 60)}:{String(elapsedTime % 60).padStart(2, '0')}
                                     </div>
-                                )}
+                                    <div className="text-sm text-purple-200 mt-1">
+                                        Est. ~{Math.floor(ESTIMATED_TIME / 60)}:{String(ESTIMATED_TIME % 60).padStart(2, '0')}
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <h3 className="text-2xl font-bold animate-pulse">Making Magic...</h3>
+                            {/* Status Text */}
+                            <div className="space-y-3">
+                                <motion.h3
+                                    className="text-2xl font-bold"
+                                    animate={{ opacity: [1, 0.7, 1] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                >
+                                    Making Magic... ✨
+                                </motion.h3>
                                 <p className="text-lg text-pink-200 min-h-[1.5em] transition-opacity duration-500">
                                     {LOADING_TIPS[tipIndex]}
                                 </p>
-                            </div>
-
-                            {/* Progress Bar (Fake) */}
-                            <div className="w-64 h-2 bg-white/10 rounded-full overflow-hidden">
-                                <motion.div
-                                    className="h-full bg-gradient-to-r from-pink-500 to-purple-500"
-                                    animate={{ width: `${progress}%` }}
-                                />
+                                <p className="text-xs text-white/50">
+                                    Processing complex 3D calculations...
+                                </p>
                             </div>
                         </motion.div>
                     )}

@@ -5,6 +5,7 @@ import { X, ChevronLeft, ChevronRight, Download, Share2, FileDown } from 'lucide
 import { motion, AnimatePresence } from 'framer-motion';
 import { ComicBubbleGrid } from '../ComicBubble';
 import jsPDF from 'jspdf';
+import { cn } from '../../lib/utils';
 
 interface CartoonBookPage {
     pageNumber: number;
@@ -203,222 +204,226 @@ export const CartoonBookViewer: React.FC<CartoonBookViewerProps> = ({
         }
     };
 
+    // Consolidated Layout Parameters (Identical to PictureBookReader)
+    const layout = {
+        bg: { scale: 102, x: 50, y: 50 },
+        text: { padding: 12, fontSize: 21, posX: 153, posY: 8 },
+        image: { padding: 12, scale: 106, posX: -111, posY: 0 }
+    };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1a1a1a] p-0 overflow-hidden">
             <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="relative bg-gradient-to-br from-purple-900 to-pink-900 rounded-3xl max-w-6xl w-full max-h-[95vh] overflow-hidden shadow-2xl"
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative w-full h-full flex flex-col shadow-2xl overflow-hidden"
             >
-                {/* Header REMOVED - Replaced by Vertical Title */}
-
-                {/* Main Content Area - Immersive Reader */}
-                <div className="flex h-[95vh] w-full items-center justify-center p-4">
-
-                    {/* 📱 MOBILE LAYOUT: Vertical Scroll Card */}
-                    <div className="md:hidden w-full h-full overflow-y-auto pb-20">
-                        <div className="bg-white rounded-3xl p-4 shadow-xl mb-4">
-                            <div className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-100 mb-4">
-                                <img
-                                    src={pages[currentPage]?.imageUrl}
-                                    alt={`Page ${currentPage + 1}`}
-                                    className="w-full h-full object-cover"
-                                />
-                                {/* Mobile Bubbles */}
-                                {pages[currentPage]?.panels && pages[currentPage].panels.length > 0 && (
-                                    <div className="absolute inset-0">
-                                        <ComicBubbleGrid
-                                            panels={pages[currentPage].panels.map(p => ({
-                                                caption: p.caption,
-                                                bubblePosition: p.bubblePosition || 'bottom',
-                                                bubbleType: p.bubbleType || 'speech',
-                                                emotion: p.emotion || 'happy'
-                                            }))}
-                                            onBubbleClick={(i) => console.log(`Panel ${i + 1} clicked`)}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                            <p className="font-comic text-slate-800 text-lg leading-relaxed">
-                                {pages[currentPage]?.text || pages[currentPage]?.panels?.map(p => p.caption).join(' ')}
-                            </p>
-                            <div className="mt-4 text-center text-slate-400 text-sm font-bold">
-                                {currentPage + 1} / {pages.length}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 💻 DESKTOP LAYOUT: Panoramic Full Book */}
-                    <div className="hidden md:block relative w-full h-full shadow-2xl rounded-lg overflow-hidden group select-none mx-auto">
-
-                        {/* 1. Underlying Book Asset (Panoramic) */}
-                        <img
-                            src="/assets/blank_comic_book_panoramic.png"
-                            className="absolute inset-0 w-full h-full object-fill z-0"
-                            alt="Open Comic Book"
-                        />
-
-                        {/* Vertical Title (Top Left) */}
-                        <div className="absolute top-8 left-2 z-30 pointer-events-none mix-blend-multiply opacity-80">
-                            <h1 className="text-slate-900 font-black text-5xl tracking-widest [writing-mode:vertical-rl] rotate-180 uppercase drop-shadow-sm whitespace-nowrap text-center leading-tight">
-                                {title}
-                            </h1>
-                        </div>
-
-                        {/* Close Button (Top Right Absolute) */}
+                {/* Header (Matching PictureBookReader style) */}
+                <div className="relative z-50 flex items-center justify-between p-4 bg-black/60 backdrop-blur-md border-b border-white/10 shrink-0">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={onClose}
-                            className="absolute top-6 right-6 z-50 p-3 bg-black/5 hover:bg-black/10 rounded-full transition-all text-slate-600 hover:text-red-500"
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70 hover:text-white"
                         >
-                            <X className="w-8 h-8" />
+                            <X size={24} />
                         </button>
+                        <h2 className="text-xl font-bold text-white/95 font-serif tracking-wide truncate max-w-md">
+                            {title}
+                        </h2>
+                        <span className="px-2.5 py-1 rounded-full bg-blue-500/30 text-blue-200 border border-blue-500/30 text-[10px] uppercase tracking-wider font-semibold">
+                            {vibe}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-white/60 text-sm font-medium">
+                        <span className="bg-white/10 px-4 py-1.5 rounded-full border border-white/5">
+                            Page {currentPage + 1} / {pages.length}
+                        </span>
+                    </div>
+                </div>
 
-                        {/* 2. LEFT PAGE (Image & Bubbles) - Locked via % */}
-                        <div
-                            className="absolute z-10 bg-white/90 mix-blend-multiply flex items-center justify-center"
+                {/* Main Content Area */}
+                <div className="flex-1 relative flex items-center justify-center p-0 overflow-hidden min-h-0 bg-[#f0e6d2]">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentPage}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="relative w-full h-full flex flex-col md:flex-row shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] overflow-hidden"
                             style={{
-                                top: '8%',
-                                right: '6%',
-                                width: '42%',
-                                height: '84%'
+                                backgroundImage: "url('/assets/picture_book_bg_magical.jpg')",
+                                backgroundSize: `${layout.bg.scale}% ${layout.bg.scale}%`,
+                                backgroundPosition: `${layout.bg.x}% ${layout.bg.y}%`,
+                                backgroundRepeat: 'no-repeat'
                             }}
                         >
-                            <div className="relative w-full h-full">
-                                <img
-                                    src={pages[currentPage]?.imageUrl}
-                                    className="w-full h-full object-contain"
-                                    alt="Comic Page"
-                                />
-                                {/* Desktop Bubbles - Overlaying image but under blend? Or top? 
-                                    If we put bubbles here, they get multiplied (ink effect). 
-                                    If we want them to pop, we might need them outside this div or removed mix-blend for them.
-                                    Let's keep them here for the 'printed' look user requested. 
-                                */}
-                                {pages[currentPage]?.panels && pages[currentPage].panels.length > 0 && (
-                                    <div className="absolute inset-0">
-                                        <ComicBubbleGrid
-                                            panels={pages[currentPage].panels.map(p => ({
-                                                caption: p.caption,
-                                                bubblePosition: p.bubblePosition || 'bottom',
-                                                bubbleType: p.bubbleType || 'speech',
-                                                emotion: p.emotion || 'happy'
-                                            }))}
-                                            onBubbleClick={(i) => console.log(`Panel ${i + 1} clicked`)}
+                            {/* Left Page (Text) - Matching PictureBookReader logic */}
+                            <div
+                                className="w-full md:w-1/2 flex flex-col justify-center relative bg-transparent"
+                                style={{
+                                    padding: `${layout.text.padding}%`,
+                                    transform: `translate(${layout.text.posX}px, ${layout.text.posY}px)`
+                                }}
+                            >
+                                <div className="relative z-10 h-full flex flex-col max-h-full">
+                                    <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-black/10 scrollbar-track-transparent flex items-center">
+                                        <div className="w-full">
+                                            <p
+                                                className="text-[#1a0f0a] font-serif leading-relaxed font-bold tracking-tight first-letter:font-black first-letter:text-[#4a2e1d] first-letter:mr-4 first-letter:float-left"
+                                                style={{ fontSize: `${layout.text.fontSize}px` }}
+                                            >
+                                                <span
+                                                    className="float-left font-black text-[#4a2e1d] mr-4"
+                                                    style={{ fontSize: `${layout.text.fontSize * 3}px`, lineHeight: 1 }}
+                                                >
+                                                    {(pages[currentPage]?.text || pages[currentPage]?.panels?.[0]?.caption || title).charAt(0)}
+                                                </span>
+                                                {(pages[currentPage]?.text || pages[currentPage]?.panels?.map(p => p.caption).join('\n\n') || '').slice(1)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-center mt-4 flex-shrink-0 text-[#1a0f0a]/60 font-serif text-sm italic font-black">
+                                        ~ Page {currentPage + 1} ~
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Page (Image & Bubbles) */}
+                            <div
+                                className="w-full md:w-1/2 relative bg-transparent flex items-center justify-center overflow-hidden"
+                                style={{
+                                    padding: `${layout.image.padding}%`,
+                                    transform: `translate(${layout.image.posX}px, ${layout.image.posY}px)`
+                                }}
+                            >
+                                <div className="relative z-10 w-full h-full flex items-center justify-center">
+                                    <div className="relative w-full h-full flex items-center justify-center">
+                                        <img
+                                            src={pages[currentPage]?.imageUrl}
+                                            alt={`Page ${currentPage + 1}`}
+                                            className="object-contain shadow-2xl rounded-lg border-2 border-white/5"
+                                            style={{
+                                                maxWidth: `${layout.image.scale}%`,
+                                                maxHeight: `${layout.image.scale}%`
+                                            }}
                                         />
+
+                                        {/* Bubbles Integration */}
+                                        {pages[currentPage]?.panels && pages[currentPage].panels.length > 0 && (
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                <ComicBubbleGrid
+                                                    panels={pages[currentPage].panels.map(p => ({
+                                                        caption: p.caption,
+                                                        bubblePosition: p.bubblePosition || 'bottom',
+                                                        bubbleType: p.bubbleType || 'speech',
+                                                        emotion: p.emotion || 'happy'
+                                                    }))}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        </div>
+                                </div>
 
-                        {/* 3. RIGHT PAGE (Text) - Locked via % */}
-                        <div
-                            className="absolute z-10 flex items-center justify-center p-8 overflow-y-auto custom-scrollbar"
-                            style={{
-                                top: '8%',
-                                left: '6%',
-                                width: '42%',
-                                height: '84%',
-                                containerType: 'inline-size'
-                            }}
+                                <div className="absolute bottom-8 text-[#1a0f0a]/60 font-serif text-sm italic left-0 right-0 text-center pointer-events-none font-black">
+                                    ~ Page {currentPage + 1} ~
+                                </div>
+                            </div>
+                        </motion.div>
+                    </AnimatePresence>
+
+                    {/* Navigation Arrows */}
+                    <div className="absolute inset-x-2 md:inset-x-8 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-[60]">
+                        <button
+                            onClick={prevPage}
+                            disabled={currentPage === 0}
+                            className={`p-4 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm transition-all pointer-events-auto transform hover:scale-110 ${currentPage === 0 ? 'opacity-0 scale-90' : 'opacity-100'}`}
                         >
-                            <div className="w-full h-full flex flex-col justify-center">
-                                <p className="font-comic text-slate-900 leading-relaxed font-medium" style={{ fontSize: '6cqw' }}>
-                                    {(pages[currentPage]?.panels && pages[currentPage].panels.length > 0)
-                                        ? pages[currentPage].panels.map(p => p.caption).join('\n\n')
-                                        : pages[currentPage]?.text}
-                                </p>
-                            </div>
+                            <ChevronLeft size={36} />
+                        </button>
+
+                        <button
+                            onClick={nextPage}
+                            disabled={currentPage === pages.length - 1}
+                            className={`p-4 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm transition-all pointer-events-auto transform hover:scale-110 ${currentPage === pages.length - 1 ? 'opacity-0' : 'opacity-100'}`}
+                        >
+                            <ChevronRight size={36} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Footer Controls */}
+                <div className="relative z-50 bg-black/40 backdrop-blur-xl border-t border-white/10 p-4 shrink-0">
+                    <div className="max-w-4xl mx-auto flex items-center justify-between gap-6">
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleDownloadPDF}
+                                className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-full font-bold text-white text-sm transition-all flex items-center gap-2 shadow-lg"
+                            >
+                                <FileDown size={18} />
+                                PDF
+                            </button>
+                            <button
+                                onClick={() => setShowMetadata(!showMetadata)}
+                                className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full font-bold text-white text-sm transition-all shadow-lg"
+                            >
+                                {showMetadata ? 'Hide' : 'Show'} Details
+                            </button>
                         </div>
 
-                        {/* Page Numbers (Simulated) */}
-                        <div className="absolute bottom-[3%] left-[25%] text-slate-400/50 text-xs font-bold font-serif">{currentPage * 2 + 1}</div>
-                        <div className="absolute bottom-[3%] right-[25%] text-slate-400/50 text-xs font-bold font-serif">{currentPage * 2 + 2}</div>
-
-                        {/* Metadata Overlay Panel (Show Details) */}
-                        <AnimatePresence>
-                            {showMetadata && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    className="absolute top-4 right-4 z-50 bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-slate-100 w-64"
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide max-w-md">
+                            {pages.map((p, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setCurrentPage(idx)}
+                                    className={`shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${currentPage === idx ? 'border-amber-400 scale-105' : 'border-transparent opacity-40'}`}
                                 >
-                                    <h3 className="font-black text-slate-800 text-lg mb-2">Book Details</h3>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-400 uppercase">Title</p>
-                                            <p className="font-bold text-slate-700">{title}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-400 uppercase">Vibe</p>
-                                            <p className="font-bold text-slate-700 capitalize">{vibe}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-400 uppercase">Created</p>
-                                            <p className="font-bold text-slate-700">{new Date(createdAt || Date.now()).toLocaleDateString()}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-400 uppercase">Length</p>
-                                            <p className="font-bold text-slate-700">{pages.length} Pages</p>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                    <img src={p.imageUrl} className="w-full h-full object-cover" />
+                                </button>
+                            ))}
+                        </div>
 
-                    </div>
-                </div>
-
-                {/* Side Navigation Arrows (Always Visible) */}
-                <button
-                    onClick={prevPage}
-                    disabled={currentPage === 0}
-                    className="absolute left-8 top-1/2 -translate-y-1/2 z-50 p-4 bg-white/20 hover:bg-white/40 rounded-full transition-all disabled:opacity-0 disabled:pointer-events-none text-white hover:scale-110 backdrop-blur-sm"
-                >
-                    <ChevronLeft className="w-8 h-8" />
-                </button>
-
-                <button
-                    onClick={nextPage}
-                    disabled={currentPage === pages.length - 1}
-                    className="absolute right-8 top-1/2 -translate-y-1/2 z-50 p-4 bg-white/20 hover:bg-white/40 rounded-full transition-all disabled:opacity-0 disabled:pointer-events-none text-white hover:scale-110 backdrop-blur-sm"
-                >
-                    <ChevronRight className="w-8 h-8" />
-                </button>
-
-                {/* Bottom Controls (Hover Only) */}
-                <div className="absolute bottom-0 left-0 right-0 z-40 p-8 flex justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
-                    <div className="flex gap-3 bg-black/50 backdrop-blur-md p-3 rounded-2xl shadow-xl">
                         <button
-                            onClick={() => setShowMetadata(!showMetadata)}
-                            className="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-bold text-white transition-all"
+                            onClick={onClose}
+                            className="px-8 py-2 bg-white text-black rounded-full font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
                         >
-                            {showMetadata ? 'Hide' : 'Show'} Details
-                        </button>
-                        <button
-                            onClick={handleDownload}
-                            className="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-bold text-white transition-all flex items-center gap-2"
-                        >
-                            <Download className="w-5 h-5" />
-                            Page
-                        </button>
-                        <button
-                            onClick={handleDownloadPDF}
-                            className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl font-bold text-white transition-all flex items-center gap-2"
-                        >
-                            <FileDown className="w-5 h-5" />
-                            PDF
-                        </button>
-                        <button
-                            onClick={handleShare}
-                            className="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-bold text-white transition-all flex items-center gap-2"
-                        >
-                            <Share2 className="w-5 h-5" />
-                            Share
+                            Close
                         </button>
                     </div>
                 </div>
+
+                {/* Metadata Overlay */}
+                <AnimatePresence>
+                    {showMetadata && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="absolute bottom-24 right-4 z-[70] bg-black/80 backdrop-blur-md p-6 rounded-2xl border border-white/20 text-white w-64 shadow-2xl"
+                        >
+                            <h3 className="font-black text-amber-400 text-lg mb-3 uppercase tracking-widest text-xs">Book Details</h3>
+                            <div className="space-y-3 text-xs">
+                                <div>
+                                    <p className="text-white/40 font-bold uppercase tracking-tighter">Title</p>
+                                    <p className="font-bold">{title}</p>
+                                </div>
+                                <div>
+                                    <p className="text-white/40 font-bold uppercase tracking-tighter">Vibe</p>
+                                    <p className="font-bold capitalize">{vibe}</p>
+                                </div>
+                                <div>
+                                    <p className="text-white/40 font-bold uppercase tracking-tighter">Created</p>
+                                    <p className="font-bold">{new Date(createdAt).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-white/40 font-bold uppercase tracking-tighter">Pages</p>
+                                    <p className="font-bold">{pages.length}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
         </div>
     );

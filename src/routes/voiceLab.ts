@@ -60,18 +60,19 @@ voiceLabRouter.get('/voices', requireAuth, async (req: any, res) => {
 
         const data = userDoc.data();
         const voices = data?.customVoices || [];
+        const myVoiceConfig = data?.myVoiceConfig || null;
 
         // Backward compatibility: check for old single 'customVoice'
         if (voices.length === 0 && data?.customVoice && data?.customVoice?.status === 'active') {
             voices.push({
-                id: data.customVoice.voiceId, // Use voiceId as ID
+                id: data.customVoice.voiceId,
                 name: "My Voice",
                 voiceId: data.customVoice.voiceId,
                 createdAt: data.customVoice.createdAt
             });
         }
 
-        res.json({ voices });
+        res.json({ voices, myVoiceConfig });
     } catch (error: any) {
         console.error('[VoiceLab] GET /voices error:', error);
         res.status(500).json({ error: 'Failed to fetch voices' });
@@ -91,16 +92,25 @@ voiceLabRouter.post('/preview', async (req, res) => {
         let resolvedCustomId = customVoiceId;
 
         // 1b. Lookup "My Voice" from DB if needed
-        if ((voiceId === 'my_voice' || voiceId === 'my voice') && !resolvedCustomId && userId && userId !== 'demo' && userId !== 'guest') {
+        let pitch = 0;
+        let speed = 1.0;
+
+        if ((voiceId === 'my_voice' || voiceId === 'my voice' || voiceId === 'custom_lab') && userId && userId !== 'demo' && userId !== 'guest') {
             try {
                 const userDoc = await adminDb.collection('users').doc(userId).get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    if (userData?.customVoice?.voiceId && userData?.customVoice?.status === 'active') {
+                    // V2.0: Check for matching config
+                    if (userData?.myVoiceConfig?.isReady) {
+                        resolvedCustomId = userData.myVoiceConfig.archetypeId;
+                        pitch = userData.myVoiceConfig.pitch || 0;
+                        speed = userData.myVoiceConfig.speed || 1.0;
+                        console.log(`[VoiceLab] Resolved 'my_voice' for user ${userId} to ${resolvedCustomId} (p=${pitch}, s=${speed})`);
+                    }
+                    // Legacy fallback
+                    else if (userData?.customVoice?.voiceId && userData?.customVoice?.status === 'active') {
                         resolvedCustomId = userData.customVoice.voiceId;
-                        console.log(`[VoiceLab] Resolved 'my_voice' for user ${userId} to ${resolvedCustomId}`);
-                    } else {
-                        console.warn(`[VoiceLab] User ${userId} requested 'my_voice' but has no active custom voice.`);
+                        console.log(`[VoiceLab] Resolved 'my_voice' (Legacy) for user ${userId} to ${resolvedCustomId}`);
                     }
                 }
             } catch (dbErr) {
@@ -141,16 +151,20 @@ voiceLabRouter.post('/preview', async (req, res) => {
         }
 
         // Check if cached file exists
+        // Check if cached file exists
         if (fs.existsSync(filePath)) {
-            console.log(`[VoiceLab] Serving cached preview: ${fileName}`);
-            // Stream the file
-            const stat = fs.statSync(filePath);
-            res.writeHead(200, {
-                'Content-Type': 'audio/mp3',
-                'Content-Length': stat.size
+            console.log(`[VoiceLab] Serving cached preview (Bridge Mode): ${fileName}`);
+
+            // BRIDGE MODE CACHE HIT: Upload cached file to Storage and return URL
+            const cachedBuffer = fs.readFileSync(filePath);
+            const { adminStorageService } = await import('../services/adminStorage');
+            const publicUrl = await adminStorageService.uploadFile(cachedBuffer, 'audio/mp3', 'voice_previews');
+
+            res.json({
+                success: true,
+                audioUrl: publicUrl,
+                cached: true
             });
-            const readStream = fs.createReadStream(filePath);
-            readStream.pipe(res);
             return;
         }
 
@@ -206,9 +220,9 @@ voiceLabRouter.post('/preview', async (req, res) => {
                 }
             }
         } else {
-            console.log(`[VoiceLab] Using MiniMax TTS (Legacy)...`);
+            console.log(`[VoiceLab] Using MiniMax TTS (Legacy) for ${targetVoiceId} (p=${pitch}, s=${speed})...`);
             try {
-                audioBuffer = await minimaxService.generateSpeech(previewText, targetVoiceId);
+                audioBuffer = await minimaxService.generateSpeech(previewText, targetVoiceId, pitch, speed);
             } catch (err: any) {
                 console.error(`[VoiceLab] MiniMax TTS Failed for ${targetVoiceId}. Falling back to Qwen (Aiden)...`);
 
@@ -238,11 +252,17 @@ voiceLabRouter.post('/preview', async (req, res) => {
             console.error("[VoiceLab] Failed to cache file:", cacheErr);
         }
 
-        res.set({
-            'Content-Type': 'audio/mp3',
-            'Content-Length': audioBuffer.length
+        // FABRICATED BRIDGE MODE: Upload to Firebase Storage
+        const { adminStorageService } = await import('../services/adminStorage');
+        const publicUrl = await adminStorageService.uploadFile(audioBuffer, 'audio/mp3', 'voice_previews');
+
+        console.log(`[VoiceLab] Bridge Mode: Uploaded preview to ${publicUrl}`);
+
+        res.json({
+            success: true,
+            audioUrl: publicUrl,
+            cached: false
         });
-        res.send(audioBuffer);
 
     } catch (error: any) {
         const errorLog = `[VoiceLab] Preview Error: ${error.message}\nStack: ${error.stack}\n`;
@@ -256,8 +276,8 @@ voiceLabRouter.post('/preview', async (req, res) => {
 
 /**
  * POST /api/voice-lab/clone
- * Registers a new custom voice
- * Uses Multer to handle file upload
+ * V2.0: AI Matching Phase
+ * Automatically matches user audio to one of 10 archetypes.
  */
 voiceLabRouter.post('/clone', upload.single('audio'), async (req: any, res) => {
     try {
@@ -265,190 +285,65 @@ voiceLabRouter.post('/clone', upload.single('audio'), async (req: any, res) => {
             return res.status(400).json({ error: 'No audio file uploaded' });
         }
 
-        const userId = req.body.userId || 'anonymous'; // Passed in FormData
+        const userId = req.body.userId || 'anonymous';
         const transcript = req.body.transcript || '';
-        const voiceName = req.body.voiceName || 'My Voice';
-        const provider = req.body.provider || 'minimax'; // 'minimax' | 'qwen'
 
-        // DEBUG: File Log
-        try {
-            if (!fs.existsSync('d:/KAT/KAT/logs')) fs.mkdirSync('d:/KAT/KAT/logs');
-            fs.appendFileSync('d:/KAT/KAT/logs/clone_debug.log', `[${new Date().toISOString()}] Clone Request: User=${userId}, Name=${voiceName}, Provider=${provider}\n`);
-            if (req.file) {
-                fs.appendFileSync('d:/KAT/KAT/logs/clone_debug.log', `[${new Date().toISOString()}] File: ${req.file.path}, Size=${req.file.size}\n`);
-            } else {
-                fs.appendFileSync('d:/KAT/KAT/logs/clone_debug.log', `[${new Date().toISOString()}] NO FILE UPLOADED\n`);
-            }
-        } catch (e) { }
+        console.log(`[VoiceLab] V2.0 Matching Phase for User ${userId}...`);
 
-        console.log(`[VoiceLab] Cloning voice '${voiceName}' for User ${userId}... Provider: ${provider}`);
-        console.log(`[VoiceLab] File: ${req.file.path} (${req.file.size} bytes)`);
+        // 1. AI Analysis & Matching (Brain)
+        const { openAIService } = await import('../services/openai');
+        const archetypes = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/data/voiceArchetypes.json'), 'utf-8'));
 
-        // 0. Check Balance using Pricing Controller
-        let cost = 0;
-        let isAdmin = false;
+        const prompt = `
+Analyze this transcript: "${transcript}"
+Based on the text and the 10 available voice archetypes, select the MOST appropriate one for the user.
+Archetypes: ${JSON.stringify(archetypes)}
 
-        if (userId !== 'anonymous' && userId !== 'demo') {
-            const userRef = adminDb.collection('users').doc(userId);
-            const userDoc = await userRef.get();
-            const userData = userDoc.data();
-            const currentGems = userData?.gems || 0;
-            const userPlan = userData?.plan || 'free';
-            const userEmail = userData?.email || '';
+Rules:
+1. Select one archetypeId.
+2. Provide a pitch offset (-5 to 5) to fine-tune the voice.
+3. Provide a speed multiplier (0.8 to 1.2).
+4. Return JSON only.
+`;
 
-            // Calculate Dynamic Cost
-            cost = await pricingController.getVoiceCloningCost(userId);
+        const systemPrompt = "You are an expert audio engineer. Map user text/intent to the best matching voice archetype and provide fine-tuning parameters.";
 
-            console.log(`[VoiceLab] Pricing Check - User: ${userId}, Plan: ${userPlan}, Gems: ${currentGems}, Cost: ${cost}`);
+        const matchingResult = await openAIService.generateJSON(prompt, systemPrompt);
+        console.log(`[VoiceLab] Matching Result:`, matchingResult);
 
-            // Admin Override
-            isAdmin = ['admin', 'yearly_pro'].includes(userPlan) || userEmail.includes('cxddong');
-
-            if (isAdmin) cost = 0; // Force zero cost for admins to bypass transaction checks
-
-            // If cost is 0, we treat it as "free/admin" logic in valid check
-            if (!isAdmin && cost > 0 && currentGems < cost) {
-                console.warn(`[VoiceLab] Cloning denied. Insufficient gems.`);
-                // Cleanup file
-                try { fs.unlinkSync(req.file.path); } catch (e) { }
-                return res.status(403).json({ error: `Insufficient Gems. Cost: ${cost}, Balance: ${currentGems}` });
-            }
-        }
-
-        let voiceId = '';
-
-        if (provider === 'qwen') {
-            // --- QWEN FLOW ---
-            console.log(`[VoiceLab] Using Qwen Provider...`);
-            try {
-                // Call DashScope Service
-                // Note: Qwen enrollment handles conversion internally if needed, but accepts WAV best.
-                // We pass the raw uploaded file path.
-                const vid = await dashscopeService.registerCustomVoice(req.file.path, userId, transcript, 'en');
-                voiceId = vid;
-                console.log(`[VoiceLab] Qwen Enrollment Success! User-facing VoiceID: ${voiceId}`);
-
-            } catch (e: any) {
-                console.error("[VoiceLab] Qwen Enrollment Failed:", e);
-                // Cleanup
-                if (req.file.path && fs.existsSync(req.file.path)) {
-                    try { fs.unlinkSync(req.file.path); } catch (cleanupErr) { }
-                }
-                return res.status(500).json({ error: 'Qwen Enrollment failed: ' + e.message });
-            }
-
-        } else {
-            // --- MINIMAX FLOW (Legacy) ---
-            // 1. Convert WebM to MP3 (MiniMax requires mp3/wav/m4a)
-            console.log(`[VoiceLab] Transcoding ${req.file.path} to MP3 for MiniMax...`);
-            let uploadFilePath = req.file.path;
-            let isTempFile = false;
-
-            try {
-                uploadFilePath = await dashscopeService.convertAudioToMp3(req.file.path);
-                isTempFile = true;
-                console.log(`[VoiceLab] Transcoded to: ${uploadFilePath}`);
-            } catch (e) {
-                console.error("Transcoding failed, trying original file:", e);
-            }
-
-            // 2. Call MiniMax Service
-            console.log(`[VoiceLab] Uploading to MiniMax...`);
-            let fileId;
-            try {
-                fileId = await minimaxService.uploadFile(uploadFilePath, 'voice_clone');
-            } catch (e: any) {
-                if (isTempFile && fs.existsSync(uploadFilePath)) fs.unlinkSync(uploadFilePath);
-                throw e;
-            } finally {
-                // Clean up temp mp3 if we created one
-                if (isTempFile && fs.existsSync(uploadFilePath)) {
-                    fs.unlinkSync(uploadFilePath);
-                }
-            }
-
-            console.log(`[VoiceLab] File Uploaded. ID: ${fileId}`);
-
-            // Generate a random voice ID or let MiniMax handle it? 
-            const newVoiceId = `custom_${userId}_${Date.now()}`;
-
-            console.log(`[VoiceLab] Cloning with ID: ${newVoiceId}...`);
-            await minimaxService.createVoiceClone(fileId, newVoiceId);
-
-            voiceId = newVoiceId;
-        }
-
-        console.log(`[VoiceLab] Final Success! New Voice ID: ${voiceId} (Provider: ${provider})`);
-
-        // 2. Persist to Firebase (if real user)
-        if (userId !== 'anonymous') {
-            try {
-                const userRef = adminDb.collection('users').doc(userId);
-
-                // Transaction to deduct gems and add voice
-                await adminDb.runTransaction(async (t) => {
-                    const doc = await t.get(userRef);
-                    const data = doc.data();
-                    const currentGems = data?.gems || 0;
-
-                    // Recalculate cost inside transaction for safety
-                    const newBalance = currentGems - cost;
-
-                    // Double check balance inside transaction
-                    if (newBalance < 0) {
-                        throw new Error("Insufficient funds during transaction");
-                    }
-
-                    const newVoice = {
-                        id: voiceId,
-                        name: voiceName,
-                        voiceId: voiceId,
-                        provider: provider, // Save provider info
-                        createdAt: new Date().toISOString(),
-                        status: 'active'
-                    };
-
-                    t.update(userRef, {
-                        gems: newBalance,
-                        customVoices: admin.firestore.FieldValue.arrayUnion(newVoice),
-                        // Keep legacy field updated with LATEST voice for backward compat
-                        customVoice: newVoice
-                    });
-                });
-
-            } catch (e: any) {
-                console.error("DB Update failed:", e);
-                if (e.message === "Insufficient funds during transaction") {
-                    return res.status(403).json({ error: 'Insufficient Gems.' });
-                }
-            }
-        }
-
-        // Cleanup uploaded original file
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            try { fs.unlinkSync(req.file.path); } catch (e) { }
-        }
-
-        // Return valid voice object for frontend optimistic update
-        const newVoiceObj = {
-            id: voiceId,
-            name: voiceName,
-            voiceId: voiceId,
-            provider: provider,
-            createdAt: new Date().toISOString(),
-            status: 'active'
+        const myVoiceConfig = {
+            archetypeId: matchingResult.archetypeId || 'female-shaonv',
+            pitch: matchingResult.pitch || 0,
+            speed: matchingResult.speed || 1.0,
+            isReady: true,
+            updatedAt: new Date().toISOString()
         };
 
-        res.json({ success: true, voiceId, provider, voice: newVoiceObj, message: 'Voice cloned successfully!' });
+        // 2. Persist to User Profile
+        if (userId !== 'anonymous' && userId !== 'demo') {
+            await adminDb.collection('users').doc(userId).update({
+                myVoiceConfig: myVoiceConfig
+            });
+            console.log(`[VoiceLab] Saved myVoiceConfig for user ${userId}`);
+        }
 
-    } catch (error: any) {
-        console.error('[VoiceLab] Error:', error);
-
-        // Cleanup file if it still exists
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+        // Cleanup
+        if (req.file.path && fs.existsSync(req.file.path)) {
             try { fs.unlinkSync(req.file.path); } catch (e) { }
         }
 
+        res.json({
+            success: true,
+            isReady: true,
+            config: myVoiceConfig,
+            message: 'Voice matched and saved successfully!'
+        });
+
+    } catch (error: any) {
+        console.error('[VoiceLab] Matching Error:', error);
+        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+            try { fs.unlinkSync(req.file.path); } catch (e) { }
+        }
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 });
