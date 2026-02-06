@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Star, MessageCircle, X, Send, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 const USAGE_KEY = 'kat_feature_usage_count';
 const LAST_FEEDBACK_KEY = 'kat_last_feedback_timestamp';
@@ -10,6 +11,7 @@ const USAGE_THRESHOLD = 3; // Show after 3 feature uses
 
 export const FeedbackWidget: React.FC = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const [isVisible, setIsVisible] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [rating, setRating] = useState(0);
@@ -18,7 +20,15 @@ export const FeedbackWidget: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
+    // Don't show on splash page
+    const isSplashPage = location.pathname === '/' || location.pathname === '/splash';
+
     useEffect(() => {
+        // Skip if on splash page
+        if (isSplashPage) {
+            return;
+        }
+
         // Check usage on mount
         const usage = parseInt(localStorage.getItem(USAGE_KEY) || '0');
         const lastFeedback = localStorage.getItem(LAST_FEEDBACK_KEY);
@@ -32,7 +42,7 @@ export const FeedbackWidget: React.FC = () => {
             const timer = setTimeout(() => setIsVisible(true), 3000);
             return () => clearTimeout(timer);
         }
-    }, []);
+    }, [isSplashPage]);
 
     const handleSubmit = async () => {
         if (rating === 0) return;
@@ -63,7 +73,8 @@ export const FeedbackWidget: React.FC = () => {
         }
     };
 
-    if (!isVisible) return null;
+    // Don't render on splash page or if not visible
+    if (isSplashPage || !isVisible) return null;
 
     return (
         <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 z-[100] flex flex-col items-end">

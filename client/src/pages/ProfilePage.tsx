@@ -424,7 +424,7 @@ export const ProfilePage: React.FC = () => {
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-sm font-black text-slate-800 leading-none">
-                                    {activeProfile ? activeProfile.name : (user?.displayName || 'Select Profile')}
+                                    {activeProfile ? activeProfile.name : (user?.name || 'Select Profile')}
                                 </span>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                                     {activeProfile ? 'Child Account' : 'Choose Account'}

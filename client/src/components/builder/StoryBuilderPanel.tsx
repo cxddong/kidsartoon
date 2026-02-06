@@ -296,13 +296,10 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                                     <img src={style.image} alt={style.labels.en} className="absolute inset-0 w-full h-full object-cover" />
                                     {/* Removed Gradient Overlay */}
 
-                                    {/* Icon Badge */}
-                                    <div className="absolute top-2 right-2 w-8 h-8 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20">
-                                        <style.icon className="w-4 h-4 text-white" />
-                                    </div>
+                                    {/* Icon Badge - Removed per user request */}
 
-                                    <div className="absolute inset-x-0 bottom-0 p-3 text-left">
-                                        <span className={cn("text-base font-black block text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight")}>{style.labels.en}</span>
+                                    <div className="absolute inset-x-0 bottom-0 p-3 text-center flex items-center justify-center">
+                                        <span className={cn("text-sm font-black text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight whitespace-nowrap")}>{style.labels.en}</span>
                                     </div>
 
                                     {isSelected && (
@@ -348,9 +345,10 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                                     <img src={tag.image} alt={tag.id} className="absolute inset-0 w-full h-full object-cover" />
                                     {/* Removed Color Overlay */}
 
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-1 text-center">
-                                        <tag.icon className={cn("w-6 h-6 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-1 transition-transform", isSelected ? "scale-110" : "")} />
-                                        <span className="text-[10px] font-bold text-white leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{tag.id}</span>
+                                    {/* Icon removed per user request */}
+
+                                    <div className="absolute inset-x-0 bottom-0 p-2 text-center flex items-center justify-center">
+                                        <span className="text-lg font-black text-white leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{tag.id}</span>
                                     </div>
 
                                     {isSelected && (
@@ -388,12 +386,10 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                                     <img src={m.image} alt={m.labels.en} className="absolute inset-0 w-full h-full object-cover" />
                                     {/* Removed Gradient Overlay */}
 
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-1">
-                                        <m.icon className={cn("w-6 h-6 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-1", isSelected ? "text-blue-200" : "")} />
-                                    </div>
+                                    {/* Icon removed per user request */}
 
-                                    <div className="absolute inset-x-0 bottom-0 p-2 text-center">
-                                        <span className="text-[10px] font-bold text-white leading-tight block drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{m.labels.en}</span>
+                                    <div className="absolute inset-x-0 bottom-0 p-2 text-center flex items-center justify-center">
+                                        <span className="text-lg font-black text-white leading-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{m.labels.en}</span>
                                     </div>
 
                                     {isSelected && (
