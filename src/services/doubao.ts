@@ -1307,6 +1307,12 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
 
             const data = await response.json();
 
+            // DEBUG: Log full response structure
+            console.log('[Doubao 3D] ===== FULL API RESPONSE =====');
+            console.log('[Doubao 3D] Task ID:', taskId);
+            console.log('[Doubao 3D] Full Response:', JSON.stringify(data, null, 2));
+            console.log('[Doubao 3D] Response Keys:', Object.keys(data));
+
             // Normalize Status (Doubao SEED3D uses similar codes to Seedance)
             const remoteStatus = data.status || data?.data?.status;
             const statusStr = String(remoteStatus).toLowerCase();
@@ -1317,13 +1323,44 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
 
             if (statusStr === 'succeeded' || remoteStatus === 2) {
                 appStatus = 'SUCCEEDED';
-                // Extract Model URL (usually in content[0].file_url)
-                const content = data.content?.[0] || data.data?.content?.[0] || data.result?.content?.[0];
-                modelUrl = content?.file_url || content?.url || content?.image_url || '';
+
+                // DEBUG: Log URL extraction attempts
+                console.log('[Doubao 3D] ===== MODEL URL EXTRACTION DEBUG =====');
+                console.log('[Doubao 3D] data.content:', data.content);
+                console.log('[Doubao 3D] data.content?.[0]:', data.content?.[0]);
+                console.log('[Doubao 3D] data.data?.content?.[0]:', data.data?.content?.[0]);
+                console.log('[Doubao 3D] data.result?.content?.[0]:', data.result?.content?.[0]);
+
+                // Extract Model URL (FIX: content is an object, not an array!)
+                // Try direct object access first (correct for 3D API)
+                if (data.content && typeof data.content === 'object' && !Array.isArray(data.content)) {
+                    // Content is an object with file_url
+                    modelUrl = data.content.file_url || data.content.url || '';
+                    console.log('[Doubao 3D] Using direct content object. modelUrl:', modelUrl);
+                } else {
+                    // Fallback: try array-based access (for compatibility with video API)
+                    const content = data.content?.[0] || data.data?.content?.[0] || data.result?.content?.[0];
+                    console.log('[Doubao 3D] Selected content object (array fallback):', content);
+
+                    if (content) {
+                        console.log('[Doubao 3D] content.file_url:', content.file_url);
+                        console.log('[Doubao 3D] content.url:', content.url);
+                        console.log('[Doubao 3D] content.image_url:', content.image_url);
+                    }
+
+                    modelUrl = content?.file_url || content?.url || content?.image_url || '';
+                }
 
                 if (!modelUrl && data.content?.video_url) {
-                    // Sometimes returns a preview video if requested, but SEED3D usually returns file
+                    console.log('[Doubao 3D] Trying data.content.video_url:', data.content.video_url);
                     modelUrl = data.content.video_url;
+                }
+
+                console.log('[Doubao 3D] FINAL EXTRACTED modelUrl:', modelUrl);
+                console.log('[Doubao 3D] ========================================');
+
+                if (!modelUrl) {
+                    console.warn('[Doubao 3D] WARNING: Task succeeded but no model URL found!');
                 }
             } else if (statusStr === 'failed' || remoteStatus === 3) {
                 appStatus = 'FAILED';

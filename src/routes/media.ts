@@ -3114,13 +3114,85 @@ router.get('/tasks/:taskId', async (req, res) => {
     const { taskId } = req.params;
     const result = await doubaoService.get3DTaskStatus(taskId);
 
-    res.json({
-      status: result.status, // Normalized SUCCEEDED, FAILED, or PENDING
-      progress: result.progress,
-      modelUrl: result.modelUrl,
-      error: result.error,
-      raw: result.raw
-    });
+    // If succeeded and modelUrl is a ZIP, extract and upload GLB
+    // Check if URL path (before query params) ends with .zip
+    const isZipUrl = result.modelUrl && (
+      result.modelUrl.includes('.zip?') ||
+      result.modelUrl.endsWith('.zip')
+    );
+
+    if (result.status === 'SUCCEEDED' && isZipUrl) {
+      console.log('[Media] 3D Task succeeded, processing ZIP file...');
+
+      try {
+        // Type guard: ensure modelUrl is defined
+        if (!result.modelUrl) {
+          throw new Error('Model URL is undefined');
+        }
+
+        // Download ZIP
+        const zipResponse = await fetch(result.modelUrl);
+        if (!zipResponse.ok) throw new Error(`Failed to download ZIP: ${zipResponse.status}`);
+
+        const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
+        console.log('[Media] Downloaded ZIP, size:', zipBuffer.length);
+
+        // Extract GLB using AdmZip
+        const AdmZip = (await import('adm-zip')).default;
+        const zip = new AdmZip(zipBuffer);
+        const zipEntries = zip.getEntries();
+
+        console.log('[Media] ZIP contents:', zipEntries.map((e: any) => e.entryName));
+
+        // Find GLB file
+        const glbEntry = zipEntries.find((e: any) => e.entryName.toLowerCase().endsWith('.glb'));
+        if (!glbEntry) {
+          throw new Error('No GLB file found in ZIP');
+        }
+
+        console.log('[Media] Found GLB file:', glbEntry.entryName);
+        const glbBuffer = glbEntry.getData();
+
+        // Upload to Firebase Storage
+        console.log('[Media] Uploading GLB to Firebase Storage...');
+        const glbUrl = await adminStorageService.uploadFile(
+          glbBuffer,
+          'model/gltf-binary',
+          '3d/models'
+        );
+
+        console.log('[Media] GLB uploaded successfully:', glbUrl);
+
+        // Return GLB URL instead of ZIP URL
+        res.json({
+          status: result.status,
+          progress: result.progress,
+          modelUrl: glbUrl, // Use uploaded GLB URL
+          error: result.error,
+          raw: result.raw
+        });
+
+      } catch (zipError: any) {
+        console.error('[Media] ZIP processing failed:', zipError);
+        // Fallback: return original ZIP URL
+        res.json({
+          status: result.status,
+          progress: result.progress,
+          modelUrl: result.modelUrl,
+          error: `ZIP processing failed: ${zipError.message}`,
+          raw: result.raw
+        });
+      }
+    } else {
+      // Not a ZIP or not succeeded yet, return as-is
+      res.json({
+        status: result.status,
+        progress: result.progress,
+        modelUrl: result.modelUrl,
+        error: result.error,
+        raw: result.raw
+      });
+    }
 
   } catch (error: any) {
     console.error('[Media] Get Task Failed:', error);
