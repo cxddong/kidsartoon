@@ -8,10 +8,11 @@ export const playAudioWithPitchShift = async (
     pitchShift: number = 1.2, // 1.15-1.25 for cartoon/child-like voice
     onEnded?: () => void
 ): Promise<{ stop: () => void }> => {
+    let arrayBuffer: ArrayBuffer | undefined;
     try {
         // 1. Fetch audio data
         const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
+        arrayBuffer = await response.arrayBuffer();
 
         // 2. Create audio context
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
