@@ -38,10 +38,13 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
     const fetchCustomVoices = async () => {
         if (!userId || userId === 'guest') return;
         try {
-            const res = await fetch(`/api/voice-lab/voices?userId=${userId}`);
+            const res = await fetch(`/api/voice-lab/voices?userId=${userId}&t=${Date.now()}`);
             if (res.ok) {
                 const data = await res.json();
+                console.log("[StoryBuilder] Fetched custom voices:", data.voices);
                 setCustomVoices(data.voices || []);
+            } else {
+                console.error("[StoryBuilder] Failed to fetch voices:", res.status);
             }
         } catch (e) {
             console.error("Failed to fetch custom voices", e);
@@ -246,9 +249,25 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
             <VoiceCloneModal
                 isOpen={isCloneModalOpen}
                 onClose={() => setIsCloneModalOpen(false)}
-                onCloneSuccess={(id) => {
-                    fetchCustomVoices(); // Refresh list
-                    setVoice(id); // Select new voice
+                onCloneSuccess={(voiceOrId) => {
+                    if (typeof voiceOrId === 'object' && voiceOrId.id) {
+                        // Optimistic Update: Add to list immediately
+                        console.log("[StoryBuilder] Optimistic add:", voiceOrId);
+                        setCustomVoices(prev => {
+                            // Deduplicate
+                            const exists = prev.find(v => v.id === voiceOrId.id);
+                            if (exists) return prev;
+                            return [voiceOrId, ...prev];
+                        });
+                        setVoice(voiceOrId.id);
+                    } else {
+                        // Fallback: Refresh list
+                        fetchCustomVoices();
+                        setVoice(voiceOrId);
+                    }
+                    // Double-check refresh after 1.5s to catch eventual consistency
+                    setTimeout(() => fetchCustomVoices(), 1500);
+
                     setIsCloneModalOpen(false);
                 }}
                 userId={userId || 'guest'}
@@ -481,7 +500,7 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                                             setVoiceTier('premium');
                                         }}
                                     >
-                                        <div className="flex items-center gap-4 relative z-10">
+                                        <div className="flex items-center gap-4 relative z-10 pr-10">
                                             {/* Avatar */}
                                             <div className="w-16 h-16 rounded-full border-2 border-purple-100 p-0.5 shadow-sm bg-white shrink-0">
                                                 <img
@@ -499,23 +518,30 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                                                 <p className="text-xs text-slate-400 font-medium">Ready to narrate your story!</p>
                                             </div>
 
-                                            {/* Actions */}
-                                            <div className="flex flex-col gap-2">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); playVoiceDemo({ ...cv, demoText: "I am the master of this story!" }); }}
-                                                    className={cn(
-                                                        "w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm border",
-                                                        playingDemo === cv.id ? "bg-purple-500 text-white border-purple-500" : "bg-white text-purple-500 border-purple-100 hover:bg-purple-50"
-                                                    )}
-                                                >
-                                                    {playingDemo === cv.id ? <Volume className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4 ml-0.5" />}
-                                                </button>
+                                            {/* BIG Play Button */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); playVoiceDemo({ ...cv, demoText: "I am the master of this story!" }); }}
+                                                className={cn(
+                                                    "w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-md border-2",
+                                                    playingDemo === cv.id ? "bg-purple-500 text-white border-purple-500 scale-110" : "bg-white text-purple-600 border-purple-100 hover:bg-purple-50 hover:scale-105"
+                                                )}
+                                            >
+                                                {playingDemo === cv.id ? <Volume className="w-6 h-6 animate-pulse" /> : <Play className="w-6 h-6 ml-0.5" />}
+                                            </button>
+
+                                            {/* Top Right: Delete & Selected Badge */}
+                                            <div className="absolute -top-2 -right-2 flex flex-col gap-2">
+                                                {isSelected && (
+                                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                                                        <Check className="w-3 h-3 text-white" />
+                                                    </div>
+                                                )}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDeleteVoice(cv.id); }}
-                                                    className="w-8 h-8 rounded-full bg-white text-slate-300 border border-slate-100 flex items-center justify-center hover:text-red-500 hover:border-red-100 transition-all shadow-sm"
+                                                    className="w-6 h-6 rounded-full bg-white text-slate-300 border border-slate-100 flex items-center justify-center hover:text-red-500 hover:border-red-100 transition-all shadow-sm"
                                                     title="Delete Voice"
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
+                                                    <Trash2 className="w-3 h-3" />
                                                 </button>
                                             </div>
                                         </div>
@@ -524,11 +550,7 @@ export const StoryBuilderPanel: React.FC<StoryBuilderPanelProps> = ({ onGenerate
                                         <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-purple-100/50 to-transparent rounded-bl-[100px] pointer-events-none" />
 
                                         {/* Selected Badge */}
-                                        {isSelected && (
-                                            <div className="absolute top-3 right-3 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center shadow-md">
-                                                <Check className="w-4 h-4 text-white" />
-                                            </div>
-                                        )}
+
                                     </div>
                                 );
                             })}

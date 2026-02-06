@@ -6,7 +6,7 @@
 const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
 const audioCtx = new AudioContextClass();
 
-export const playUiSound = (type: 'pop' | 'swoosh' | 'click') => {
+export const playUiSound = (type: 'pop' | 'swoosh' | 'click' | 'magic') => {
     // 许多浏览器要求由用户交互触发后才能 resume
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().catch((err) => console.warn('AudioContext resume failed', err));
@@ -54,6 +54,29 @@ export const playUiSound = (type: 'pop' | 'swoosh' | 'click') => {
 
         oscillator.start(now);
         oscillator.stop(now + 0.05);
+    }
+    else if (type === 'magic') {
+        // 魔法音效：多个正弦波扫频，模拟闪烁声
+        // 主音
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(600, now);
+        oscillator.frequency.linearRampToValueAtTime(1200, now + 0.3);
+
+        // 增加一点颤音
+        const vibrato = audioCtx.createOscillator();
+        vibrato.frequency.value = 15; // 15Hz 颤动
+        const vibratoGain = audioCtx.createGain();
+        vibratoGain.gain.value = 30;
+        vibrato.connect(vibratoGain);
+        vibratoGain.connect(oscillator.frequency);
+        vibrato.start(now);
+        vibrato.stop(now + 0.5);
+
+        gainNode.gain.setValueAtTime(0.3, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+        oscillator.start(now);
+        oscillator.stop(now + 0.5);
     }
 };
 

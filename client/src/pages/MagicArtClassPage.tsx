@@ -658,6 +658,66 @@ export const MagicArtClassPage: React.FC = () => {
         sendMessage("How does my drawing look? Any tips?", img);
     };
 
+    // --- Save Drawing ---
+    const handleSaveDrawing = async () => {
+        let imageData: string | undefined;
+        let currentMode: 'digital' | 'real';
+
+        if (mode === 'digital' && canvasRef.current) {
+            imageData = getCanvasAsBase64WithWhiteBg(canvasRef);
+            currentMode = 'digital';
+        } else if (mode === 'real') {
+            imageData = captureCameraFrame();
+            currentMode = 'real';
+        } else {
+            return; // Not in a drawing mode
+        }
+
+        if (!imageData || !user?.uid) {
+            console.warn('[ArtClass] Cannot save: no image data or user');
+            return;
+        }
+
+        try {
+            setAnalyzing(true); // Show loading state
+
+            const response = await fetch('/api/artclass/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    profileId: (user as any).currentProfileId,
+                    imageData,
+                    mode: currentMode,
+                    prompt: `Art class drawing - ${currentMode} mode`
+                })
+            });
+
+            if (response.ok) {
+                // Success feedback
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+                setAiFeedback(`Awesome! I saved your ${currentMode === 'digital' ? 'digital' : 'paper'} artwork! 🎨✨`);
+
+                // Play success audio
+                const successAudio = new Audio('/assets/magic_chime.mp3');
+                successAudio.play().catch(() => { });
+            } else {
+                const error = await response.json();
+                console.error('[ArtClass] Save failed:', error);
+                setAiFeedback("Oops! I couldn't save that. Try again? 😿");
+            }
+        } catch (error) {
+            console.error('[ArtClass] Save error:', error);
+            setAiFeedback("Hmm, something went wrong! But your art is still amazing! 🐱");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     // --- Navigation / Auto-Fill ---
     const handleNavigate = async (targetPath: string) => {
         // Credit Check Logic (Cost: 25 points for Magic Transformation)
@@ -1101,6 +1161,25 @@ export const MagicArtClassPage: React.FC = () => {
                             title="Clear All"
                         >
                             <span className="text-xl md:text-2xl pt-1">🗑️</span>
+                        </motion.button>
+
+                        {/* Save (Blue Star) - NEW */}
+                        <motion.button
+                            whileHover={{ scale: 1.1, rotate: -10 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={handleSaveDrawing}
+                            style={{ width: 'clamp(50px, 12vh, 64px)', height: 'clamp(50px, 12vh, 64px)' }}
+                            className="bg-gradient-to-b from-blue-400 to-blue-500 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(59,130,246,0.4)] border-[4px] border-white active:scale-95 group relative overflow-hidden"
+                            title="Save Drawing!"
+                            disabled={analyzing}
+                        >
+                            {/* Gloss Shine */}
+                            <div className="absolute top-0 inset-x-0 h-1/2 bg-white/20 rounded-t-full pointer-events-none" />
+                            {analyzing ? (
+                                <div className="w-1/2 h-1/2 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <span className="text-2xl md:text-3xl drop-shadow-sm group-hover:scale-125 transition-transform">💾</span>
+                            )}
                         </motion.button>
 
                         {/* DONE (Big Green Check) */}

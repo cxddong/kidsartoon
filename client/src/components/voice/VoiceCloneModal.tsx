@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface VoiceCloneModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCloneSuccess: (voiceId: string) => void;
+    onCloneSuccess: (voice: string | any) => void;
     userId: string;
 }
 
@@ -130,7 +130,8 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({ isOpen, onClos
             console.log('[VoiceClone] Success! Voice ID:', result.voiceId);
 
             if (onCloneSuccess && result.voiceId) {
-                onCloneSuccess(result.voiceId);
+                // Pass full object if available (preferred) or just ID
+                onCloneSuccess(result.voice || result.voiceId);
                 setClonedVoiceId(result.voiceId);
                 setStep(3);
             }

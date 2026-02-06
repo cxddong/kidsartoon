@@ -1,0 +1,76 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 鈿欙笍  load multiple .env files with { path: ['.env.local', '.env'] }
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\success_qwen3-tts-flash.mp3
+[DashScope] Optimizing enrollment audio: success_qwen3-tts-flash.mp3
+node.exe : [DashScop
+e] MP3 conversion fa
+iled, sticking to or
+iginal: Error: ffmpe
+g exited with code 6
+9: size=       0kB t
+ime=N/A bitrate=N/A 
+speed=N/A    
+所在位置 行:1 字符: 1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: ([Das   
+ hScope] MP3...A    
+ speed=N/A    :    S
+tring) [], Rem    ot
+eException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+Conversion failed!
+
+    at ChildProcess.
+<anonymous> (D:\KAT\
+KAT\node_modules\flu
+ent-ffmpeg\lib\proce
+ssor.js:180:22)
+    at ChildProcess.
+emit (node:events:50
+7:28)
+    at ChildProcess.
+_handle.onexit (node
+:internal/child_proc
+ess:294:12)
+[DashScope] Voice enrollment attempt 1/3 for user test_user_fix_1770111610159
+[DashScope] Voice re
+gistration failed: E
+rror: Enrollment Fai
+led (400): {"request
+_id":"d1d56de9-6d08-
+4974-bf53-552d79c982
+a4","code":"Audio.De
+coderError","message
+":"Failed to decode 
+audio file."}
+    at Object.regist
+erCustomVoice (D:\KA
+T\KAT\src\services\d
+ashscopeService.ts:2
+37:27)
+    at process.proce
+ssTicksAndRejections
+ (node:internal/proc
+ess/task_queues:105:
+5)
+    at async test (D
+:\KAT\KAT\verify_voi
+ce_cloning.ts:18:25)
+CAUGHT ERROR:
+Enrollment Failed (400): {"request_id":"d1d56de9-6d08-4974-bf53-552d79c982a4","code":"Audio.DecoderError","message":"Failed to decode audio file."}
+UNKNOWN ERROR: Error: Enrollment Failed (400): {"request_id":"d1d56de9-6d08-4974-bf53-552d79c982a4","code":"Audio.DecoderError","message":"Failed to decode audio file."}
+    at Object.registerCustomVoice (D:\KAT\KAT\src\services\dashscopeService.ts:237:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async test (D:\KAT\KAT\verify_voice_cloning.ts:18:25)

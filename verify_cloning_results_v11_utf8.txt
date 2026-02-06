@@ -1,0 +1,12 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 鈿欙笍  write to custom object with { processEnv: myObject }
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770110613127.wav
+[DashScope] Starting registration for user test_user_fix_1770112493494 with file voice_1770110613127.wav
+[DashScope] Transcoding to enrollment-compatible format...
+[DashScope] Enrollment attempt 1/2
+CAUGHT ERROR:
+Enrollment Failed (400): {"request_id":"6a562818-6f8f-4bf5-aaf1-775663adcf8b","code":"Audio.PreprocessError","message":"No audio data received"}
+UNKNOWN ERROR: Error: Enrollment Failed (400): {"request_id":"6a562818-6f8f-4bf5-aaf1-775663adcf8b","code":"Audio.PreprocessError","message":"No audio data received"}
+    at Object.registerCustomVoice (D:\KAT\KAT\src\services\dashscopeService.ts:276:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async test (D:\KAT\KAT\verify_voice_cloning.ts:18:25)

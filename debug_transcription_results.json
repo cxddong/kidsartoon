@@ -1,0 +1,23 @@
+{
+  "output": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "message": {
+          "content": [
+            {
+              "text": "这段音频的原始内容是：'hello children welcome to my story time today i will tell you a magic tale about a little rabbit named bunny.'"
+            }
+          ],
+          "role": "assistant"
+        }
+      }
+    ]
+  },
+  "usage": {
+    "audio_tokens": 266,
+    "input_tokens": 294,
+    "output_tokens": 30
+  },
+  "request_id": "272da7ba-d776-4e87-b403-068d812b8e16"
+}

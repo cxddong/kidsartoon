@@ -354,7 +354,7 @@ CRITICAL: ENSURE VISUAL CONTINUITY using the character description. Avoid repeti
                     sceneDescription: p.sceneDescription || "A transition scene",
                     emotion: p.emotion || "interested",
                     bubbleType: p.bubbleType || "speech",
-                    bubblePosition: p.bubblePosition || "bottom"
+                    bubblePosition: p.bubblePosition || "top"
                 }));
 
                 while (validatedPanels.length < totalPanels) {
@@ -364,7 +364,7 @@ CRITICAL: ENSURE VISUAL CONTINUITY using the character description. Avoid repeti
                         sceneDescription: "Connecting scene",
                         emotion: "neutral",
                         bubbleType: "speech",
-                        bubblePosition: "bottom"
+                        bubblePosition: "top"
                     });
                 }
 
@@ -594,7 +594,7 @@ CRITICAL: Character appearance must match the description exactly.
                         sceneDescription: p.sceneDescription,
                         emotion: p.emotion || 'happy',
                         bubbleType: p.bubbleType || 'speech',
-                        bubblePosition: p.bubblePosition || 'bottom'
+                        bubblePosition: p.bubblePosition || 'top'
                     }))
                 };
 

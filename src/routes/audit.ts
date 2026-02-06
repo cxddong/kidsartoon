@@ -67,7 +67,10 @@ auditRouter.post('/upload', upload.array('images', 50), async (req, res) => {
                 imageUrl,
                 'upload',
                 '', // prompt
-                { source: 'portfolio_scanner' }
+                {
+                    source: 'portfolio_scanner',
+                    isAnalysisOnly: true // Mark as analysis-only, exclude from artwork gallery
+                }
             );
             imageIds.push(imageRecord.id);
         }

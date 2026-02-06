@@ -43,8 +43,9 @@ export const MOODS = [
 export const VOICES = [
     { id: 'standard', label: 'Robot Friend', tier: 'standard', cost: 0, image: '/assets/role_icons/icon_robot_new.jpg', icon: Volume2, description: '[FREE] Robot Friend', demoText: 'Hello! I am the standard narrator voice.', demoUrl: '/assets/audio_demos/standard_preview.mp3' },
     { id: 'kiki', label: 'Kiki', tier: 'premium', cost: 20, image: '/assets/role_icons/icon_titi_new.jpg', icon: Volume2, description: 'Playful & Energetic 🐱', demoText: 'Meow! I am Kiki, your art class friend!', demoUrl: '/assets/audio_demos/kiki_preview.mp3' },
-    { id: 'titi', label: 'Titi', tier: 'premium', cost: 20, image: '/assets/role_icons/icon_kiki_new.png', icon: Volume2, description: 'Gentle & Calm 🎩', demoText: 'Hello, I am Titi. Let us tell a story.', demoUrl: '/assets/audio_demos/titi_preview.mp3' },
     { id: 'aiai', label: 'Aiai', tier: 'premium', cost: 20, image: '/assets/role_icons/icon_aiai_new.jpg', icon: Volume2, description: 'Sweet & Caring 🌸', demoText: 'Hi cutie! I am Aiai, ready to help!', demoUrl: '/assets/audio_demos/aiai_preview.mp3' },
+    { id: 'titi', label: 'Titi', tier: 'premium', cost: 20, image: '/assets/role_icons/icon_kiki_new.png', icon: Volume2, description: 'Gentle & Calm 🎩', demoText: 'Hello, I am Titi. Let us tell a story.', demoUrl: '/assets/audio_demos/titi_preview.mp3' },
+
 ];
 
 export const MODELS = [

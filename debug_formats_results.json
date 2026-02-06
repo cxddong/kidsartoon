@@ -1,0 +1,29 @@
+[
+  {
+    "name": "WAV (audio/wav)",
+    "status": 400,
+    "data": {
+      "request_id": "dfd41f14-684a-4e08-ac2b-fa10f72b4280",
+      "code": "Audio.PreprocessError",
+      "message": "No audio data received"
+    }
+  },
+  {
+    "name": "MP3 (audio/mpeg)",
+    "status": 400,
+    "data": {
+      "request_id": "c5b44ba3-1b2f-4184-835f-7bb4e6ab036d",
+      "code": "Audio.PreprocessError",
+      "message": "No audio data received"
+    }
+  },
+  {
+    "name": "MP3 (audio/mp3)",
+    "status": 400,
+    "data": {
+      "request_id": "0b679f8b-d837-4c58-a89c-9c900e413528",
+      "code": "Audio.PreprocessError",
+      "message": "No audio data received"
+    }
+  }
+]

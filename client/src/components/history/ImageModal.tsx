@@ -17,6 +17,8 @@ export interface ImageRecord {
     prompt?: string;
     favorite?: boolean;
     meta?: any;
+    isPublic?: boolean;
+    authorAlias?: string;
 }
 
 interface ImageModalProps {
@@ -82,16 +84,27 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
         }
     };
 
+    const [confirmPublish, setConfirmPublish] = React.useState(false);
+
     // Fetch Creator Name
     React.useEffect(() => {
         if (!image) return;
         setCreatorName(null); // Reset
 
         const fetchCreator = async () => {
+            // 1. Use Alias if provided (Anonymization for Public view)
+            if (image.authorAlias) {
+                setCreatorName(image.authorAlias);
+                return;
+            }
+
+            // 2. Mock check
             if (image.userId === 'mock') {
                 setCreatorName("Community Artist");
                 return;
             }
+
+            // 3. Fallback to API if not anonymized (e.g. looking at own history)
             try {
                 const res = await fetch(`/api/users/${image.userId}`);
                 if (res.ok) {
@@ -185,6 +198,30 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
     const handleClose = () => {
         window.speechSynthesis.cancel();
         onClose();
+    };
+
+    const handlePublish = async () => {
+        if (!image) return;
+        try {
+            const res = await fetch(`/api/images/${image.id}/publish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: image.userId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert("✨ Magic! Your creation is now shared with the world!");
+                setConfirmPublish(false);
+                onClose(); // Close modal to reflect state or user flow
+            } else {
+                alert(data.error || "Could not publish.");
+                setConfirmPublish(false);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Something went wrong.");
+            setConfirmPublish(false);
+        }
     };
 
     const handleAiReview = async () => {
@@ -602,6 +639,16 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2 items-center justify-end">
+                            {/* Publish Button (Only for owner and not yet public) */}
+                            {onDelete && !image.isPublic && image.type !== 'cards' && (
+                                <button
+                                    onClick={() => setConfirmPublish(true)}
+                                    className="px-3 py-2 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-lg text-xs font-bold transition-transform hover:scale-105 shadow-sm flex items-center gap-1"
+                                >
+                                    🌍 Publish
+                                </button>
+                            )}
+
                             {/* Analyze */}
                             <button
                                 onClick={handleAiReview}
@@ -775,6 +822,43 @@ const ImageModal: React.FC<ImageModalProps> = ({ image, onClose, onToggleFavorit
                         )}
                     </div>
                 )}
+
+                {/* Publish Confirmation Modal */}
+                {confirmPublish && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-pink-200 animate-in zoom-in-95">
+                            <h3 className="text-xl font-black text-slate-800 mb-2">🌍 Share with the World?</h3>
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                                <p className="text-sm text-amber-900 font-medium">
+                                    ⚠️ Safety Check:
+                                </p>
+                                <ul className="text-xs text-amber-800 list-disc list-inside mt-1 space-y-1">
+                                    <li>Wait! Does this show your real face?</li>
+                                    <li>Does it show your full name?</li>
+                                    <li>Ask a parent first!</li>
+                                </ul>
+                            </div>
+                            <p className="text-slate-600 text-sm mb-6">
+                                Publishing will make this artwork visible to everyone in the Magic Community. Your name will be hidden as "Young Artist".
+                            </p>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setConfirmPublish(false)}
+                                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handlePublish}
+                                    className="px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-lg font-bold text-sm shadow-md"
+                                >
+                                    Yes, Publish!
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
 
 
             </motion.div>

@@ -123,6 +123,33 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// POST /api/images/:id/publish
+// Triggers validation and manual publish to community (The "Second Lock")
+router.post('/:id/publish', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'userId required' });
+        }
+
+        console.log(`[API] Publish Request for image ${id} from user ${userId}`);
+
+        const success = await databaseService.publishImage(id, userId);
+
+        if (success) {
+            res.json({ success: true, message: 'Image published to community' });
+        } else {
+            console.warn(`[API] Publish failed: Restricted type or ownership mismatch. ID: ${id}`);
+            res.status(403).json({ error: 'Failed to publish. Content might be restricted (e.g. Greeting Cards) or not owned by you.' });
+        }
+    } catch (error) {
+        console.error("Publish Image Error:", error);
+        res.status(500).json({ error: 'Internal error during publishing' });
+    }
+});
+
 // POST /api/images/cleanup
 // Triggers manually because we don't have a cron job yet
 router.post('/cleanup', async (req, res) => {

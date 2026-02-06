@@ -1,0 +1,33 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 馃攽 add access controls to secrets: https://dotenvx.com/ops
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770086883582.wav
+[DashScope] Starting registration for user test_user_fix_1770113620945 with file voice_1770086883582.wav
+[DashScope] Transcoding to enrollment-compatible format...
+[DashScope] Enrollment attempt 1/2 (Lang: en)
+node.exe : [DashScop
+e] Retryable error (
+ECONNRESET), retryin
+g in 5000ms...
+所在位置 行:1 字符: 1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotSpe
+cified:     ([DashSc
+ope] Ret...n    g in
+ 5000ms...:Strin    
+g) [], RemoteExcepti
+    on
+    + FullyQualified
+Erro    rId : Native
+CommandE    rror
+ 
+[DashScope] Enrollment attempt 2/2 (Lang: en)
+[DashScope] Voice qwen-tts-vc-vcf9712q2l8-voice-20260203181443716-cb61 registered. Waiting 10s for propagation...
+SUCCESS: Voice ID received: qwen-tts-vc-vcf9712q2l8-voice-20260203181443716-cb61

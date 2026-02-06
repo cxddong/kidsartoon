@@ -78,6 +78,19 @@ router.post('/refund', async (req, res) => {
     res.json(result);
 });
 
+// POST /api/points/redeem
+router.post('/redeem', async (req, res) => {
+    const { userId, code } = req.body;
+    if (!userId || !code) return res.status(400).json({ error: 'Missing code' });
+
+    const result = await pointsService.redeemCode(userId, code);
+    if (result.success) {
+        res.json({ success: true, pointsAdded: result.pointsAdded });
+    } else {
+        res.status(200).json({ success: false, error: result.error }); // Return 200 for logic errors (flow control)
+    }
+});
+
 // GET /api/points/logs
 router.get('/logs', async (req, res) => {
     const userId = req.query.userId as string;

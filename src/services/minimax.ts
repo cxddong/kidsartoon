@@ -3,6 +3,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import FormData from 'form-data';
 
 // Environment variables are read at runtime inside the method for safety
 
@@ -11,27 +12,105 @@ import path from 'path';
 // Voice Mappings
 // Voice Mappings
 const VOICE_MAP: Record<string, string> = {
-    'kiki': 'English_PlayfulGirl',
-    'aiai': 'English_Soft-spokenGirl',
-    'titi': 'English_Deep-VoicedGentleman',
-    'female-shaonv': 'female-shaonv',
-    'male-qn-2': 'English_Deep-VoicedGentleman',
-    'kiki_v2': 'English_PlayfulGirl', // Alias for clarity
+    'kiki': 'English_PlayfulGirl',       // Kiki: Playful & Energetic
+    'aiai': 'English_Soft-spokenGirl',   // Aiai: Sweet & Caring
+    'titi': 'English_CaptivatingStoryteller', // Titi: Gentle & Calm (Male)
+    'female-shaonv': 'English_PlayfulGirl',
+    'male-qn-2': 'English_CaptivatingStoryteller',
+    'kiki_v2': 'English_PlayfulGirl',
 };
 
 export class MinimaxService {
+
+    /**
+     * Upload a file to MiniMax for voice cloning or prompt audio
+     * purpose: 'voice_clone' | 'prompt_audio'
+     */
+    async uploadFile(filePath: string, purpose: 'voice_clone' | 'prompt_audio'): Promise<string> {
+        const MINIMAX_API_URL = 'https://api.minimax.io/v1/files/upload';
+        const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || '';
+
+        try {
+            if (!MINIMAX_API_KEY) throw new Error("Missing Minimax API Key");
+
+            const formData = new FormData();
+            formData.append('purpose', purpose);
+            const fileStream = fs.createReadStream(filePath);
+            formData.append('file', fileStream);
+
+            console.log(`[Minimax] Uploading file for ${purpose}: ${filePath}`);
+
+            const response = await axios.post(MINIMAX_API_URL, formData, {
+                headers: {
+                    'Authorization': `Bearer ${MINIMAX_API_KEY}`,
+                    ...formData.getHeaders()
+                }
+            });
+
+            if (response.data && response.data.file && response.data.file.file_id) {
+                return response.data.file.file_id;
+            } else {
+                console.error("[Minimax] Unexpected Upload Response:", JSON.stringify(response.data));
+                throw new Error("Invalid response from MiniMax Upload API");
+            }
+
+        } catch (error: any) {
+            console.error('[Minimax] Upload failed:', error.message);
+            if (error.response) {
+                console.error('[Minimax] Response data:', JSON.stringify(error.response.data));
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Create a voice clone using MiniMax API
+     */
+    async createVoiceClone(fileId: string, voiceId: string): Promise<any> {
+        const MINIMAX_API_URL = 'https://api.minimax.io/v1/voice_clone';
+        const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || '';
+
+        try {
+            if (!MINIMAX_API_KEY) throw new Error("Missing Minimax API Key");
+
+            console.log(`[Minimax] Creating voice clone for ID: ${voiceId} using File: ${fileId}`);
+
+            const payload = {
+                file_id: fileId,
+                voice_id: voiceId,
+                // Optional: We can add a prompt audio here if we had one "prompt_audio": <file_id>
+                // For now, simple cloning
+            };
+
+            const response = await axios.post(MINIMAX_API_URL, payload, {
+                headers: {
+                    'Authorization': `Bearer ${MINIMAX_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            return response.data;
+
+        } catch (error: any) {
+            console.error('[Minimax] Voice Clone failed:', error.message);
+            if (error.response) {
+                console.error('[Minimax] Response data:', JSON.stringify(error.response.data));
+            }
+            throw error;
+        }
+    }
 
     /**
      * Generate speech using Minimax T2A V2
      */
     async generateSpeech(text: string, voiceKey: string, outputFilename: string = 'output.mp3'): Promise<Buffer> {
         // Late binding for environment variables to ensure they are loaded
-        const MINIMAX_API_URL = process.env.MINIMAX_API_URL || 'https://api.minimaxi.chat/v1/t2a_v2';
+        const MINIMAX_API_URL = process.env.MINIMAX_API_URL || 'https://api.minimax.io/v1/t2a_v2';
         const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || '';
         const MINIMAX_GROUP_ID = process.env.MINIMAX_GROUP_ID || '';
 
         try {
-            const voiceId = VOICE_MAP[voiceKey] || 'English_PlayfulGirl'; // Default fallback
+            const voiceId = VOICE_MAP[voiceKey] || voiceKey || 'English_PlayfulGirl'; // Fallback to key or default
             console.log(`[Minimax] Generating speech for voice: ${voiceKey} -> ${voiceId}`);
             console.log(`[Minimax] Text length: ${text.length} characters`);
             console.log(`[Minimax] 📝 Exact text to speak: "${text}"`);
@@ -89,7 +168,7 @@ export class MinimaxService {
             console.error('[Minimax] Generation failed:', error.message);
             if (error.response) {
                 console.error('[Minimax] Response status:', error.response.status);
-                console.error('[Minimax] Response data:', JSON.stringify(error.response.data));
+                console.error('[Minimax] CRITICAL ERROR DATA:', JSON.stringify(error.response.data, null, 2));
             }
             throw error;
         }
@@ -99,7 +178,7 @@ export class MinimaxService {
      * Generate speech using Minimax T2A V2 with Streaming
      */
     async generateSpeechStream(text: string, voiceKey: string): Promise<any> {
-        const MINIMAX_API_URL = process.env.MINIMAX_API_URL || 'https://api.minimaxi.chat/v1/t2a_v2';
+        const MINIMAX_API_URL = process.env.MINIMAX_API_URL || 'https://api.minimax.io/v1/t2a_v2';
         const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || '';
         const MINIMAX_GROUP_ID = process.env.MINIMAX_GROUP_ID || '';
 

@@ -1,0 +1,18 @@
+[dotenv@17.2.3] injecting env (25) from .env -- tip: ⚙️  override existing env vars with { override: true }
+Starting test...
+Testing with Voice ID: v7b364377cz-voice-20260206104034587-6365
+[DashScope] Custom voice synthesis, adding 1s propagation buffer...
+[DashScope] Synthesis | Model: qwen3-tts-vc-realtime-2026-01-15 | Voice: v7b364377cz-voice-20260206104034587-6365
+[DEBUG SSE CHUNK]: id:1
+event:result
+:HTTP_STATUS/200
+data:{"output":{"error":{"message":"Invalid message type: ","code":"InvalidParameter"},"type":"error","event_id":"event_MNqPDcC62KsJXfbgqICxR"},"request_id":"fdcfd735-9ced-49c7-b244-5dfcc4dfe3b3"}
+
+
+[DEBUG SSE CHUNK]: id:2
+event:error
+:HTTP_STATUS/400
+data:{"code":"InvalidParameter","message":"Invalid message type: ","request_id":"fdcfd735-9ced-49c7-b244-5dfcc4dfe3b3"}
+
+
+Test failed: No audio data recovered from stream.

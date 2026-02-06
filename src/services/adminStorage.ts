@@ -12,20 +12,25 @@ process.env.https_proxy = '';
 let useAdminSDK = false;
 let adminBucket: admin.storage.Storage | null = null;
 
-// Try to initialize Admin SDK
+// Try to initialize Admin SDK or use existing instance
 try {
     if (!admin.apps.length) {
+        // No app exists, initialize new one
         admin.initializeApp({
             credential: admin.credential.cert('./firebase-admin-key.json'),
             storageBucket: 'kat-antigravity.firebasestorage.app'
         });
-        adminBucket = admin.storage();
-        useAdminSDK = true;
         console.log('[AdminStorage] Firebase Admin SDK initialized successfully');
+    } else {
+        // App already exists (likely from firebaseAdmin.ts)
+        console.log('[AdminStorage] Using existing Firebase Admin SDK instance');
     }
+
+    // Try to access storage
+    adminBucket = admin.storage();
+    useAdminSDK = true;
 } catch (error) {
     console.warn('[AdminStorage] Admin SDK initialization failed - Will use local storage fallback.', error);
-    // console.error('[AdminStorage] Please download firebase-admin-key.json from Firebase Console');
     useAdminSDK = false;
 }
 

@@ -1,0 +1,11 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 馃攧 add secrets lifecycle management: https://dotenvx.com/ops
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770110613127.wav
+[DashScope] Starting registration for user test_user_fix_1770112359367 with file voice_1770110613127.wav
+[DashScope] Uploading enrollment file: voice_1770110613127.wav
+CAUGHT ERROR:
+form.getHeaders is not a function
+UNKNOWN ERROR: TypeError: form.getHeaders is not a function
+    at Object.uploadFileToDashScope (D:\KAT\KAT\src\services\dashscopeService.ts:197:25)
+    at Object.registerCustomVoice (D:\KAT\KAT\src\services\dashscopeService.ts:223:35)
+    at test (D:\KAT\KAT\verify_voice_cloning.ts:18:48)

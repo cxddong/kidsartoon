@@ -1,0 +1,45 @@
+[
+  {
+    "config": {
+      "action": "enroll",
+      "audio": {
+        "data": "dashscope://file-id/259a078d-eda8-47f4-a0ee-06baa60c2196"
+      }
+    },
+    "status": 400,
+    "data": {
+      "request_id": "79764a24-1bbd-40f5-9567-aa8c62e65d77",
+      "code": "InvalidParameter",
+      "message": "Required input 'action' is invalid, please check the request parameters."
+    }
+  },
+  {
+    "config": {
+      "action": "create",
+      "audio": {
+        "data": "dashscope://file-id/259a078d-eda8-47f4-a0ee-06baa60c2196"
+      },
+      "text": "你好，欢迎使用"
+    },
+    "status": 400,
+    "data": {
+      "request_id": "b3763724-7077-40a9-ae2c-ece412887f0f",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "config": {
+      "action": "create",
+      "audio": {
+        "data": "https://dashscope-file-mgr.oss-cn-beijing.aliyuncs.com/api-fs/1052894881827664/2470193/259a078d-eda8-47f4-a0ee-06baa60c2196/voice_1770110613127.wav?Expires=1770199365&OSSAccessKeyId=STS.NZ5AWf6FYe9YrVxS18dzDzw3R&Signature=ZK6XkhfD3n51j5HVqg92BxpWxC8%3D&security-token=CAIS1AJ1q6Ft5B2yfSjIr5mACu3S25l40vuycHDJtzFtaPVolbKYsDz2IHhMdHFqBOwasfQ1nWxY7P0Ylrp6SJtIXleCZtF94oxN9h2gb4fb43gJOHWu08%2FLI3OaLjKm9u2wCryLYbGwU%2FOpbE%2B%2B5U0X6LDmdDKkckW4OJmS8%2FBOZcgWWQ%2FKBlgvRq0hRG1YpdQdKGHaONu0LxfumRCwNkdzvRdmgm4NgsbWgO%2Fks0SD0gall7ZO%2FNiqfcL%2FMvMBZskvD42Hu8VtbbfE3SJq7BxHybx7lqQs%2B02c5onNWwMMv0nZY7CNro01d1VjFqQhXqBFqPW5jvBipO3YmsHv0RFBeOZOSDQE1i1TRm1UcgnAGaHaFd6TUxylurgE5gJ7JY8Pz1gvlRKYWhvQG45hiCYmPtXwQEGpNl5k7MlN5QbLfi8Yf1QXq3esyb6gQz4rKwxeAhNDUvdUGoABHC1RxdXuVzrDV09E9K7g3xeqiEmlVIyz%2FyM8y3Bv2rBy0cI5HhykaiLsoJpPleeGNYPNLU5nSH%2F8gLBzoroSJOhNJDmLX3E8R6DerY0eAcza6kFUMBxBKmHi6eTzb%2BfOp1RjtivRC3yAbk5UOOoedtIxhIBe1UY38BmU4sm%2Fd3QgAA%3D%3D"
+      }
+    },
+    "status": 400,
+    "data": {
+      "request_id": "bd6769ff-1fd2-4e2e-83c5-a822e12e611f",
+      "code": "Audio.PreprocessError",
+      "message": "No audio data received"
+    }
+  }
+]

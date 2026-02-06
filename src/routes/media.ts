@@ -12,6 +12,8 @@ import { minimaxService } from '../services/minimax.js'; // Premium voices
 import { seedanceService } from '../services/seedance.js';
 import { databaseService } from '../services/database.js';
 import { pointsService, POINT_COSTS } from '../services/points.js';
+import { dashscopeService } from '../services/dashscopeService.js';
+import { resolveVoiceId } from '../services/qwenVoiceConfig.js';
 import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
@@ -291,7 +293,7 @@ router.post('/image-to-voice', upload.single('image'), async (req, res) => {
         const publicUrl = await adminStorageService.uploadFile(
           compressedBuffer,
           'image/jpeg',
-          `story-inputs/${imgFilename}`
+          'story-inputs'
         );
         savedImageUrl = publicUrl;
 
@@ -328,6 +330,28 @@ router.post('/image-to-voice', upload.single('image'), async (req, res) => {
     // Log Start
     import('fs').then(fs => fs.appendFileSync('debug_gen.log', `[${new Date().toISOString()}]REQ: Lang = ${lang} Desc = ${imageDescription.substring(0, 30)} \n`));
 
+    // Inject User Name (Prioritize Child Profile)
+    let userName = 'Our Hero';
+    if (userId && userId !== 'demo') {
+      try {
+        const u = await databaseService.getUser(userId);
+
+        // 1. Try to find child profile name
+        let childName = '';
+        if (req.body.profileId && u && u.profiles && Array.isArray(u.profiles)) {
+          const profile = u.profiles.find((p: any) => p.id === req.body.profileId);
+          if (profile && profile.name) {
+            childName = profile.name;
+          }
+        }
+
+        // 2. Fallback to User Name
+        userName = childName || u?.name || 'Hero';
+        console.log(`[Media] Story Character Name: ${userName} (ProfileID: ${req.body.profileId || 'none'})`);
+
+      } catch (e) { console.warn("Could not fetch user name for story", e); }
+    }
+
     // Voice-Friendly Prompt (Strictly following user specs)
     let prompt = '';
     console.log(`[DEBUG] Constructing prompt for language: ${lang} `);
@@ -351,6 +375,7 @@ and user context: ${userVoiceText}.
 - Story duration: Approximately 300 - 400 words(Minimum 300 words).
 3. **Engagement**: USE EXAGGERATED HUMOR. Make it funny, surprising, and full of twists! Avoid boring linear narration.
 4. Content Style: Warm, positive, child's perspective (e.g., "little cutie").
+5. **Character Name**: The main character MUST be named "${userName}". Do not use "Lily" unless the user's name is Lily.
 
 # Output Format
   - Output plain text only, no title, no notes.
@@ -376,6 +401,7 @@ and user context: ${userVoiceText}.
 - Story duration: Approximately 300 - 400 words(Minimum 300 words).
 3. **Engagement**: USE EXAGGERATED HUMOR. Make it funny, surprising, and full of twists! Avoid boring linear narration.
 4. Content Style: Warm, positive, child's perspective (e.g., "little cutie").
+5. **Character Name**: The main character MUST be named "${userName}". Do not use "Lily" unless the user's name is Lily.
 
 # Output Format
   - Output plain text only, no title, no notes.
@@ -440,12 +466,14 @@ and user context: ${userVoiceText}.
     let voiceId = req.body.voice || 'standard'; // From frontend
     let voiceTier = req.body.voiceTier || 'standard'; // standard | premium
 
-    // ROBUSTNESS FIX: Force premium tier for known premium voice IDs
+    // ROBUSTNESS FIX: Force premium tier for known premium voice IDs OR Custom Voices
     const PREMIUM_VOICES = ['kiki', 'aiai', 'titi', 'female-shaonv'];
-    if (PREMIUM_VOICES.includes(voiceId.toLowerCase())) {
-      console.log(`[Media] Auto-detecting premium tier for voice: ${voiceId}`);
+    const isCustomVoice = req.body.customVoiceId || req.body.voice === 'my_voice' || (typeof voiceId === 'string' && voiceId.startsWith('custom_'));
+
+    if (PREMIUM_VOICES.includes(voiceId.toLowerCase()) || isCustomVoice) {
+      console.log(`[Media] Auto-detecting premium tier for voice: ${voiceId} (Custom: ${!!isCustomVoice})`);
       voiceTier = 'premium';
-      voiceId = voiceId.toLowerCase();
+      if (!isCustomVoice) voiceId = voiceId.toLowerCase();
     }
 
     console.log(`Generating Speech for lang: ${lang}, Voice: ${voiceId}, Tier: ${voiceTier}...`);
@@ -458,29 +486,66 @@ and user context: ${userVoiceText}.
       if (!fs.existsSync(outputDir)) { fs.mkdirSync(outputDir, { recursive: true }); }
 
       if (voiceTier === 'premium') {
-        // Minimax Handling for Kiki/Aiai/Titi
-        if (voiceId === 'kiki' || voiceId === 'aiai' || voiceId === 'titi') {
-          try {
-            console.log(`[TTS] Attempting Minimax Voice: ${voiceId}...`);
-            audioBuffer = await minimaxService.generateSpeech(story, voiceId);
 
-            // If successful, save and set audioUrl
+        // 1. Minimax Handling (Kiki, Aiai, Titi) OR Custom Voices (MiniMax Cloning)
+        const customId = req.body.customVoiceId; // ID from frontend for 'my_voice'
+        const isMiniMaxStandard = voiceId === 'kiki' || voiceId === 'aiai' || voiceId === 'titi';
+        const isDirectCustomId = typeof voiceId === 'string' && voiceId.startsWith('custom_');
+        // Fix: Only use MiniMax service if the custom ID explicitly looks like a MiniMax ID (starts with 'custom_')
+        const isMiniMaxCustom = customId && String(customId).startsWith('custom_');
+
+        if (isMiniMaxStandard || isMiniMaxCustom || isDirectCustomId) {
+          try {
+            const targetId = customId || voiceId;
+            console.log(`[TTS] Generating MiniMax Audio for ${targetId}...`);
+            audioBuffer = await minimaxService.generateSpeech(story, targetId);
+
             const filename = `audio-${id}.mp3`;
             const outputPath = path.join(outputDir, filename);
             fs.writeFileSync(outputPath, audioBuffer);
             audioUrl = `/generated/${filename}`;
             usedProvider = 'minimax';
-            console.log('[TTS] Minimax Audio Generated successfully:', audioUrl);
-          } catch (mErr: any) {
-            console.error(`[TTS] Minimax Failed for ${voiceId}:`, mErr.message);
-            // Log full error to file for debugging
-            import('fs').then(fs => {
-              fs.appendFileSync('minimax_debug.log', `[${new Date().toISOString()}] FAILED for ${voiceId}: ${mErr.message}\nStack: ${mErr.stack}\n`);
-            });
-            // Will fallback to OpenAI below if possible
+            console.log('[TTS] MiniMax Audio Generated successfully:', audioUrl);
+          } catch (mmErr: any) {
+            console.error(`[TTS] MiniMax Failed for ${voiceId}:`, mmErr.message);
+            // Fallback to Qwen or OpenAI below
+            console.log(`[TTS] Falling back to Qwen/OpenAI due to MiniMax error.`);
           }
         }
 
+        // 2. Qwen CosyVoice Handling for others or fallback
+        if (!audioUrl) {
+          const qwenVoiceId = resolveVoiceId(voiceId, req.body.customVoiceId);
+          // Only use Qwen if it's NOT one of the MiniMax ones we just failed on (unless we want Qwen as fallback for MiniMax?)
+          // The user wants "revert to MiniMax". If MiniMax fails, fallback to Qwen/OpenAI is good.
+
+          if (qwenVoiceId) {
+            try {
+              console.log(`[TTS] Attempting Qwen CosyVoice: ${qwenVoiceId}...`);
+              // Note: DashScope might return wav or mp3. We requested mp3 in config.
+              audioBuffer = await dashscopeService.generateSpeech({
+                text: story,
+                voice: qwenVoiceId,
+                format: 'mp3',
+                volume: (qwenVoiceId === 'boy_funny' || voiceId.toUpperCase() === 'TITI') ? 0.9 : 1.0
+              });
+
+              const filename = `audio-${id}.mp3`;
+              const outputPath = path.join(outputDir, filename);
+              fs.writeFileSync(outputPath, audioBuffer);
+              audioUrl = `/generated/${filename}`;
+              usedProvider = 'dashscope-cosyvoice';
+              console.log('[TTS] Qwen Audio Generated successfully:', audioUrl);
+
+            } catch (qErr: any) {
+              console.error(`[TTS] Qwen Failed for ${voiceId}:`, qErr.message);
+              import('fs').then(fs => {
+                fs.appendFileSync('qwen_debug.log', `[${new Date().toISOString()}] FAILED for ${voiceId}: ${qErr.message}\n`);
+              });
+              // Fallback to OpenAI below
+            }
+          }
+        }
       }
 
       // Final Fallback: OpenAI (Nova HD) - If premium failed or was never selected
@@ -581,7 +646,7 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
         savedOriginalUrl = await adminStorageService.uploadFile(
           req.file.buffer,
           req.file.mimetype,
-          `cartoons/inputs/${filename}`
+          'cartoons/inputs'
         );
         base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
 
@@ -808,7 +873,7 @@ router.post('/image-to-video/task', (req, res, next) => {
         originalImageUrl = await adminStorageService.uploadFile(
           compressedBuffer,
           'image/jpeg',
-          `animations/inputs/${filename}`
+          'animations/inputs'
         );
 
       } catch (e) {
@@ -1548,7 +1613,7 @@ router.post('/generate-picture-book', upload.single('cartoonImage'), async (req,
       originalImageUrl = await adminStorageService.uploadFile(
         req.file.buffer,
         req.file.mimetype,
-        `books/inputs/${filename}`
+        'books/inputs'
       );
     } else if (req.body.cartoonImageUrl) {
       originalImageUrl = req.body.cartoonImageUrl;
@@ -1896,8 +1961,12 @@ router.get('/history', async (req, res) => {
     }
 
     console.log(`[API] /history Fetching for: '${userId}'`);
-    const images = await databaseService.getUserImages(userId);
-    console.log(`[API] /history Returning ${images.length} images for ${userId}`);
+    const allImages = await databaseService.getUserImages(userId);
+
+    // Filter out analysis-only images (uploaded for report generation, not artwork gallery)
+    const images = allImages.filter(img => !img.meta?.isAnalysisOnly);
+
+    console.log(`[API] /history Returning ${images.length} images for ${userId} (filtered ${allImages.length - images.length} analysis images)`);
     res.json(images);
   } catch (error) {
     console.error('[API] /history Failed:', error);
@@ -2031,6 +2100,8 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
   try {
     const userId = req.body.userId;
     const userPrompt = req.body.prompt || 'Funny story';
+    const profileName = req.body.profileName;
+    const profileGender = req.body.profileGender;
     const id = uuidv4();
 
     if (!userId) return res.status(401).json({ error: 'User ID required', errorCode: 'AUTH_REQUIRED' });
@@ -2067,8 +2138,14 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
       base64Reference = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       const ext = req.file.mimetype.split('/')[1] || 'png';
       const filename = `input-${id}.${ext}`;
-      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
-      originalImageUrl = `/uploads/${filename}`;
+
+      console.log('[MagicComic] Uploading input to storage...');
+      originalImageUrl = await adminStorageService.uploadFile(
+        req.file.buffer,
+        req.file.mimetype,
+        'comics/inputs'
+      );
+
     } else if (req.body.cartoonImageUrl) {
       try {
         const fetch = global.fetch;
@@ -2076,14 +2153,20 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
         if (resp.ok) {
           const arrayBuffer = await resp.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
-          base64Reference = `data:${resp.headers.get('content-type') || 'image/jpeg'};base64,${buffer.toString('base64')}`;
+          const mimeType = resp.headers.get('content-type') || 'image/jpeg';
+          base64Reference = `data:${mimeType};base64,${buffer.toString('base64')}`;
+
           const filename = `input-${id}.png`;
-          fs.writeFileSync(path.join(uploadDir, filename), buffer);
-          originalImageUrl = `/uploads/${filename}`;
+          console.log('[MagicComic] Uploading input URL to storage...');
+          originalImageUrl = await adminStorageService.uploadFile(
+            buffer,
+            mimeType,
+            'comics/inputs'
+          );
         }
       } catch (e) {
-        console.error("URL Fetch failed", e);
-        base64Reference = ''; // Ensure empty string on fail
+        console.error("URL Fetch/Upload failed", e);
+        base64Reference = '';
       }
     }
 
@@ -2123,11 +2206,37 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
       }
     }
 
+    // Gender-based name injection (same logic as Picture Book)
+    let characterGender = 'neutral';
+    try {
+      const anchors = await geminiService.extractVisualAnchors(base64Reference);
+      characterGender = anchors.character_gender || 'neutral';
+      console.log(`[MagicComic] Detected Character Gender: ${characterGender}`);
+    } catch (e) {
+      console.warn('[MagicComic] Gender detection failed, using neutral');
+    }
+
+    const shouldUseProfileName = (
+      profileName &&
+      profileGender &&
+      characterGender &&
+      profileGender.toLowerCase() === characterGender.toLowerCase()
+    );
+
+    const characterName = shouldUseProfileName ? profileName : undefined;
+    console.log(`[MagicComic] Gender Match: ${shouldUseProfileName}, Using Name: ${characterName || 'AI-generated'}`);
+
+    // Inject name into prompt if gender matches
+    let finalPrompt = userPrompt;
+    if (characterName) {
+      finalPrompt = `${userPrompt}. The main character's name is ${characterName}.`;
+    }
+
     // 4. Generate Script (4 Panels)
     let panels = [];
     try {
       // Use Doubao to summarize/create 4 panels directly
-      panels = await doubaoService.summarizeStoryToComicPanels(userPrompt);
+      panels = await doubaoService.summarizeStoryToComicPanels(finalPrompt);
     } catch (scriptErr) {
       console.error('[MagicComic] Script Gen Failed:', scriptErr);
       // Fallback
@@ -2181,6 +2290,27 @@ router.post('/generate-magic-comic', upload.single('cartoonImage'), async (req, 
     } catch (genErr) {
       console.error('[MagicComic] Image Gen Failed:', genErr);
       gridImageUrl = 'https://placehold.co/1024x1024/png?text=Comic+Gen+Failed';
+    }
+
+    // 4.5 Upload to Persistent Storage (CORS Fix & Persistence)
+    if (gridImageUrl && !gridImageUrl.includes('placehold.co')) {
+      try {
+        console.log(`[MagicComic] Uploading to permanent storage: ${gridImageUrl}`);
+        const fetch = global.fetch;
+        const imgResp = await fetch(gridImageUrl);
+
+        if (imgResp.ok) {
+          const arrayBuffer = await imgResp.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const fileName = `generated/comic-${id}.png`;
+
+          // Upload to Firebase
+          gridImageUrl = await adminStorageService.uploadFile(buffer, 'image/png', fileName);
+          console.log(`[MagicComic] Permanent URL: ${gridImageUrl}`);
+        }
+      } catch (uploadErr) {
+        console.error('[MagicComic] Upload to storage failed, maintaining temp URL:', uploadErr);
+      }
     }
 
     // 5. Save Record
@@ -2296,8 +2426,14 @@ router.post('/generate-magic-book', upload.single('cartoonImage'), async (req, r
       base64Reference = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       const ext = req.file.mimetype.split('/')[1] || 'png';
       const filename = `input-book-${id}.${ext}`;
-      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
-      originalImageUrl = `/uploads/${filename}`;
+
+      console.log('[MagicBook] Uploading input to storage...');
+      originalImageUrl = await adminStorageService.uploadFile(
+        req.file.buffer,
+        req.file.mimetype,
+        'books/inputs'
+      );
+
     } else if (req.body.cartoonImageUrl) {
       try {
         const fetchFn = typeof fetch !== 'undefined' ? fetch : (await import('node-fetch')).default as any;
@@ -2305,13 +2441,19 @@ router.post('/generate-magic-book', upload.single('cartoonImage'), async (req, r
         if (r.ok) {
           const b = await r.arrayBuffer();
           const buffer = Buffer.from(b);
-          base64Reference = `data:${r.headers.get('content-type') || 'image/jpeg'};base64,${buffer.toString('base64')}`;
+          const mimeType = r.headers.get('content-type') || 'image/jpeg';
+          base64Reference = `data:${mimeType};base64,${buffer.toString('base64')}`;
+
           const filename = `input-book-${id}.png`;
-          fs.writeFileSync(path.join(uploadDir, filename), buffer);
-          originalImageUrl = `/uploads/${filename}`;
+          console.log('[MagicBook] Uploading input URL to storage...');
+          originalImageUrl = await adminStorageService.uploadFile(
+            buffer,
+            mimeType,
+            'books/inputs'
+          );
         }
       } catch (e) {
-        console.error("[MagicBook] Reference image fetch failed", e);
+        console.error("[MagicBook] Reference image fetch/upload failed", e);
       }
     }
 
@@ -2794,8 +2936,30 @@ router.post('/magic-art', async (req, res) => {
       return res.status(500).json({ error: 'Magic creation failed due to API error' });
     }
 
-    // 5. Save Record
+    // 4. Save Record
     if (imageUrl) {
+      // 4a. Upload Input Image to ensure persistence (for History/Profile side-by-side)
+      let persistentInputUrl = "";
+      try {
+        if (image && image.startsWith('data:image')) {
+          console.log('[MagicArt] Uploading original input to storage...');
+          // Extract base64
+          const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            const type = matches[1];
+            const buffer = Buffer.from(matches[2], 'base64');
+            const ext = type.split('/')[1] || 'jpeg';
+            const filename = `magic-input-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`;
+
+            persistentInputUrl = await adminStorageService.uploadFile(buffer, type, 'magic-art/inputs');
+            console.log('[MagicArt] Input saved:', persistentInputUrl);
+          }
+        }
+      } catch (uploadErr) {
+        console.error('[MagicArt] Failed to save input image:', uploadErr);
+        // Non-critical, continue
+      }
+
       await databaseService.saveImageRecord(
         userId || 'anonymous',
         imageUrl,
@@ -2805,7 +2969,8 @@ router.post('/magic-art', async (req, res) => {
           mode,
           stylePreset,
           originalPrompt: prompt,
-          source: 'magic-art-studio'
+          source: 'magic-art-studio',
+          originalImageUrl: persistentInputUrl // Key fix for Profile comparison
         }
       );
     }
@@ -2872,6 +3037,94 @@ router.post('/cleanup-profile', async (req, res) => {
   } catch (error: any) {
     console.error('[Cleanup] Failed:', error);
     res.status(500).json({ error: 'Cleanup failed' });
+  }
+});
+
+
+// ==========================================
+// MAGIC TOY MAKER (Image to 3D)
+// ==========================================
+router.post('/image-to-3d', upload.single('image'), async (req, res) => {
+  const userId = req.body.userId;
+  console.log(`[Media] /image-to-3d hit for User ${userId}`);
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID required' });
+  }
+
+  try {
+    // 0. Check Points (Scheme A: 50 Gems for high quality default)
+    // Actually, user suggested "Preview (10) + High Qual (30)".
+    // Backend Implementation: We charge 50 for the whole generation for simplicity now (Scheme A).
+    // Or we charge 10 for task creation? 
+    // Let's implement Scheme A (50 gems) for now to get it working.
+    const action = 'generate_3d_model';
+    // We need to add 'generate_3d_model' to point costs or reuse an existing one like 'generate_video' (50).
+    // I'll assume 'generate_video' cost or similar. Or just hardcode logic elsewhere.
+    // For now, I'll attempt to consume 'generate_image'. No, 3D is more expensive.
+    // I'll use 'generate_video' (50 points).
+
+    // Check balance
+    const deduction = await pointsService.consumePoints(userId, 'generate_video_5s'); // 50 pts
+    if (!deduction.success) {
+      if (deduction.error === 'NOT_ENOUGH_POINTS') {
+        return res.status(200).json({ success: false, errorCode: 'NOT_ENOUGH_POINTS' });
+      }
+      return res.status(500).json({ error: deduction.error || 'Points transaction failed' });
+    }
+
+    // 1. Get Image URL
+    let imageUrl = '';
+    if (req.file) {
+      // Upload to Cloud Storage
+      const fileExt = req.file.mimetype.split('/')[1] || 'png';
+      imageUrl = await adminStorageService.uploadFile(req.file.buffer, req.file.mimetype, '3d/inputs');
+    } else if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    console.log(`[Media] Starting 3D Task for image: ${imageUrl}`);
+
+    // 2. Call Doubao Service
+    const taskId = await doubaoService.create3DGenerationTask(imageUrl);
+
+    // 3. Save initial record? Optional. We can save when finished.
+
+    res.json({ success: true, taskId, initialStatus: 'QUEUED' });
+
+  } catch (error: any) {
+    console.error('[Media] 3D Task Failed:', error);
+    // Refund?
+    try {
+      await pointsService.refundPoints(userId, 'generate_video_5s', '3d_failed');
+    } catch (refundErr) {
+      console.error('[Media] Refund failed after 3D error:', refundErr);
+    }
+    res.status(500).json({
+      error: 'Failed to start 3D generation',
+      details: error.message || String(error)
+    });
+  }
+});
+
+router.get('/tasks/:taskId', async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const result = await doubaoService.get3DTaskStatus(taskId);
+
+    res.json({
+      status: result.status, // Normalized SUCCEEDED, FAILED, or PENDING
+      progress: result.progress,
+      modelUrl: result.modelUrl,
+      error: result.error,
+      raw: result.raw
+    });
+
+  } catch (error: any) {
+    console.error('[Media] Get Task Failed:', error);
+    res.status(500).json({ error: 'Failed to get task status' });
   }
 });
 

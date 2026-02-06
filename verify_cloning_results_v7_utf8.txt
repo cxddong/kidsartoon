@@ -1,0 +1,94 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 鈿欙笍  write to custom object with { processEnv: myObject }
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770110613127.wav
+[DashScope] Starting registration for user test_user_fix_1770112156797 with file voice_1770110613127.wav
+[DashScope] Transcoding to WAV-48V for enrollment...
+[DashScope] Enrollment attempt 1/3
+node.exe : [DashScope] En
+rollment failed (Enrollme
+nt Failed (400): {"reques
+t_id":"94a1ec59-50f4-4027
+-a991-2b81efe3bd92","code
+":"Audio.PreprocessError"
+,"message":"No audio data
+ received"}), retrying in
+ 5000ms...
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nod
+ejs/node.exe" "C:\Program
+ Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo       
+       : NotS    pecified
+: ([Das    hScope] Enr...
+n    g in 5000ms...:    S
+tring) [], Rem    oteExce
+ption
+    + FullyQualifie    dE
+rrorId : Nati    veComman
+dError
+ 
+[DashScope] Enrollment attempt 2/3
+[DashScope] Enrollment fa
+iled (Enrollment Failed (
+400): {"request_id":"df1a
+50e0-f9a8-4770-8481-3aa2a
+d1b3371","code":"Audio.Pr
+eprocessError","message":
+"No audio data received"}
+), retrying in 10000ms...
+[DashScope] Enrollment attempt 3/3
+[DashScope] Voice registr
+ation terminal failure: F
+etchError: request to htt
+ps://dashscope.aliyuncs.c
+om/api/v1/services/audio/
+tts/customization failed,
+ reason: Client network s
+ocket disconnected before
+ secure TLS connection wa
+s established
+    at ClientRequest.<ano
+nymous> (D:\KAT\KAT\node_
+modules\node-fetch\lib\in
+dex.js:1501:11)
+    at ClientRequest.emit
+ (node:events:507:28)
+    at emitErrorEvent (no
+de:_http_client:106:11)
+    at TLSSocket.socketEr
+rorListener (node:_http_c
+lient:574:5)
+    at TLSSocket.emit (no
+de:events:507:28)
+    at emitErrorNT (node:
+internal/streams/destroy:
+170:8)
+    at emitErrorCloseNT (
+node:internal/streams/des
+troy:129:3)
+    at process.processTic
+ksAndRejections (node:int
+ernal/process/task_queues
+:90:21) {
+  type: 'system',
+  errno: 'ECONNRESET',
+  code: 'ECONNRESET'
+}
+CAUGHT ERROR:
+request to https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization failed, reason: Client network socket disconnected before secure TLS connection was established
+UNKNOWN ERROR: FetchError: request to https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization failed, reason: Client network socket disconnected before secure TLS connection was established
+    at ClientRequest.<anonymous> (D:\KAT\KAT\node_modules\node-fetch\lib\index.js:1501:11)
+    at ClientRequest.emit (node:events:507:28)
+    at emitErrorEvent (node:_http_client:106:11)
+    at TLSSocket.socketErrorListener (node:_http_client:574:5)
+    at TLSSocket.emit (node:events:507:28)
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  type: 'system',
+  errno: 'ECONNRESET',
+  code: 'ECONNRESET'
+}

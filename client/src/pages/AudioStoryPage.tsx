@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, Upload, Sparkles, Check, Play, Pause, ArrowLeft, Music, Heart, Zap, Hand, Lock, Volume, Smile, Moon, Rocket, Gift, Castle, Wand2, Snowflake, TreeDeciduous, Footprints, Globe, Fish, Flame, Palette, PawPrint, Users, Cake, Waves, CloudUpload, RotateCw } from 'lucide-react';
+import { Volume2, Upload, Sparkles, Check, Play, Pause, ArrowLeft, Music, Heart, Zap, Hand, Lock, Volume, Smile, Moon, Rocket, Gift, Castle, Wand2, Snowflake, TreeDeciduous, Footprints, Globe, Fish, Flame, Palette, PawPrint, Users, Cake, Waves, CloudUpload, RotateCw, Mic } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import GenerationCancelButton from '../components/GenerationCancelButton';
 import { cn } from '../lib/utils';
@@ -26,6 +26,7 @@ export const AudioStoryPage: React.FC = () => {
 
     // Voice Cloning State
     const [isRecorderOpen, setIsRecorderOpen] = useState(false);
+    const [recorderProvider, setRecorderProvider] = useState<'minimax' | 'qwen'>('qwen');
     const [justClonedVoiceId, setJustClonedVoiceId] = useState<string | null>(null); // To auto-retry generation
 
     // Steps: 1:Upload, 2:Audio/Story, 3:Result
@@ -207,6 +208,7 @@ export const AudioStoryPage: React.FC = () => {
             const hasCustomVoice = user?.customVoice?.voiceId || justClonedVoiceId;
             if (!hasCustomVoice) {
                 // Open Recorder
+                setRecorderProvider('qwen');
                 setIsRecorderOpen(true);
                 return; // Stop flow
             }
@@ -268,6 +270,7 @@ export const AudioStoryPage: React.FC = () => {
                 // Robust Custom Voice Lookup
                 let myVoiceId = justClonedVoiceId;
 
+                // Check Array (New Schema)
                 // Check Array (New Schema)
                 if (!myVoiceId && user?.customVoices && Array.isArray(user.customVoices) && user.customVoices.length > 0) {
                     const lastVoice = user.customVoices[user.customVoices.length - 1];
@@ -505,12 +508,30 @@ export const AudioStoryPage: React.FC = () => {
                 isOpen={isRecorderOpen}
                 onClose={() => setIsRecorderOpen(false)}
                 userId={user?.uid || ''}
+                provider={recorderProvider}
                 onVoiceCloned={(id) => {
                     setJustClonedVoiceId(id);
                     // Optional: Auto-trigger generation or show success
                     alert("Voice Cloned! Click 'Generate' again to use your new voice.");
                 }}
             />
+
+            {/* Quick Access to Voice Labs */}
+            <div className="absolute top-4 right-4 z-50 flex flex-col gap-2">
+                {/* Magic Voice Lab (Qwen) */}
+                <button
+                    onClick={() => { setRecorderProvider('qwen'); setIsRecorderOpen(true); }}
+                    className="p-3 bg-white/50 backdrop-blur-md rounded-2xl shadow-sm hover:bg-white transition-all flex items-center gap-2 border-2 border-transparent hover:border-indigo-400"
+                >
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <div className="text-left hidden md:block">
+                        <div className="text-xs font-bold text-slate-500">New Feature</div>
+                        <div className="text-xs font-black text-slate-800">Magic Voice Lab 🎤</div>
+                    </div>
+                </button>
+            </div>
 
             <MagicNavBar />
         </div >

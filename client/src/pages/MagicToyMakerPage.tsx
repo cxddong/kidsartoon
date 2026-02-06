@@ -114,10 +114,8 @@ export const MagicToyMakerPage: React.FC = () => {
 
             if (!res.ok || !data.success) {
                 // Check for point error
-                if (data.errorCode === 'NOT_ENOUGH_POINTS') {
-                    throw new Error('Not enough gems! You need 50 gems.');
-                }
-                throw new Error(data.error || 'Failed to start magic.');
+                const errMsg = data.details ? `${data.error}: ${data.details}` : (data.error || 'Failed to start magic.');
+                throw new Error(errMsg);
             }
 
             setTaskId(data.taskId);

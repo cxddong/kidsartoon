@@ -1,0 +1,9 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 鉁?audit secrets and track compliance: https://dotenvx.com/ops
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\test_output.mp3
+[DashScope] Processing enrollment for file: D:\KAT\KAT\test_output.mp3
+[DashScope] Audio format: audio/mpeg, size: 195884 bytes
+[DashScope] Generated safe name: v87fb1ccz61
+CAUGHT ERROR:
+Voice Cloning Failed: Voice Cloning Failed (401): {"code":"InvalidApiKey","message":"Invalid API-key provided.","request_id":"5aacf0be-5841-4505-bb33-0a1b03508c96"}
+PARTIAL SUCCESS/FAIL: API reached but failed with: Voice Cloning Failed: Voice Cloning Failed (401): {"code":"InvalidApiKey","message":"Invalid API-key provided.","request_id":"5aacf0be-5841-4505-bb33-0a1b03508c96"}

@@ -1,0 +1,35 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 鈿欙笍  suppress all logs with { quiet: true }
+
+--- Testing Model: qwen3-tts-flash ---
+Status: 200
+Response: {
+  "output": {
+    "audio": {
+      "data": "",
+      "expires_at": 1770201603,
+      "id": "audio_9c6411db-a5c2-45d6-8094-4b78bce47194",
+      "url": "http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/1d/4b/20260203/0d5ce7dd/8d627d79-18f5-4ed1-9e4c-1977a48ee021.wav?Expires=1770201603&OSSAccessKeyId=LTAI5tKPD3TMqf2Lna1fASuh&Signature=LtvnWEilWysZiqjXkpty2E7giJw%3D"
+    },
+    "finish_reason": "stop"
+  },
+  "usage": {
+    "characters": 57
+  },
+  "request_id": "9c6411db-a5c2-45d6-8094-4b78bce47194"
+}
+
+--- Testing Model: cosyvoice-v3-plus ---
+Status: 400
+Response: {
+  "request_id": "df1cd2ce-afa6-4dd9-aaab-1bcacffaec00",
+  "code": "InvalidParameter",
+  "message": "url error, please check url锛?For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+}
+
+--- Testing Model: cosyvoice-v3-flash ---
+Status: 400
+Response: {
+  "request_id": "acae1327-fb67-4dcd-bd37-308ad41be783",
+  "code": "InvalidParameter",
+  "message": "url error, please check url锛?For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "variation": "dashscope://file-id/b6f0a3af-d6b2-456d-8a1d-6610ea1f3c80",
+    "status": 400,
+    "data": {
+      "request_id": "1053b3a2-5c0e-49bf-adcb-7231ea481c92",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "variation": "dashscope://file-id-b6f0a3af-d6b2-456d-8a1d-6610ea1f3c80",
+    "status": 400,
+    "data": {
+      "request_id": "7dbf9312-b085-498c-a65e-0b5632575077",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "variation": "dashscope://file/b6f0a3af-d6b2-456d-8a1d-6610ea1f3c80",
+    "status": 400,
+    "data": {
+      "request_id": "2ac09d5b-cc93-421d-8d82-1f251ce21342",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "variation": "dashscope://file-v1/b6f0a3af-d6b2-456d-8a1d-6610ea1f3c80",
+    "status": 400,
+    "data": {
+      "request_id": "59014a24-18b0-47eb-99e6-43468452fe34",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "variation": "dashscope://file_id/b6f0a3af-d6b2-456d-8a1d-6610ea1f3c80",
+    "status": 400,
+    "data": {
+      "request_id": "e31f45a2-d7d1-4fd7-9827-5b79b809facc",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "variation": "b6f0a3af-d6b2-456d-8a1d-6610ea1f3c80",
+    "status": 400,
+    "data": {
+      "request_id": "5e2502f8-2545-4da1-bba9-ffcceadb9943",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  }
+]

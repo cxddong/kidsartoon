@@ -1,0 +1,32 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 馃摗 add observability to secrets: https://dotenvx.com/ops
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770110613127.wav
+[DashScope] Starting registration for user test_user_fix_1770112591563 with file voice_1770110613127.wav
+[DashScope] Uploading enrollment file: voice_1770110613127.wav
+[DashScope] File upload success. FileID: 0e2d937b-3a2f-415c-a56e-aaf6b8c81ddc
+[DashScope] Enrollment attempt 1/3 using FileID: 0e2d937b-3a2f-415c-a56e-aaf6b8c81ddc
+CAUGHT ERROR:
+Enrollment Failed (400): {"request_id":"606e7cb8-89ad-4526-8fbc-1603e197dbf5","code":"InvalidURL","message":"Invalid URL provided in your request."}
+node.exe : FAIL: Inv
+alid URL error persi
+sts.
+所在位置 行:1 字符: 1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (FAIL   
+ : Invalid URL e    
+rror persists.:    S
+tring) [], Rem    ot
+eException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 

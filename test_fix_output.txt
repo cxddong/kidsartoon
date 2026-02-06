@@ -1,0 +1,47 @@
+[dotenv@17.2.3] injecting env (25) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+Testing qwen3-tts-flash with custom voice...
+Success! Status: 200
+Chunk: id:1
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: G8/5v+vwOH/hIA7ADH/8f/iP/7/wMBc/8dAPP+lP9PAcH/9f5t
+Chunk: XB+Rr/OwOXB58HfwgfCV8Kbww/C78KfwzPD98U3xUfFf8S/w/P
+Chunk: id:2
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: Hs4eoB6QHmgePB3kHfIenJ+I8KnxQfHZ8dHx1/Gh8XPxQfEL8O
+Chunk: id:3
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: sB6gDdAFcAEQAGAAsANADy//z/HwD9/zj/Cf5d/Vn8efqp+dH3
+Chunk: id:4
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: H/awAn/msD9fzlAGsBP/6xAfH9mQEp/ZEBCAD//qcBMf9a/9YA
+Chunk: id:5
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: n4YfXh8OHsgeph6WHoYebB5EHm4elB71H0EflJ/l8FLw0fE58Y
+Chunk: id:6
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: sAzf3J/Mf/sf0l/TL/mf0x/CH8afw5/l38Wftp/EX+ifyB+qH8
+Chunk: id:7
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: kBtwHBAckB1wHfAeMB5wHpAfkBAwIPAhMCEwIXAhMCGwInAisC
+Chunk: id:8
+event:result
+:HTTP_STATUS/200
+data:{"output":
+Chunk: id:9
+event:result
+:HTTP_STATUS/200
+data:{"output":

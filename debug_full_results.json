@@ -1,0 +1,47 @@
+{
+  "upload": {
+    "data": {
+      "uploaded_files": [
+        {
+          "name": "voice_1770110613127.wav",
+          "file_id": "44d14fb4-cadb-4871-be4b-b6ef3a429361"
+        }
+      ],
+      "failed_uploads": []
+    },
+    "request_id": "10437268-5487-491d-a8d5-8b483abd1340"
+  },
+  "details": {
+    "data": {
+      "id": 224071452,
+      "name": "voice_1770110613127.wav",
+      "size": 210318,
+      "md5": "62D3HzYoSp0Pg8B77VXI4A==",
+      "region": "cn-beijing",
+      "file_id": "44d14fb4-cadb-4871-be4b-b6ef3a429361",
+      "url": "http://dashscope-file-mgr.oss-cn-beijing.aliyuncs.com/api-fs/1052894881827664/2470193/44d14fb4-cadb-4871-be4b-b6ef3a429361/voice_1770110613127.wav?Expires=1770198438&OSSAccessKeyId=STS.NZiMDmEyQSfsHik278GvcjaCf&Signature=w%2BG020kPV3U7sIFstvfVk6KArv8%3D&security-token=CAIS1AJ1q6Ft5B2yfSjIr5ncBv7ZqKZw5KSYSk%2Fa1jdtS%2FlPhaTohDz2IHhMdHFqBOwasfQ1nWxY7P0Ylrp6SJtIXleCZtF94oxN9h2gb4fb4xQqNnWu08%2FLI3OaLjKm9u2wCryLYbGwU%2FOpbE%2B%2B5U0X6LDmdDKkckW4OJmS8%2FBOZcgWWQ%2FKBlgvRq0hRG1YpdQdKGHaONu0LxfumRCwNkdzvRdmgm4NgsbWgO%2Fks0SD0gall7ZO%2FNiqfcL%2FMvMBZskvD42Hu8VtbbfE3SJq7BxHybx7lqQs%2B02c5onNWwMMv0nZY7CNro01d1VjFqQhXqBFqPW5jvBipO3YmsHv0RFBeOZOSDQE1i1TRm1UcgnAGaHaFd6TUxylurgEhiHitpltajvduFf%2Ft2aF7tukFV11LB%2BTQ4T8wwvBeTyIQKP%2B27p92qEYoRiWu7TDSTeBK056pNRDUvdUGoABqXfVc34d1T3yAvTT6UWD8hX4ywroO3v8pQLcG0iDNWag4uaF8OxdYQSkZhWetL323UFIeq%2FP5nRQbMIo5e%2F6DD8k7PN7ga6YoBUiYh9J3vMiTX8OJ1qdCOVCx9gZj5MeOTLVdCTkAh2AFsARG9eYy5wK1P4Jw0gE2mwvC%2BSaiIsgAA%3D%3D",
+      "user_id": "1052894881827664",
+      "api_key_id": "2470193",
+      "gmt_create": "2026-02-03 17:47:17"
+    },
+    "request_id": "23a09999-4254-4506-b995-449fb8454ca1"
+  },
+  "results": [
+    {
+      "variation": "dashscope://file-id/44d14fb4-cadb-4871-be4b-b6ef3a429361",
+      "response": {
+        "request_id": "859b649f-6225-41ba-8f90-1e3a1e2569d0",
+        "code": "InvalidURL",
+        "message": "Invalid URL provided in your request."
+      }
+    },
+    {
+      "variation": "dashscope://file/44d14fb4-cadb-4871-be4b-b6ef3a429361",
+      "response": {
+        "request_id": "4a967e65-c77e-4a99-b80f-08df12ca98a4",
+        "code": "InvalidURL",
+        "message": "Invalid URL provided in your request."
+      }
+    }
+  ]
+}

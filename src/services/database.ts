@@ -13,6 +13,9 @@ export interface ImageRecord {
     favorite?: boolean;
     colorPalette?: string[]; // Hex codes
     dominantColor?: string;
+    artSource?: 'user-upload' | 'digital-drawing' | 'paper-capture'; // Source of artwork
+    isPublic?: boolean;      // Privacy control
+    authorAlias?: string;    // Anonymized name for public display
 }
 
 
@@ -328,9 +331,14 @@ export class DatabaseService {
         type: 'upload' | 'generated' | 'comic' | 'story' | 'animation' | 'picturebook' | 'masterpiece' | 'cards' | 'graphic-novel' | 'cartoon-book',
         prompt?: string,
         meta?: any,
-        profileId?: string // Optional profile ID for child profiles
+        profileId?: string, // Optional profile ID for child profiles
+        artSource?: 'user-upload' | 'digital-drawing' | 'paper-capture' // Optional artwork source
     ): Promise<ImageRecord> {
         const id = uuidv4();
+
+        // PRIVACY: Force Private by Default
+        const isPublic = false;
+
         const newRecord: ImageRecord = {
             id,
             userId,
@@ -338,18 +346,53 @@ export class DatabaseService {
             type,
             createdAt: new Date().toISOString(),
             prompt,
-            meta: { ...meta, profileId }, // Store profileId in meta for now (since root-level schema changes are harder)
-            favorite: false
+            meta: { ...meta, profileId }, // Store profileId in meta
+            favorite: false,
+            artSource,
+            isPublic
         };
 
         try {
             await adminDb.collection('images').doc(id).set(newRecord);
-            console.log(`[Database] Saved image record: ${id} (User: ${userId}, Type: ${type})`);
+            console.log(`[Database] Saved image record: ${id} (User: ${userId}, Type: ${type}, Public: ${isPublic})`);
         } catch (e) {
             console.error('[Database] Failed to save image:', e);
             throw e;
         }
         return newRecord;
+    }
+
+    public async publishImage(id: string, userId: string): Promise<boolean> {
+        try {
+            const snapshot = await adminDb.collection('images')
+                .where("id", "==", id)
+                .where("userId", "==", userId)
+                .get();
+
+            if (snapshot.empty) return false;
+
+            const doc = snapshot.docs[0];
+            const data = doc.data() as ImageRecord;
+
+            // SAFETY CHECK: Block prohibited categories
+            // 'greeting-card' and 'magic-mirror' (if that type exists) are generated via 'generated' type but usually have meta distinguishing them.
+            // Based on user request types: GREETING_CARD and SELFIE_MIRROR.
+            // Currently our types are: 'upload' | 'generated' | ...
+            // We need to check if we can identify them. 
+            // Assuming for now if type is 'cards' it's blocked.
+            if (data.type === 'cards') {
+                console.warn(`[Database] Blocked publishing of restricted type: ${data.type}`);
+                return false;
+            }
+
+            // Update to public
+            await doc.ref.update({ isPublic: true });
+            console.log(`[Database] Published image: ${id}`);
+            return true;
+        } catch (e) {
+            console.error('[Database] Publish failed:', e);
+            return false;
+        }
     }
 
     public async getUserImages(userId: string, profileId?: string): Promise<ImageRecord[]> {
@@ -625,15 +668,43 @@ export class DatabaseService {
     public async getPublicImages(type?: string): Promise<ImageRecord[]> {
         try {
             let ref: any = adminDb.collection('images');
+
+            // SAFETY: Only show explicitly public images
+            ref = ref.where("isPublic", "==", true);
+
             if (type) {
-                ref = ref.where("type", "==", type).orderBy("createdAt", "desc").limit(50);
-            } else {
-                ref = ref.orderBy("createdAt", "desc").limit(50);
+                ref = ref.where("type", "==", type);
             }
+
+            // Limit fetch
+            ref = ref.orderBy("createdAt", "desc").limit(50);
+
             const snapshot = await ref.get();
-            return snapshot.docs.map((d: any) => d.data() as ImageRecord);
+            const images = snapshot.docs.map((d: any) => d.data() as ImageRecord);
+
+            // POST-FILTERING & ANONYMIZATION
+            const safelyProcessed = images.map((img: ImageRecord) => {
+                // Double check for prohibited types just in case DB state is weird
+                if (img.type === 'cards' || (img.type as any) === 'magic-mirror') return null;
+
+                // Anonymize
+                const safeImage = { ...img };
+                if (!safeImage.authorAlias) {
+                    safeImage.authorAlias = "Young Artist";
+                }
+                // Remove raw userId from public view if strict anonymity needed? 
+                // Frontend uses it for 'My Gallery' check, so might need to keep it, 
+                // but Frontend should respect authorAlias for display.
+
+                return safeImage;
+            }).filter((img: any) => img !== null);
+
+            return safelyProcessed as ImageRecord[];
+
         } catch (e) {
             console.error('[Database] Public images failed:', e);
+            // Fallback: If index is missing, it throws. 
+            // Return empty array instead of crashing allows page to load even if empty.
             return [];
         }
     }

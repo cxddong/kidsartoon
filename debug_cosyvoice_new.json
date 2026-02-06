@@ -1,0 +1,50 @@
+[
+  {
+    "config": {
+      "model": "voice-enrollment",
+      "key": "url"
+    },
+    "status": 400,
+    "data": {
+      "request_id": "b13f22d5-6681-4388-beee-49f4cd3a4d1b",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "config": {
+      "model": "voice-enrollment",
+      "key": "audio_url"
+    },
+    "status": 400,
+    "data": {
+      "request_id": "b43f82be-c94f-42dc-8657-0b8984d3e910",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "config": {
+      "model": "qwen-voice-enrollment",
+      "key": "url"
+    },
+    "status": 400,
+    "data": {
+      "request_id": "4a3e1de1-16f2-4020-a1e4-18314a7db2b1",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "config": {
+      "model": "qwen-voice-enrollment",
+      "key": "audio_url"
+    },
+    "status": 400,
+    "data": {
+      "request_id": "638d9be0-0562-48e5-b3ac-dbb8a2eddd98",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  }
+]

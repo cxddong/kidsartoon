@@ -118,14 +118,31 @@ export class GeminiService {
      * Analyze image with cross-provider fallback
      */
     async analyzeImage(base64Image: string, prompt: string = "Describe this image in detail."): Promise<string> {
-        const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+        let cleanBase64 = base64Image;
+
+        // Auto-convert URL to base64 if needed
+        if (base64Image.startsWith('http')) {
+            try {
+                console.log(`[GeminiService] Fetching image from URL: ${base64Image.slice(0, 50)}...`);
+                const response = await fetch(base64Image);
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                cleanBase64 = buffer.toString('base64');
+            } catch (e: any) {
+                console.error(`[GeminiService] Failed to fetch image from URL: ${e.message}`);
+                return "I couldn't access the drawing to see it. Please try again!";
+            }
+        } else {
+            cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+        }
 
         // 1. Try OpenAI Vision
         try {
             const openai = getOpenAI();
             if (openai) {
                 const modelName = MODEL_ROUTER_OPENAI.vision;
-                console.log(`[GeminiService->OpenAI] Analyzing Image with ${modelName}...`);
+                // console.log(`[GeminiService->OpenAI] Analyzing Image with ${modelName}...`); 
+                // Commented out to reduce log noise
                 const response = await openai.chat.completions.create({
                     model: modelName,
                     messages: [
@@ -150,8 +167,8 @@ export class GeminiService {
         try {
             const genAI = getGoogleGenAI();
             if (genAI) {
-                console.log("[GeminiService->Gemini] Analyzing Image with Gemini 1.5 Flash...");
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                // console.log("[GeminiService->Gemini] Analyzing Image with Gemini 1.5 Flash...");
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Verified model name
                 const result = await model.generateContent([
                     prompt,
                     { inlineData: { data: cleanBase64, mimeType: "image/jpeg" } }
@@ -518,23 +535,27 @@ Create exactly ${pageCount} pages with a complete story arc.`;
         const prompt = `Analyze this drawing and extract:
 1. Character Description: Detailed physical description
 2. Art Style: The artistic style (cartoon, realistic, watercolor, etc.)
+3. Character Gender: The apparent gender of the main character (boy, girl, or neutral)
 
 Return JSON:
 {
   "character_description": "detailed description",
-  "art_style": "style name"
+  "art_style": "style name",
+  "character_gender": "boy|girl|neutral"
 }`;
 
         try {
             const result = await this.analyzeImageJSON(base64Image, prompt);
             return {
                 character_description: result.character_description || "A creative character",
-                art_style: result.art_style || "cartoon"
+                art_style: result.art_style || "cartoon",
+                character_gender: result.character_gender || "neutral"
             };
         } catch (e) {
             return {
                 character_description: "A creative magical character",
-                art_style: "cartoon"
+                art_style: "cartoon",
+                character_gender: "neutral"
             };
         }
     }

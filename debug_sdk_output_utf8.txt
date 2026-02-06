@@ -1,0 +1,51 @@
+﻿node.exe : D:\KAT\KA
+T\debug_sdk.ts:1
+所在位置 行:1 字符: 1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (D:\K   
+ AT\KAT\debug_sd    
+k.ts:1:String)     [
+], RemoteExcep    ti
+on
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+import dashscope fro
+m 'dashscope';
+       ^
+
+SyntaxError: The req
+uested module 'dashs
+cope' does not provi
+de an export named '
+default'
+    at #_instantiate
+ (node:internal/modu
+les/esm/module_job:2
+54:21)
+    at async ModuleJ
+ob.run (node:interna
+l/modules/esm/module
+_job:363:5)
+    at async onImpor
+t.tracePromise.__pro
+to__ (node:internal/
+modules/esm/loader:6
+69:26)
+    at async asyncRu
+nEntryPointWithESMLo
+ader (node:internal/
+modules/run_main:101
+:5)
+
+Node.js v24.5.0

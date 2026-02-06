@@ -1,0 +1,55 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 鈿欙笍  suppress all logs with { quiet: true }
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770110613127.wav
+[DashScope] Starting registration for user test_user_fix_1770112407532 with file voice_1770110613127.wav
+[DashScope] Uploading enrollment file: voice_1770110613127.wav
+[DashScope] File upload success. FileID: 59db7072-51d2-4453-8f24-7b71443c83a1
+[DashScope] Enrollment attempt 1/3 (File: 59db7072-51d2-4453-8f24-7b71443c83a1)
+node.exe : [DashScop
+e] Voice registratio
+n terminal failure: 
+Error: Enrollment Fa
+iled (400): {"reques
+t_id":"0111f0d8-f0ac
+-4898-a4ea-192bf488b
+d4f","code":"Invalid
+URL","message":"Inva
+lid URL provided in 
+your request."}
+所在位置 行:1 字符: 1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotSpe
+cified:     ([DashSc
+ope] Voi...y    our 
+request."}:Strin    
+g) [], RemoteExcepti
+    on
+    + FullyQualified
+Erro    rId : Native
+CommandE    rror
+ 
+    at Object.regist
+erCustomVoice (D:\KA
+T\KAT\src\services\d
+ashscopeService.ts:2
+62:27)
+    at process.proce
+ssTicksAndRejections
+ (node:internal/proc
+ess/task_queues:105:
+5)
+    at async test (D
+:\KAT\KAT\verify_voi
+ce_cloning.ts:18:25)
+CAUGHT ERROR:
+Enrollment Failed (400): {"request_id":"0111f0d8-f0ac-4898-a4ea-192bf488bd4f","code":"InvalidURL","message":"Invalid URL provided in your request."}
+FAIL: Invalid URL er
+ror persists.

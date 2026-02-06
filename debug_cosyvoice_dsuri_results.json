@@ -1,0 +1,29 @@
+[
+  {
+    "name": "NewEP_DSURI_URL_Param",
+    "status": 400,
+    "data": {
+      "request_id": "c8a42515-640e-493a-8cd6-d863c5d28cd0",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "name": "NewEP_DSURI_AudioURL_Param",
+    "status": 400,
+    "data": {
+      "request_id": "bd390e6c-ff7e-4a49-a1f6-fc1887be2855",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "name": "NewEP_CosyModelName",
+    "status": 400,
+    "data": {
+      "code": "InvalidParameter",
+      "message": "Model not exist.",
+      "request_id": "93e36496-7823-41a3-9541-885c69a34598"
+    }
+  }
+]

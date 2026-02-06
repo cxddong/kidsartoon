@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Standard Object",
+    "status": 400,
+    "data": {
+      "request_id": "0cd16050-eed1-486d-9011-a61a3c7d62fd",
+      "code": "Audio.PreprocessError",
+      "message": "No audio data received"
+    }
+  },
+  {
+    "name": "Array of Objects",
+    "status": 400,
+    "data": {
+      "request_id": "6a49661f-864e-4f59-9a86-85e7dde5e09b",
+      "code": "InvalidParameter",
+      "message": "Required input 'audio.data' is invalid, please check the request parameters."
+    }
+  },
+  {
+    "name": "Direct Audio String (Base64)",
+    "status": 400,
+    "data": {
+      "request_id": "6edf10b3-9955-45be-ac13-852a3a708a10",
+      "code": "InvalidParameter",
+      "message": "Required input 'audio.data' is invalid, please check the request parameters."
+    }
+  }
+]

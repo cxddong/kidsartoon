@@ -1,0 +1,55 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 馃摗 add observability to secrets: https://dotenvx.com/ops
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770110613127.wav
+[DashScope] Starting registration for user test_user_fix_1770111965662 with file voice_1770110613127.wav
+[DashScope] Transcoding to MP3 for stability...
+[DashScope] Enrollment variation 1/2 (Prefix: YES)
+node.exe : [DashScop
+e] Enrollment format
+ error: No audio dat
+a received. Trying n
+ext variation.
+所在位置 行:1 字符: 1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: ([Das   
+ hScope] Enr...n    
+ext variation.:    S
+tring) [], Rem    ot
+eException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+[DashScope] Enrollment variation 2/2 (Prefix: NO)
+[DashScope] Voice re
+gistration terminal 
+failure: Error: Enro
+llment Failed (400):
+ Invalid URL provide
+d in your request.
+    at Object.regist
+erCustomVoice (D:\KA
+T\KAT\src\services\d
+ashscopeService.ts:2
+67:31)
+    at process.proce
+ssTicksAndRejections
+ (node:internal/proc
+ess/task_queues:105:
+5)
+    at async test (D
+:\KAT\KAT\verify_voi
+ce_cloning.ts:18:25)
+CAUGHT ERROR:
+Enrollment Failed (400): Invalid URL provided in your request.
+FAIL: Invalid URL er
+ror persists.

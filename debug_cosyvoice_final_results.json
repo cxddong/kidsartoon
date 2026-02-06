@@ -1,0 +1,29 @@
+[
+  {
+    "name": "NewEP_PythonInput",
+    "status": 400,
+    "data": {
+      "request_id": "fc1ab9c8-6a4e-4eab-8e6e-9656651b1b66",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "name": "NewEP_SubagentInput",
+    "status": 400,
+    "data": {
+      "request_id": "ca9fefaa-4527-4c4e-a12d-e6ff8b4aadf5",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "name": "OldEP_CosyInput",
+    "status": 403,
+    "data": {
+      "request_id": "145fa9a6-04c1-467f-a404-e75d9bd6e20a",
+      "code": "AccessDenied",
+      "message": "current user api does not support asynchronous calls"
+    }
+  }
+]

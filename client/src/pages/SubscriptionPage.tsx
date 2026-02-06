@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { MagicNavBar } from '../components/ui/MagicNavBar';
+
 import { Ticket } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
@@ -359,7 +359,7 @@ export const SubscriptionPage: React.FC = () => {
                 </section>
             </main>
 
-            <MagicNavBar />
+
         </div >
     );
 };

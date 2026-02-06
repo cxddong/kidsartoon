@@ -6,6 +6,8 @@ import { databaseService } from '../services/database.js';
 import { doubaoService } from '../services/doubao.js';
 import { xunfeiTTS } from '../services/xunfei.js';
 import { baiduService } from '../services/baidu.js';
+import { pricingController } from '../controllers/pricingController.js';
+import { adminDb, admin } from '../services/firebaseAdmin.js';
 
 export const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -122,19 +124,37 @@ router.post('/create-story-from-image', upload.single('image'), async (req, res)
             }
         }
 
-        // --- 2. Check Daily Limits (Free Plan Protection) ---
-        // We only check limits if we are generating NEW content (not cached)
-        const dailyCount = await databaseService.getUserDailyUsage(userId, 'story');
-        const userRec = await databaseService.getUser(userId);
-        const isFree = !userRec?.plan || (userRec.plan as string) === 'free';
+        // --- 2. Check Balance & Daily Limits ---
+        let cost = 0;
 
-        if (isFree && dailyCount >= 3) {
-            console.warn(`[StoryOrchestrator] Daily Limit Reached for ${userId}`);
-            return res.status(403).json({
-                error: "Daily Limit Reached",
-                details: "You've created 3 stories today! Come back tomorrow or upgrade to Premium for unlimited magic.",
-                errorCode: 'DAILY_LIMIT_REACHED'
-            });
+        if (userId !== 'anonymous') {
+            cost = await pricingController.getStoryGenerationCost(userId);
+            const dailyCount = await databaseService.getUserDailyUsage(userId, 'story');
+            const userRef = adminDb.collection('users').doc(userId);
+            const userDoc = await userRef.get();
+            const userData = userDoc.data();
+            const currentGems = userData?.gems || 0;
+            const isFree = !userData?.plan || (userData.plan as string) === 'free';
+
+            // Free Plan Limit
+            if (isFree && dailyCount >= 3) {
+                console.warn(`[StoryOrchestrator] Daily Limit Reached for ${userId}`);
+                return res.status(403).json({
+                    error: "Daily Limit Reached",
+                    details: "You've created 3 stories today! Come back tomorrow or upgrade to Premium for unlimited magic.",
+                    errorCode: 'DAILY_LIMIT_REACHED'
+                });
+            }
+
+            // Gem Balance Check (if cost > 0)
+            if (cost > 0 && currentGems < cost) {
+                console.warn(`[StoryOrchestrator] Insufficient gems for ${userId}. Cost: ${cost}, Balance: ${currentGems}`);
+                return res.status(403).json({
+                    error: "Insufficient Gems",
+                    details: `This magic spell requires ${cost} gems. You have ${currentGems}.`,
+                    errorCode: 'INSUFFICIENT_FUNDS'
+                });
+            }
         }
 
         let base64Image = '';
@@ -325,16 +345,26 @@ ${userProvidedPrompt}
                 req.body.profileId // Pass profileId
             );
 
-            // Deduct Points ONLY if not cached (which we already handled by returning early, so if we are here, it's a new gen)
-            // But verify logical flow. Yes.
-            if (userId !== 'anonymous') await databaseService.awardPoints(userId, 15, 'story'); // Legacy name 'awardPoints' often handles deduction based on type, need to check? 
-            // Wait, AudioStoryPage usually calls 'deduct' or 'grant'?
-            // Usually 'image' costs 40. 'story' via this endpoint? 
-            // The user prompt said: "Deduct 1-2 credits" for rewriting. And "Limit spam". 
-            // Existing code calls `awardPoints` (which usually ADDS points).
-            // This endpoint seems to be "Create Story", maybe it relies on Subscription limits mostly?
-            // The prompt "Prevent API cost spikes" implies we should DEDUCT points or at least track limits.
-            // I'll leave the existing point logic (award 15? weird for a cost) but enforce the limit I added above.
+            // Deduct Points via Transaction (safe) if cost > 0
+            if (userId !== 'anonymous' && cost > 0) {
+                await adminDb.runTransaction(async (t) => {
+                    const uRef = adminDb.collection('users').doc(userId);
+                    const uDoc = await t.get(uRef);
+                    if (uDoc.exists) {
+                        const current = uDoc.data()?.gems || 0;
+                        const newValue = current - cost;
+                        if (newValue >= 0) {
+                            t.update(uRef, { gems: newValue });
+                            console.log(`[StoryOrchestrator] Deducted ${cost} gems. New balance: ${newValue}`);
+                        }
+                    }
+                });
+            } else if (userId !== 'anonymous') {
+                // Typically free users or free tier uses might not dedudct "gems" but daily limits.
+                // We already checked limits above.
+                // Maybe award XP for activity?
+                await databaseService.awardPoints(userId, 5, 'story_created');
+            }
 
             console.log('[StoryOrchestrator] DB Save Success');
 

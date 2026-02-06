@@ -41,7 +41,9 @@ export const POINTS_COSTS: Record<string, number> = {
     'magic_mirror_scan': 25,
     'magic_mirror_colorize': 25, // Standardized cost for colorization
     'magic_mentor_step': 25,      // Point cost for each step in Art Coach
-    'masterpiece_match': 25
+    'masterpiece_match': 25,
+    'generate_video_5s': 50,
+    'generate_3d_model': 50
 };
 
 export interface PointLog {
@@ -83,8 +85,23 @@ export class PointsService {
      * Check if user has enough points (Non-transactional check)
      */
     async hasEnoughPoints(userId: string, action: string): Promise<{ enough: boolean, current: number, required: number }> {
+        if (!userId) return { enough: false, current: 0, required: 0 };
+
         const cost = POINTS_COSTS[action] || 0;
         const current = await this.getBalance(userId);
+
+        // Admin Bypass Logic (matches consumePoints)
+        try {
+            const userSnap = await adminDb.collection('users').doc(userId).get();
+            if (userSnap.exists) {
+                const userData = userSnap.data() || {};
+                const isAdmin = (userData.plan === 'admin' || (userData.email || '').includes('cxddong') || (userData.points || 0) >= 10000);
+                if (isAdmin) return { enough: true, current, required: cost };
+            }
+        } catch (e) {
+            console.warn('[Points] Admin check failed in hasEnoughPoints, falling back to standard check');
+        }
+
         return {
             enough: current >= cost,
             current,
@@ -120,14 +137,21 @@ export class PointsService {
 
                 const userData = userDoc.data() || {};
                 const currentPoints = userData.points || 0;
-
-                // ADMIN BYPASS: Users with 10000+ points OR admin emails are admins and don't consume points
                 const userEmail = userData.email || '';
-                const isAdminEmail = userEmail.includes('cxddong');
+                const userPlan = userData.plan || 'free';
 
-                if (currentPoints >= 10000 || isAdminEmail) {
-                    console.log(`[Points] ADMIN BYPASS: User ${userId} (${userEmail}) - Points: ${currentPoints}, Admin Email: ${isAdminEmail}. Skipping deduction.`);
+                // ADMIN BYPASS: Users with 'admin' plan, 10000+ points OR admin emails are admins
+                const isAdmin = userPlan === 'admin' || userEmail.includes('cxddong') || currentPoints >= 10000;
+
+                if (isAdmin) {
+                    console.log(`[Points] ADMIN BYPASS: User ${userId} (${userEmail}) - Plan: ${userPlan}, Points: ${currentPoints}. Skipping deduction.`);
                     return { success: true, before: currentPoints, after: currentPoints };
+                }
+
+                // --- POST-ADMIN CHECKS ---
+                if (cost === undefined) {
+                    console.error(`[Points] Unknown action: ${action}`);
+                    throw "INVALID_ACTION";
                 }
 
                 const totalSpent = userData.totalSpentPoints || 0;
@@ -160,7 +184,9 @@ export class PointsService {
                 return { success: true, before: currentPoints, after: newPoints };
             });
 
-            console.log(`[Points] Consumed ${cost} for ${action}. User: ${userId}.`);
+            if (result.success && result.before !== result.after) {
+                console.log(`[Points] Consumed ${cost} for ${action}. User: ${userId}.`);
+            }
             return result;
 
         } catch (e) {
@@ -243,6 +269,87 @@ export class PointsService {
         } catch (e) {
             console.error('[Points] Grant Failed:', e);
             return { success: false };
+        }
+    }
+
+    /**
+     * Redeem Promotion Code
+     */
+    async redeemCode(userId: string, code: string): Promise<{ success: boolean, pointsAdded?: number, error?: string }> {
+        const cleanCode = code.trim().toUpperCase();
+        if (!cleanCode) return { success: false, error: 'INVALID_CODE' };
+
+        try {
+            return await adminDb.runTransaction(async (transaction) => {
+                // 1. Get Code
+                const codeRef = adminDb.collection('promotion_codes').doc(cleanCode);
+                const codeDoc = await transaction.get(codeRef);
+
+                if (!codeDoc.exists) {
+                    throw "INVALID_CODE"; // Code doesn't exist
+                }
+
+                const codeData = codeDoc.data();
+                if (!codeData || !codeData.active) throw "INVALID_CODE"; // Inactive
+
+                // Check Expiry
+                if (codeData.expiresAt && new Date(codeData.expiresAt) < new Date()) {
+                    throw "CODE_EXPIRED";
+                }
+
+                // Check Global Usage Limit
+                if (codeData.maxUses && codeData.currentUses >= codeData.maxUses) {
+                    throw "CODE_FULLY_REDEEMED";
+                }
+
+                // Check User Redemption (Prevent double dip)
+                const redeemedBy = codeData.redeemedBy || [];
+                if (redeemedBy.includes(userId)) {
+                    throw "ALREADY_REDEEMED";
+                }
+
+                // 2. Get User
+                const userRef = adminDb.collection('users').doc(userId);
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists) throw "USER_NOT_FOUND";
+
+                const currentPoints = userDoc.data()?.points || 0;
+                const pointsToAdd = codeData.points || 0;
+                const newPoints = currentPoints + pointsToAdd;
+
+                // 3. Updates
+                // Update Code Usage
+                transaction.update(codeRef, {
+                    currentUses: (codeData.currentUses || 0) + 1,
+                    redeemedBy: [...redeemedBy, userId]
+                });
+
+                // Update User Points
+                transaction.update(userRef, {
+                    points: newPoints
+                });
+
+                // Log Transaction
+                const logRef = adminDb.collection('points_logs').doc();
+                transaction.set(logRef, {
+                    logId: uuidv4(),
+                    userId,
+                    action: 'redeem_code',
+                    pointsChange: pointsToAdd,
+                    beforePoints: currentPoints,
+                    afterPoints: newPoints,
+                    reason: `Code: ${cleanCode}`,
+                    createdAt: new Date().toISOString()
+                });
+
+                return { success: true, pointsAdded: pointsToAdd };
+            });
+
+        } catch (e: any) {
+            console.error('[Points] Redeem Error:', e);
+            // Return specific errors
+            if (typeof e === 'string') return { success: false, error: e };
+            return { success: false, error: 'REDEEM_FAILED' };
         }
     }
 

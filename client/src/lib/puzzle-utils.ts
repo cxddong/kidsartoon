@@ -39,90 +39,92 @@ export async function sliceImage(
     gridSize: number
 ): Promise<PuzzlePiece[]> {
     return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
+        const loadAndSlice = (src: string, isRetry = false) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
 
-        img.onload = () => {
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
 
-                if (!ctx) {
-                    reject(new Error('Failed to get canvas context'));
-                    return;
-                }
-
-                // Handle high-DPI scaling if needed, but for slicing logic we stick to raw pixels
-                // Just ensure we don't zero-size
-                if (img.width === 0 || img.height === 0) {
-                    reject(new Error('Image has 0 dimensions'));
-                    return;
-                }
-
-                const pieceWidth = img.width / gridSize;
-                const pieceHeight = img.height / gridSize;
-
-
-
-                const pieces: PuzzlePiece[] = [];
-                let id = 0;
-
-                for (let row = 0; row < gridSize; row++) {
-                    for (let col = 0; col < gridSize; col++) {
-                        canvas.width = pieceWidth;
-                        canvas.height = pieceHeight;
-
-                        // Clear canvas
-                        ctx.clearRect(0, 0, pieceWidth, pieceHeight);
-
-                        // Draw the piece
-                        ctx.drawImage(
-                            img,
-                            col * pieceWidth,
-                            row * pieceHeight,
-                            pieceWidth,
-                            pieceHeight,
-                            0,
-                            0,
-                            pieceWidth,
-                            pieceHeight
-                        );
-
-                        pieces.push({
-                            id: id++,
-                            correctRow: row,
-                            correctCol: col,
-                            currentRow: -1, // Unplaced
-                            currentCol: -1,
-                            imageData: canvas.toDataURL('image/png'),
-                            isPlaced: false
-                        });
+                    if (!ctx) {
+                        reject(new Error('Failed to get canvas context'));
+                        return;
                     }
+
+                    if (img.width === 0 || img.height === 0) {
+                        reject(new Error('Image has 0 dimensions'));
+                        return;
+                    }
+
+                    const pieceWidth = img.width / gridSize;
+                    const pieceHeight = img.height / gridSize;
+
+                    const pieces: PuzzlePiece[] = [];
+                    let id = 0;
+
+                    for (let row = 0; row < gridSize; row++) {
+                        for (let col = 0; col < gridSize; col++) {
+                            canvas.width = pieceWidth;
+                            canvas.height = pieceHeight;
+
+                            ctx.clearRect(0, 0, pieceWidth, pieceHeight);
+                            ctx.drawImage(
+                                img,
+                                col * pieceWidth,
+                                row * pieceHeight,
+                                pieceWidth,
+                                pieceHeight,
+                                0,
+                                0,
+                                pieceWidth,
+                                pieceHeight
+                            );
+
+                            pieces.push({
+                                id: id++,
+                                correctRow: row,
+                                correctCol: col,
+                                currentRow: -1,
+                                currentCol: -1,
+                                imageData: canvas.toDataURL('image/png'),
+                                isPlaced: false
+                            });
+                        }
+                    }
+
+                    resolve(pieces);
+                } catch (error) {
+                    reject(error);
                 }
+            };
 
-                resolve(pieces);
-            } catch (error) {
-                reject(error);
-            }
+            img.onerror = () => {
+                if (!isRetry && src.includes('/api/media/proxy')) {
+                    // Proxy failed, try direct (e.g. Firebase might have CORS enabled)
+                    console.warn(`[Puzzle] Proxy load failed for ${src}. Retrying direct load...`);
+                    const originalUrl = decodeURIComponent(src.split('url=')[1]);
+                    loadAndSlice(originalUrl, true);
+                } else {
+                    console.error('[Puzzle] Image Load Error', src);
+                    reject(new Error('Failed to load image for puzzle'));
+                }
+            };
+
+            img.src = src;
         };
 
-        img.onerror = () => {
-            // If proxy failed or original failed
-            console.error('Puzzle Image Load Error', img.src);
-            reject(new Error('Failed to load image for puzzle'));
-        };
-
-        // Auto-proxy remote images to avoid CORS taint on Canvas
-        // We force proxy for ANY URL that starts with http(s) and isn't our own origin
-        // This ensures purely local access for Canvas
-        let src = imageUrl;
-        if (src.startsWith('http')) {
-            const isSameOrigin = src.startsWith(window.location.origin);
-            if (!isSameOrigin) {
-                src = `/api/media/proxy/image?url=${encodeURIComponent(src)}`;
+        // Initial load logic: Auto-proxy remote images unless same origin
+        let initialSrc = imageUrl;
+        if (initialSrc.startsWith('http') && !initialSrc.startsWith(window.location.origin)) {
+            // Check if already proxied to avoid double-proxy
+            if (!initialSrc.includes('/api/media/proxy')) {
+                initialSrc = `/api/media/proxy/image?url=${encodeURIComponent(initialSrc)}`;
             }
         }
-        img.src = src;
+
+        loadAndSlice(initialSrc);
     });
 }
 
@@ -183,14 +185,32 @@ export function checkWinCondition(pieces: PuzzlePiece[]): boolean {
 export function savePuzzleState(imageId: string, state: SavedPuzzleState): void {
     try {
         const storage = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+
+        // Strip heavy base64 imageData from pieces before saving
+        const optimizedPieces = state.pieces.map(p => ({
+            ...p,
+            imageData: '' // Don't save image data, we regenerate it on load
+        }));
+
         storage[imageId] = {
             ...state,
+            pieces: optimizedPieces,
             timestamp: Date.now()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(storage));
         console.log(`[Puzzle] Saved progress for ${imageId}: ${state.completedPieces}/${state.pieces.length} pieces`);
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Puzzle] Failed to save progress:', error);
+        // If quota exceeded, try to clear space
+        if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+            console.warn('[Puzzle] Storage quota exceeded. Clearing old saves...');
+            try {
+                // Clear all puzzle saves as a fallback to allow playing
+                localStorage.removeItem(STORAGE_KEY);
+            } catch (e) {
+                console.error('Failed to clear storage:', e);
+            }
+        }
     }
 }
 

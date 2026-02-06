@@ -118,7 +118,8 @@ router.post('/generate', async (req, res) => {
             id: img.id,
             description: img.prompt || img.meta?.description || 'Untitled',
             type: img.type,
-            colors: img.colorPalette || [img.dominantColor].filter(Boolean)
+            colors: img.colorPalette || [img.dominantColor].filter(Boolean),
+            source: img.artSource || 'unknown' // NEW: Include artwork source
         }));
 
         const childAge = userData?.age || 7;
@@ -130,6 +131,14 @@ You are analyzing a batch of ${artworkDescriptions.length} drawings from a ${chi
 **INPUT DATA:**
 - Batch Artworks: ${JSON.stringify(artworkDescriptions)}
 - Stats: ${JSON.stringify(stats)}
+
+**NOTE ON ARTWORK SOURCES:**
+Artworks may come from different sources:
+  - 'digital-drawing': Created within our app using digital canvas (shows digital creativity, mouse/touch control)
+  - 'paper-capture': Drawn on real paper and captured by camera (shows fine motor skills, traditional art ability)
+  - 'user-upload' or 'unknown': Uploaded from device or legacy records
+  
+When analyzing motor skills and creativity, consider the source. Digital work demonstrates different skills than paper work.
 
 **YOUR TASKS:**
 

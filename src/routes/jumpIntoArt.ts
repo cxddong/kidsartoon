@@ -36,100 +36,102 @@ router.post('/generate', async (req, res) => {
         console.log(`[JumpIntoArt] Art URL: ${artUrl}`);
 
         let resultImageUrl = '';
-        let analysisPrompt = '';
-        let generationPrompt = '';
 
         if (mode === 'A') {
-            // MODE A: Jump Into Drawing (User becomes cartoon)
-            console.log('[JumpIntoArt] Mode A: Jump Into Drawing');
+            // MODE A: Jump Into Drawing (User becomes cartoon with artwork style)
+            console.log('[JumpIntoArt] Mode A: Jump Into Drawing - Style Transfer');
 
-            // STEP 1: Precise Feature Extraction
-            // Extract person features from photo
-            console.log('[JumpIntoArt] Step 1: Extracting person features from photo...');
+            // STEP 1: Deep Style Analysis of Artwork
+            console.log('[JumpIntoArt] 🎨 Step 1/3: Analyzing artwork style in detail...');
+            const artBase64 = await fetchImageAsBase64(artUrl);
+            const artStyleAnalysis = await doubaoService.analyzeImage(
+                artBase64,
+                `You are a professional art analyst. Analyze this artwork's EXACT visual style for AI recreation. Describe:
+
+1. ART MEDIUM: What medium was used? (crayon, watercolor, colored pencil, marker, digital art, oil painting, etc.)
+2. LINE STYLE: Line characteristics (thick black outlines / thin delicate lines / no outlines / rough sketchy / smooth clean)
+3. COLOR PALETTE: Specific colors used (list main colors), saturation level (vibrant/muted/pastel), brightness (bright/dark/balanced)
+4. SHADING TECHNIQUE: How is depth shown? (flat colors / gradient shading / cross-hatching / textured / soft blending)
+5. TEXTURE: Surface appearance (smooth / rough / grainy / paper texture visible / digital clean)
+6. OVERALL AESTHETIC: Art style category (cute cartoon / realistic sketch / anime / chibi / storybook illustration / abstract)
+
+Format as detailed technical description for exact art style recreation.
+
+Example: "Crayon drawing on paper, thick black outlines around all shapes, vibrant primary colors (red, yellow, blue, green), flat coloring with slight crayon texture visible, no gradient shading, rough energetic strokes, cute childlike cartoon aesthetic"`
+            );
+            console.log('[JumpIntoArt] ✅ Art style analyzed:', artStyleAnalysis);
+
+            // STEP 2: Extract art character features
+            console.log('[JumpIntoArt] 👤 Step 2/3: Extracting art character features...');
+            const artCharacterFeatures = await doubaoService.analyzeImage(
+                artBase64,
+                "Describe the character's appearance: character type, hair color and style, clothing, accessories, expression. Reply with comma-separated keywords."
+            );
+            console.log('[JumpIntoArt] ✅ Art character extracted:', artCharacterFeatures);
+
+            // STEP 3: Extract user's basic features (for content, not exact face)
+            console.log('[JumpIntoArt] 📸 Step 3/3: Extracting user features...');
             const photoBase64 = await fetchImageAsBase64(photoUrl);
             const personFeatures = await doubaoService.analyzeImage(
                 photoBase64,
-                "Describe the person's visual features in detail. Focus on: hair style and color, face shape, distinctive clothing (e.g., pink swimsuit), expression. Reply with comma-separated keywords only, no background. Example: 'toddler girl, black short hair with bangs, round face, pink swimsuit, smiling'"
+                "Describe this person's basic appearance: age group, gender, hair color and style, clothing. Reply with comma-separated keywords only."
             );
-            console.log('[JumpIntoArt] Person features:', personFeatures);
+            console.log('[JumpIntoArt] ✅ User features extracted:', personFeatures);
 
-            // Extract art character features from artwork
-            console.log('[JumpIntoArt] Step 2: Extracting art character features...');
-            const artBase64 = await fetchImageAsBase64(artUrl);
-            const artCharacterFeatures = await doubaoService.analyzeImage(
-                artBase64,
-                "Describe the character's visual features in detail. Focus on: character type (e.g., doll girl), hair color and style (e.g., pink twin-tail, blue bow), clothing details (e.g., polka dot dress), eye shape (e.g., large round eyes). Reply with comma-separated keywords only, no background. Example: 'cartoon doll girl, pink twin-tail hair, blue bow, large round eyes, pink polka dot dress'"
-            );
-            console.log('[JumpIntoArt] Art character features:', artCharacterFeatures);
+            // Generate with style-focused prompt
+            const prompt = `Create a ${artStyleAnalysis} illustration showing TWO characters:
 
-            // Extract art style
-            console.log('[JumpIntoArt] Step 3: Extracting art style...');
-            const artStyle = await doubaoService.analyzeImage(
-                artBase64,
-                "What is the art style of this drawing? Reply with one or two words only. Examples: 'crayon drawing', 'watercolor', 'pencil sketch', 'cute cartoon'"
-            );
-            console.log('[JumpIntoArt] Art style:', artStyle);
+Character 1: A cartoon version of a person (${personFeatures}). Draw this person in the EXACT art style described above. Match the line style, color palette, shading technique, and overall aesthetic perfectly. The character should look like it was drawn by the same artist using the same medium.
 
-            // STEP 2: Construct Feature-Locked Prompt
-            const prompt = `A cartoon illustration showing TWO distinct characters together in a whimsical scene. 
-Art style: ${artStyle}.
+Character 2: ${artCharacterFeatures}. Keep this character's original appearance.
 
-Character 1 (The Real Person as Cartoon): Based on reference image A. A cartoon version of the person with ${personFeatures}. This character's face and features MUST strictly resemble the person in reference image A, but drawn in ${artStyle} style.
+Both characters standing together, side-by-side, in the same unified art style. Cheerful scene. 4K resolution.
 
-Character 2 (The Art Character): Based on reference image B. The character with ${artCharacterFeatures}. This character MUST look exactly like the character in reference image B.
+CRITICAL: Both characters must be rendered in the IDENTICAL art style - same line work, same coloring technique, same medium appearance.`;
 
-Both characters are standing side-by-side, interacting happily. Same ${artStyle} art style for both. Colorful, cheerful atmosphere. 4K resolution.`;
-
-            console.log('[JumpIntoArt] Final prompt:', prompt);
-
-            // STEP 3: Generate with feature-locked prompt
-            // Using text-to-image since our detailed feature extraction already captured key characteristics
+            console.log('[JumpIntoArt] 🚀 Generating with style-matched prompt...');
             resultImageUrl = await doubaoService.generateImage(prompt, '4K');
 
         } else if (mode === 'B') {
-            // MODE B: Bring Art to Life (Artwork becomes realistic)
+            // MODE B: Bring Art to Life (Realistic transformation)
             console.log('[JumpIntoArt] Mode B: Bring Art to Life');
 
-            // STEP 1: Precise Feature Extraction
-            // Extract art character features
-            console.log('[JumpIntoArt] Step 1: Extracting art character features...');
+            // STEP 1: Analyze art character for realistic transformation
+            console.log('[JumpIntoArt] 🎨 Step 1/3: Analyzing art character...');
             const artBase64 = await fetchImageAsBase64(artUrl);
-            const artCharacterFeatures = await doubaoService.analyzeImage(
+            const artCharacterDescription = await doubaoService.analyzeImage(
                 artBase64,
-                "Describe the character's visual features in detail. Focus on: character type, hair color and style, clothing details, accessories, eye shape. Reply with comma-separated keywords only. Example: 'cartoon doll girl, pink twin-tail hair, blue bow, large round eyes, pink polka dot dress'"
+                "Describe this character in detail for realistic transformation: character type (girl/boy/animal/object), hair color and style, clothing and accessories, distinctive features, colors. Be detailed. Reply with comma-separated descriptive phrases."
             );
-            console.log('[JumpIntoArt] Art character features:', artCharacterFeatures);
+            console.log('[JumpIntoArt] ✅ Art character:', artCharacterDescription);
 
-            // Extract person features from photo
-            console.log('[JumpIntoArt] Step 2: Extracting person features...');
+            // STEP 2: Analyze user's appearance
+            console.log('[JumpIntoArt] 📸 Step 2/3: Analyzing your appearance...');
             const photoBase64 = await fetchImageAsBase64(photoUrl);
-            const personFeatures = await doubaoService.analyzeImage(
+            const personDescription = await doubaoService.analyzeImage(
                 photoBase64,
-                "Describe the person's visual features. Focus on: hair style and color, age group, clothing. Reply with comma-separated keywords only. Example: 'toddler girl, black short hair with bangs, pink swimsuit'"
+                "Describe this person's appearance: age group, gender, hair color and style, face shape, skin tone, clothing, expression. Be specific. Reply with comma-separated descriptive phrases."
             );
-            console.log('[JumpIntoArt] Person features:', personFeatures);
+            console.log('[JumpIntoArt] ✅ Person appearance:', personDescription);
 
-            // Extract photo environment/style
-            console.log('[JumpIntoArt] Step 3: Extracting photo style...');
-            const photoStyle = await doubaoService.analyzeImage(
+            // STEP 3: Analyze environment
+            console.log('[JumpIntoArt] 🌅 Step 3/3: Analyzing photo environment...');
+            const photoEnvironment = await doubaoService.analyzeImage(
                 photoBase64,
-                "Describe the photo's lighting and atmosphere. Reply with a short phrase. Examples: 'bright indoor lighting', 'warm outdoor sunlight', 'soft natural light'"
+                "Describe the photo's setting and lighting: location (indoor/outdoor), background, lighting (bright/natural/soft). Reply with short phrase."
             );
-            console.log('[JumpIntoArt] Photo style:', photoStyle);
+            console.log('[JumpIntoArt] ✅ Environment:', photoEnvironment);
 
-            // STEP 2: Construct Feature-Locked Prompt
-            const prompt = `A photorealistic photograph of TWO distinct subjects standing together in a real indoor pool environment.
+            // Generate realistic scene
+            const prompt = `A photorealistic photograph of TWO subjects standing together:
 
-Subject 1 (The Real Person): Based on reference image A. The real person with ${personFeatures}. This person's face MUST strictly resemble the person in reference image A.
+Subject 1: A real person matching this description: ${personDescription}. Natural realistic appearance.
 
-Subject 2 (The Art Character Brought to Life): Based on reference image B. A realistic, physical version of the character with ${artCharacterFeatures}. It should look like a real-life mascot or large doll standing next to the person, but with realistic textures and lighting.
+Subject 2: A life-size realistic version of this character: ${artCharacterDescription}. Transform the cartoon/drawing into a real physical being - like a realistic costume character, mascot, or living doll with actual fabric textures and materials.
 
-They are standing side-by-side on the pool deck. ${photoStyle}. Realistic lighting, detailed textures, high quality photography. 4K resolution.`;
+Setting: ${photoEnvironment}. Both standing side-by-side. Natural poses, realistic lighting, professional photography. 4K resolution, highly detailed.`;
 
-            console.log('[JumpIntoArt] Final prompt:', prompt);
-
-            // STEP 3: Generate with feature-locked prompt
-            // Using text-to-image since our detailed feature extraction already captured key characteristics
+            console.log('[JumpIntoArt] 🚀 Generating realistic composition...');
             resultImageUrl = await doubaoService.generateImage(prompt, '4K');
 
         } else {

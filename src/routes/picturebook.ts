@@ -29,7 +29,7 @@ const characterPrompts: Record<string, string> = {
 router.post('/create', async (req, res) => {
     try {
         try {
-            const { userId, imageUrl, theme, pageCount = 4, character, vibe, illustrationStyle, storyText } = req.body;
+            const { userId, imageUrl, theme, pageCount = 4, character, vibe, illustrationStyle, storyText, profileName, profileGender } = req.body;
 
             if (!userId || !imageUrl || !theme) {
                 return res.status(400).json({ error: 'Missing required fields: userId, imageUrl, theme' });
@@ -108,13 +108,25 @@ router.post('/create', async (req, res) => {
                 anchors = { character_description: "A cute character", art_style: "cartoon" };
             }
 
-            // 3. Step B: Story Generation (With Validation)
-            console.log('[PictureBookV2] Step 1: Story Generation...');
-            // CRITICAL FIX: Include user's storyText in the theme/prompt logic
-            // If storyText is provided, it OVERRIDES or AUGMENTS the theme.
+            // Gender-based name injection
+            const shouldUseProfileName = (
+                profileName &&
+                profileGender &&
+                anchors.character_gender &&
+                profileGender.toLowerCase() === anchors.character_gender.toLowerCase()
+            );
+
+            const characterName = shouldUseProfileName ? profileName : undefined;
+            console.log(`[PictureBookV2] Gender Match: ${shouldUseProfileName}, Using Name: ${characterName || 'AI-generated'}`);
+
             let narrativeInstruction = theme;
             if (storyText) {
                 narrativeInstruction = `Core Idea: "${storyText}". Theme: ${theme}`;
+            }
+
+            // Inject character name if gender matches
+            if (characterName) {
+                narrativeInstruction = `${narrativeInstruction}. The main character's name is ${characterName}.`;
             }
 
             const enhancedTheme = `${narrativeInstruction}. ${selectedVibePrompt}`;
@@ -174,7 +186,7 @@ router.post('/create', async (req, res) => {
                     generatedUrl = await doubaoService.generateImageFromImage(
                         finalPrompt,
                         imageUrl,
-                        '2K',
+                        '4K',
                         safeSeed,
                         0.6
                     );

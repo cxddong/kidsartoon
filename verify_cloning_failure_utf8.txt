@@ -1,0 +1,12 @@
+﻿[dotenv@17.2.3] injecting env (25) from .env -- tip: 馃攼 prevent committing .env to code: https://dotenvx.com/precommit
+Starting Voice Cloning Verification...
+Attempting to clone voice using file: D:\KAT\KAT\uploads\voice_1770086883582.wav
+[DashScope] Starting registration for user test_user_fix_1770115676172 with file voice_1770086883582.wav
+[DashScope] Transcoding to enrollment-compatible format...
+[DashScope] Enrollment attempt 1/2 (Lang: en)
+CAUGHT ERROR:
+Enrollment Failed (400): {"request_id":"c81ac9bd-cc0c-4988-8ef4-dce6372470bd","code":"PipelineNotFound","message":"No pipeline for: cosyvoice-v3-plus"}
+UNKNOWN ERROR: Error: Enrollment Failed (400): {"request_id":"c81ac9bd-cc0c-4988-8ef4-dce6372470bd","code":"PipelineNotFound","message":"No pipeline for: cosyvoice-v3-plus"}
+    at Object.registerCustomVoice (D:\KAT\KAT\src\services\dashscopeService.ts:280:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async test (D:\KAT\KAT\verify_voice_cloning.ts:19:25)

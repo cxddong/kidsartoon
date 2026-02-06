@@ -63,6 +63,22 @@ export class DoubaoService {
         if (imageInput.includes('base64,')) {
             return imageInput.split('base64,')[1];
         }
+
+        // Handle local paths by reading from public directory
+        if (imageInput.startsWith('/')) {
+            try {
+                const publicDir = path.join(process.cwd(), 'client', 'public');
+                const filePath = path.join(publicDir, imageInput);
+                if (fs.existsSync(filePath)) {
+                    console.log(`[DoubaoService] Loading local image from: ${filePath}`);
+                    const buffer = fs.readFileSync(filePath);
+                    return buffer.toString('base64');
+                }
+            } catch (e) {
+                console.warn(`[DoubaoService] Failed to read local image ${imageInput}:`, e);
+            }
+        }
+
         return imageInput;
     }
 
@@ -79,41 +95,29 @@ export class DoubaoService {
      */
     async generateImage(prompt: string, size: '2K' | '4K' = '2K', seed?: number, watermark: boolean = true): Promise<string> {
         try {
-            // New Model: Seedream 4.0 (Default fallback, overridden by env if needed)
             const model = process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-pro-4-0-t2i-250415';
 
-            // Doubao Seedream-4.0 supports 1280x720 to 4096x4096
-            // Using maximum 4096x4096 for highest quality
-            const sizeParam = "4096x4096";
+            const payload = {
+                model,
+                prompt,
+                size: size === '4K' ? '2048x2048' : '1024x1024',
+                seed: seed || Math.floor(Math.random() * 1000000),
+                watermark
+            };
 
-            const response = await fetch(`${this.baseUrl}/images/generations`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/images/generations`, {
                 method: 'POST',
                 headers: this.headers,
-                body: JSON.stringify({
-                    model: model,
-                    prompt,
-                    size: sizeParam,
-                    seed: (seed !== undefined && !isNaN(seed)) ? Math.floor(Math.max(0, seed)) : undefined,
-                    width: sizeParam === "4096x4096" ? 4096 : 1024,
-                    height: sizeParam === "4096x4096" ? 4096 : 1024,
-                    response_format: 'url',
-                    guidance_scale: 3, // Updated per user request
-                    sequential_image_generation: 'disabled',
-                    watermark: watermark // True = Add Watermark (Free), False = Clear (VIP)
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Doubao API Error: ${response.status} - ${errorText}`);
+                throw new Error(`Doubao Image Error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
-            const url = data.data?.[0]?.url;
-            if (!url) {
-                throw new Error(`Doubao T2I returned empty URL. Response: ${JSON.stringify(data)}`);
-            }
-            return url;
+            return data.data?.[0]?.url || '';
         } catch (error) {
             console.error('generateImage failed:', error);
             throw error;
@@ -125,20 +129,13 @@ export class DoubaoService {
      */
     async generateImageFromImage(prompt: string, imageUrl: string, size: '2K' | '4K' = '2K', seed?: number, imageWeight: number = 0.7, watermark: boolean = true): Promise<string> {
         try {
-            // NOTE: Seedream 3.0 might be T2I only (t2i in name). 
-            // We keep the old model as fallback for I2I unless we verify 3.0 supports it.
-            // Or we try to use it. Usually T2I models fail on I2I endpoints or inputs.
-            // Leaving this as safe default for now, or user provided I2I model ID? No.
-            // Assuming old model for I2I stability.
-            // NOTE: Use specific I2I model or fallback to known good endpoint.
-            // Do NOT use generic DOUBAO_IMAGE_MODEL as it might be T2I only (e.g. Seedream).
-            const model = process.env.DOUBAO_I2I_MODEL || 'ep-20251209124008-rp9n8';
+            const model = process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-pro-4-0-t2i-250415';
             const safeSeed = (seed !== undefined && !isNaN(seed)) ? Math.floor(Math.max(0, seed)) : undefined;
 
             const body: any = {
                 model: model,
                 prompt,
-                size: size === '4K' ? "4096x4096" : "1024x1024",
+                size: size === '4K' ? "4096x4096" : "2048x2048",
                 seed: safeSeed,
                 image_weight: imageWeight,
                 response_format: 'url',
@@ -146,28 +143,18 @@ export class DoubaoService {
                 watermark: watermark
             };
 
-            // Volcengine Seedream endpoint ID usually expects 'image' field for single reference
             let finalImage = imageUrl;
-
-            // Check if input has a mime type we can preserve
             if (imageUrl.startsWith('data:')) {
-                // It's already a full data URL, use it as is (Doubao supports it)
-                // Just normalize if needed, but usually full string is safer if correct
                 finalImage = imageUrl;
             } else if (imageUrl.startsWith('http')) {
                 finalImage = imageUrl;
             } else {
-                // Raw base64 validation - assume jpeg if no header found, or try to detect?
-                // For safety, defaulting to jpeg is okay if we really only have raw bytes
-                // But better to assume frontend sends full DataURI.
-                // If it looks like raw base64 (no prefix), we add prefix.
-                // NOTE: Most of our app sends full Data URI.
                 finalImage = `data:image/jpeg;base64,${this.normalizeBase64(imageUrl)}`;
             }
 
             body.image = finalImage;
 
-            const response = await fetch(`${this.baseUrl}/images/generations`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/images/generations`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify(body)
@@ -195,9 +182,6 @@ export class DoubaoService {
      */
     async generateSequentialImages(prompt: string, imageUrl?: string, count: number = 5, watermark: boolean = true): Promise<string[]> {
         try {
-            // Use new model for sequential too? 
-            // If it supports it. "t2i" usually supports sequential if platform allows.
-            // Let's try update it to new model.
             const model = process.env.DOUBAO_IMAGE_MODEL || 'doubao-seedream-3-0-t2i-250415';
 
             const body: any = {
@@ -214,13 +198,12 @@ export class DoubaoService {
             };
 
             if (imageUrl) {
-                const cleanImage = this.normalizeBase64(imageUrl);
-                body.image = cleanImage.startsWith('http') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`;
+                body.image = imageUrl.startsWith('http') || imageUrl.startsWith('data:')
+                    ? imageUrl
+                    : `data:image/jpeg;base64,${this.normalizeBase64(imageUrl)}`;
             }
 
-            console.log('[Doubao] Generating sequential images with prompt length:', prompt.length);
-
-            const response = await fetch(`${this.baseUrl}/images/generations`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/images/generations`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify(body)
@@ -228,11 +211,11 @@ export class DoubaoService {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Doubao Sequential Gen Error: ${response.status} - ${errorText}`);
+                throw new Error(`Sequential API Error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
-            return data.data?.map((item: any) => item.url) || [];
+            return (data.data || []).map((img: any) => img.url).filter(Boolean);
         } catch (error) {
             console.error('generateSequentialImages failed:', error);
             throw error;
@@ -243,42 +226,33 @@ export class DoubaoService {
      * Vision Analysis (Image-to-Text)
      */
     async analyzeImage(imageInput: string, prompt: string = "Describe this image for a children's story."): Promise<string> {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 120s Timeout (Increased)
-
         try {
-            const model = process.env.DOUBAO_VISION_MODEL || 'ep-20251209113004-w6g8p';
+            const model = process.env.DOUBAO_VISION_MODEL || 'doubao-vision-pro-32k-250115';
             console.log(`[Doubao] Analyzing image with model: ${model}`);
 
             // Clean base64 prefix if present
             const cleanImage = this.normalizeBase64(imageInput);
+            const imageUrl = cleanImage.startsWith('http') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`;
 
-            const messages: any[] = [
+            const messages = [
                 {
                     role: 'user',
                     content: [
                         { type: 'text', text: prompt },
-                        {
-                            type: 'image_url',
-                            image_url: {
-                                url: cleanImage.startsWith('http') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`
-                            }
-                        }
+                        { type: 'image_url', image_url: { url: imageUrl } }
                     ]
                 }
             ];
 
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
-                    model: model,
-                    messages: messages
+                    model,
+                    messages
                 }),
-                signal: controller.signal
+                timeout: 120000 // 120s Timeout
             });
-
-            clearTimeout(timeout);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -289,9 +263,8 @@ export class DoubaoService {
             const data = await response.json();
             return data.choices?.[0]?.message?.content || '';
         } catch (error) {
-            clearTimeout(timeout);
             console.error('analyzeImage failed:', error);
-            throw error; // Re-throw to let caller handle it
+            throw error;
         }
     }
 
@@ -352,21 +325,19 @@ Your task is to generate a 4-page story based on the user's theme.
                 { role: 'user', content: finalUserPrompt }
             ];
 
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
-                    model: model,
-                    messages: messages
+                    model,
+                    messages
                 }),
-                signal: controller.signal
+                timeout: 120000 // 120s Timeout
             });
-
-            clearTimeout(timeout);
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Story Gen Error: ${response.status} - ${errorText}`);
+                throw new Error(`Story API Error: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
@@ -435,14 +406,11 @@ Your task is to generate a 4-page story based on the user's theme.
      * Text Generation (Story Creation) - Legacy
      */
     async generateStory(prompt: string): Promise<string> {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 90000); // 90s Timeout
-
         try {
             const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20251130051132-bqhrh';
             console.log(`[Doubao] Generating text story with model: ${model}`);
 
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
@@ -452,21 +420,18 @@ Your task is to generate a 4-page story based on the user's theme.
                         { role: 'user', content: prompt }
                     ]
                 }),
-                signal: controller.signal
+                timeout: 90000 // 90s Timeout
             });
-
-            clearTimeout(timeout);
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.warn(`Text Generation API failed (Status ${response.status}): ${errorText}. Falling back to mock.`);
+                console.warn(`Text Generation API failed (Status ${response.status}): ${errorText}`);
                 throw new Error(`Doubao Text Error: ${response.status}`);
             }
 
             const data = await response.json();
             return data.choices?.[0]?.message?.content || '';
         } catch (error) {
-            clearTimeout(timeout);
             console.error('generateStory failed:', error);
             throw error;
         }
@@ -478,7 +443,7 @@ Your task is to generate a 4-page story based on the user's theme.
     async generateSimpleText(userPrompt: string, systemPrompt: string = 'You are a helpful assistant.'): Promise<string> {
         try {
             const model = process.env.DOUBAO_TEXT_MODEL || 'ep-20251130051132-bqhrh';
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
@@ -573,7 +538,7 @@ GOOD: "Look! A magic door appeared in my garden!" / "Oh no! It's locked and I do
 
 Make every word count. Make every emotion clear. Make kids FEEL the story!`;
 
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
@@ -583,10 +548,8 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
                         { role: 'user', content: `Story to create:\n\n${storyText}` }
                     ]
                 }),
-                signal: controller.signal
+                timeout: 120000 // 120s timeout
             });
-
-            clearTimeout(timeout);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -620,7 +583,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
                     sceneDescription: panel.sceneDescription || '',
                     emotion: panel.emotion || 'happy',
                     bubbleType: panel.bubbleType || 'speech',
-                    bubblePosition: panel.bubblePosition || 'bottom'
+                    bubblePosition: panel.bubblePosition || 'top'
                 }));
             } catch (e) {
                 console.warn('[Doubao] JSON Parse failed, generating creative fallback story', e);
@@ -682,11 +645,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
      */
     async generateChildFriendlyPrompt(childInput: string): Promise<string> {
         try {
-            // Use specific model for prompt engineering if defined, otherwise fallback to text model
-            // The user requested 'doubao-pro-1.8', which usually requires a specific endpoint ID in Volcengine.
-            // We use the environment variable DOUBAO_PRO_1_8_MODEL or fallback to the generic text model.
             const model = process.env.DOUBAO_PRO_1_8_MODEL || process.env.DOUBAO_TEXT_MODEL || 'ep-20251130051132-bqhrh';
-
             console.log(`[Doubao] Generating child-friendly prompt with model: ${model}`);
 
             const payload = {
@@ -705,7 +664,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
                 temperature: 0.7
             };
 
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify(payload)
@@ -861,7 +820,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
         };
 
         try {
-            const response = await fetch(url, {
+            const response = await this.fetchWithRetry(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
@@ -982,7 +941,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
         };
 
         try {
-            const response = await fetch(url, {
+            const response = await this.fetchWithRetry(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
@@ -1117,7 +1076,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
         // [Debug] Log Payload for troubleshooting 400 errors
         console.log('[Debug] Volcengine Request Payload:', JSON.stringify(body, null, 2));
 
-        const res = await fetch(`${this.baseUrl}/contents/generations/tasks`, {
+        const res = await this.fetchWithRetry(`${this.baseUrl}/contents/generations/tasks`, {
             method: 'POST',
             headers: { ...this.headers, 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
@@ -1138,7 +1097,7 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
 
         try {
             // Fast check
-            const taskRes = await fetch(`${this.baseUrl}/contents/generations/tasks/${taskId}`, {
+            const taskRes = await this.fetchWithRetry(`${this.baseUrl}/contents/generations/tasks/${taskId}`, {
                 method: 'GET',
                 headers: this.headers
             });
@@ -1244,38 +1203,173 @@ Make every word count. Make every emotion clear. Make kids FEEL the story!`;
      * Text-to-Speech (Audio Generation)
      */
     async generateSpeech(text: string, voice: string = 'zh_female_tianmei'): Promise<Buffer> {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 20000); // 20s Timeout
-
         try {
-            // Try standard endpoint first
-            // For Volcengine/Doubao, the endpoint for OpenAI compatibility is sometimes strictly /api/v3/audio/speech
-            const response = await fetch(`${this.baseUrl}/audio/speech`, {
+            const response = await this.fetchWithRetry(`${this.baseUrl}/audio/speech`, {
                 method: 'POST',
                 headers: this.headers,
                 body: JSON.stringify({
                     model: process.env.DOUBAO_TTS_MODEL || 'doubao-tts-1.0',
                     input: text,
-                    voice: voice, // 'zh_female_tianmei'
+                    voice: voice,
                     speed: 1.0
                 }),
-                signal: controller.signal
+                timeout: 20000 // 20s Timeout
             });
 
-            clearTimeout(timeout);
-
             if (!response.ok) {
-                // Try legacy/alternative endpoint or model if 400/404
                 const errorText = await response.text();
-                // Throw error so orchestrator catches it for fallback
                 throw new Error(`TTS API Error: ${response.status} - ${errorText}`);
             }
 
             const arrayBuffer = await response.arrayBuffer();
             return Buffer.from(arrayBuffer);
         } catch (error) {
-            clearTimeout(timeout);
             console.error('generateSpeech failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create 3D Generation Task (Magic Toy Maker)
+     * Model: doubao-seed3d-1-0-250928
+     */
+    async create3DGenerationTask(imageUrl: string, prompt: string = '--subdivisionlevel medium --fileformat glb'): Promise<string> {
+        try {
+            console.log('[Doubao] Creating 3D Generation Task...');
+            const model = process.env.DOUBAO_3D_MODEL || 'doubao-seed3d-1-0-250928';
+
+            const cleanImage = this.normalizeBase64(imageUrl);
+            // Default to data URI if it looks like raw base64 or has data prefix
+            const finalImageUrl = cleanImage.startsWith('http') ? cleanImage : (cleanImage.startsWith('data:') ? cleanImage : `data:image/jpeg;base64,${cleanImage}`);
+
+            const payload = {
+                model: model,
+                content: [
+                    {
+                        type: "text",
+                        text: prompt
+                    },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: finalImageUrl
+                        }
+                    }
+                ]
+            };
+
+            const response = await this.fetchWithRetry(`${this.baseUrl}/contents/generations/tasks`, {
+                method: 'POST',
+                headers: {
+                    ...this.headers,
+                    'X-Cb-Antigravity-Ref': 'magic-toy-maker'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Doubao 3D Task Error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            const taskId = data.id || data?.data?.id;
+            if (!taskId) {
+                throw new Error(`Doubao 3D returned no Task ID. Resp: ${JSON.stringify(data)}`);
+            }
+
+            console.log(`[Doubao] 3D Task Created: ${taskId}`);
+            return taskId;
+
+        } catch (error) {
+            console.error('create3DGenerationTask failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get 3D Task Status
+     */
+    async get3DTaskStatus(taskId: string): Promise<{ status: string; modelUrl?: string; error?: any; progress?: number; raw?: any }> {
+        try {
+            const url = `${this.baseUrl}/contents/generations/tasks/${taskId}`;
+            const response = await this.fetchWithRetry(url, {
+                method: 'GET',
+                headers: {
+                    ...this.headers
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Doubao 3D Status Error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            // Normalize Status (Doubao SEED3D uses similar codes to Seedance)
+            const remoteStatus = data.status || data?.data?.status;
+            const statusStr = String(remoteStatus).toLowerCase();
+
+            let appStatus = 'PENDING';
+            let modelUrl = '';
+            let errorMsg = null;
+
+            if (statusStr === 'succeeded' || remoteStatus === 2) {
+                appStatus = 'SUCCEEDED';
+                // Extract Model URL (usually in content[0].file_url)
+                const content = data.content?.[0] || data.data?.content?.[0] || data.result?.content?.[0];
+                modelUrl = content?.file_url || content?.url || content?.image_url || '';
+
+                if (!modelUrl && data.content?.video_url) {
+                    // Sometimes returns a preview video if requested, but SEED3D usually returns file
+                    modelUrl = data.content.video_url;
+                }
+            } else if (statusStr === 'failed' || remoteStatus === 3) {
+                appStatus = 'FAILED';
+                errorMsg = data.error?.message || data.error_message || "Generation failed";
+            }
+
+            return {
+                status: appStatus,
+                modelUrl,
+                error: errorMsg,
+                progress: data.progress || data.data?.progress || 0,
+                raw: data
+            };
+
+        } catch (error) {
+            console.error('get3DTaskStatus failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Robust fetch wrapper with timeout and retry logic
+     */
+    private async fetchWithRetry(url: string, options: any = {}, retries = 3, backoff = 1000): Promise<Response> {
+        const timeout = options.timeout || 30000; // Default 30s timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return response;
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+
+            const isTimeout = error.name === 'AbortError' || error.code === 'UND_ERR_CONNECT_TIMEOUT';
+            const isRetryable = isTimeout || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.status >= 500;
+
+            if (retries > 0 && isRetryable) {
+                console.warn(`[DoubaoService] Fetch failed (${error.code || error.name}). Retrying in ${backoff}ms... (${retries} attempts left)`);
+                await new Promise(res => setTimeout(res, backoff));
+                return this.fetchWithRetry(url, options, retries - 1, backoff * 2);
+            }
             throw error;
         }
     }

@@ -1,0 +1,38 @@
+[
+  {
+    "variation": "http://dashscope-file-mgr.oss-cn-beijing.aliyuncs.com/api-fs/1052894881827664/2470193/35718990-0542-",
+    "status": 400,
+    "data": {
+      "request_id": "3307a99d-9ea2-44c4-aad9-140cd342fcbd",
+      "code": "PipelineNotFound",
+      "message": "No pipeline for: qwen3-tts-flash"
+    }
+  },
+  {
+    "variation": "dashscope://v1/file-id/35718990-0542-4aa6-bcfb-ce03af2adb0a",
+    "status": 400,
+    "data": {
+      "request_id": "9f59e364-c95f-449e-9b36-ab7d28599399",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "variation": "dashscope://v1/file/35718990-0542-4aa6-bcfb-ce03af2adb0a",
+    "status": 400,
+    "data": {
+      "request_id": "81c8dae5-0239-4011-ac66-6fcb8e13125b",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "variation": "dashscope://file-id/35718990-0542-4aa6-bcfb-ce03af2adb0a",
+    "status": 400,
+    "data": {
+      "request_id": "d5b4259b-1de6-472e-89a1-3022a262d076",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  }
+]

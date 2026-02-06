@@ -181,3 +181,13 @@ declare global {
   }
 }
 
+
+/**
+ * Require Authentication Middleware (Stub/Placeholder)
+ * Ensure this validates session/token in production
+ */
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // For now, allow all (dev mode) or validate apiKeyAuth which runs before
+  // If you need strict user auth, implement firebase admin verifyIdToken here
+  next();
+}

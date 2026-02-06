@@ -1,0 +1,38 @@
+[
+  {
+    "name": "fileid:// URI",
+    "status": 400,
+    "data": {
+      "request_id": "7b8bceef-f2bc-432f-89d4-78fafbe3ae37",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "name": "Raw Base64 (No prefix)",
+    "status": 400,
+    "data": {
+      "request_id": "997c9fba-68a8-4a63-a98a-0f4e14b283b0",
+      "code": "InvalidURL",
+      "message": "Invalid URL provided in your request."
+    }
+  },
+  {
+    "name": "Audio Object with URL field",
+    "status": 400,
+    "data": {
+      "request_id": "c59587ad-0abf-4291-a45a-13c90ed423df",
+      "code": "InvalidParameter",
+      "message": "Required input 'audio.data' is invalid, please check the request parameters."
+    }
+  },
+  {
+    "name": "Audio Object with direct fileid",
+    "status": 400,
+    "data": {
+      "request_id": "c30d9df4-591f-4612-bb66-9c6f1b1375a9",
+      "code": "InvalidParameter",
+      "message": "Required input 'audio.data' is invalid, please check the request parameters."
+    }
+  }
+]

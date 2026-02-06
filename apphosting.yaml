@@ -13,3 +13,25 @@ env:
   value: 1:1045560094198:web:8c0186f65ab1ddbab3ebd7
 - variable: VITE_FIREBASE_MEASUREMENT_ID
   value: G-Y4M4VX7B5Q
+- variable: MINIMAX_GROUP_ID
+  value: 2002035045556035835
+# OSS Configuration: If these are secrets, move them to the secrets section.
+# Otherwise, update the values here or set them in the Firebase Console.
+- variable: OSS_REGION
+  value: oss-us-east-1
+- variable: OSS_BUCKET
+  value: kat-antigravity
+
+secrets:
+- variable: OPENAI_API_KEY
+  secret: OPENAI_API_KEY
+- variable: DASHSCOPE_API_KEY
+  secret: DASHSCOPE_API_KEY
+- variable: MINIMAX_API_KEY
+  secret: MINIMAX_API_KEY
+- variable: GEMINI_API_KEY
+  secret: GEMINI_API_KEY
+- variable: OSS_ACCESS_KEY_ID
+  secret: OSS_ACCESS_KEY_ID
+- variable: OSS_ACCESS_KEY_SECRET
+  secret: OSS_ACCESS_KEY_SECRET

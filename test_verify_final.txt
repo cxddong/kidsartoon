@@ -1,0 +1,7 @@
+[dotenv@17.2.3] injecting env (25) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+Starting test...
+Testing with Voice ID: v7b364377cz-voice-20260206104034587-6365
+[DashScope] Custom voice synthesis, adding 1s propagation buffer...
+[DashScope] Synthesis | Model: qwen3-tts-flash | Voice: v7b364377cz-voice-20260206104034587-6365
+[DashScope] Downloading from fallback URL: http://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/1d/04/20260206/0d5ce7dd/e01b3db2-8b08-4f3c-8d92-f08891ee54fb.wav?Expires=1770432843&OSSAccessKeyId=LTAI5tKPD3TMqf2Lna1fASuh&Signature=bnuwWGMF1Am6WP9HsCTZ0xqo78I%3D
+Success! Buffer length: 119084

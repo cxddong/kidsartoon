@@ -1,0 +1,20 @@
+[
+  {
+    "name": "NewEP_Base64_AudioData",
+    "status": 400,
+    "data": {
+      "request_id": "f7003c90-daab-4fb3-b789-759734bd9eb3",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  },
+  {
+    "name": "NewEP_Base64_TopUrl",
+    "status": 400,
+    "data": {
+      "request_id": "c63da831-b9e1-4e15-8126-2d1d79bf3104",
+      "code": "InvalidParameter",
+      "message": "url error, please check url！ For details, see: https://help.aliyun.com/zh/model-studio/error-code#error-url"
+    }
+  }
+]

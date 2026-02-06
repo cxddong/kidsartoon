@@ -1,0 +1,29 @@
+[
+  {
+    "name": "audio: { data_url: v }",
+    "status": 400,
+    "data": {
+      "request_id": "a85036b0-0dbe-4542-b180-bdf59d910118",
+      "code": "InvalidParameter",
+      "message": "Required input 'audio.data' is invalid, please check the request parameters."
+    }
+  },
+  {
+    "name": "audio: [ { audio_url: v } ]",
+    "status": 400,
+    "data": {
+      "request_id": "69cbf576-1aec-4a4d-9976-7afa9ba7f187",
+      "code": "InvalidParameter",
+      "message": "Required input 'audio.data' is invalid, please check the request parameters."
+    }
+  },
+  {
+    "name": "audio: [ { data: v } ]",
+    "status": 400,
+    "data": {
+      "request_id": "fccbf450-03d7-40ee-8369-f96d41eb3329",
+      "code": "InvalidParameter",
+      "message": "Required input 'audio.data' is invalid, please check the request parameters."
+    }
+  }
+]
