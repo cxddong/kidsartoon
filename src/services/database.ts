@@ -34,7 +34,7 @@ export interface UserRecord {
     password?: string;
     email?: string;
     isSubscribed?: boolean;
-    plan?: 'basic' | 'pro' | 'yearly' | 'explorer'; // Updated for new tiers
+    plan?: 'basic' | 'pro' | 'yearly' | 'explorer' | 'yearly_pro' | 'admin'; // Updated for new tiers
     subscriptionPlatform?: string;
     subscriptionId?: string;
     subscriptionDate?: string;
