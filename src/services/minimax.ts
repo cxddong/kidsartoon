@@ -77,7 +77,7 @@ export class MinimaxService {
 
             console.log(`[Minimax] Uploading file for ${purpose}: ${filePath}`);
 
-            const response = await axios.post(MINIMAX_API_URL, formData, {
+            const response = await (axios as any).post(MINIMAX_API_URL, formData, {
                 headers: {
                     'Authorization': `Bearer ${MINIMAX_API_KEY}`,
                     ...formData.getHeaders()
@@ -119,7 +119,7 @@ export class MinimaxService {
                 // For now, simple cloning
             };
 
-            const response = await axios.post(MINIMAX_API_URL, payload, {
+            const response = await (axios as any).post(MINIMAX_API_URL, payload, {
                 headers: {
                     'Authorization': `Bearer ${MINIMAX_API_KEY}`,
                     'Content-Type': 'application/json'
@@ -174,7 +174,7 @@ export class MinimaxService {
                 }
             };
 
-            const response = await axios.post(`${MINIMAX_API_URL}?GroupId=${MINIMAX_GROUP_ID}`, payload, {
+            const response = await (axios as any).post(`${MINIMAX_API_URL}?GroupId=${MINIMAX_GROUP_ID}`, payload, {
                 headers: {
                     'Authorization': `Bearer ${MINIMAX_API_KEY}`,
                     'Content-Type': 'application/json'
@@ -240,7 +240,7 @@ export class MinimaxService {
                 }
             };
 
-            const response = await axios.post(`${MINIMAX_API_URL}?GroupId=${MINIMAX_GROUP_ID}`, payload, {
+            const response = await (axios as any).post(`${MINIMAX_API_URL}?GroupId=${MINIMAX_GROUP_ID}`, payload, {
                 headers: {
                     'Authorization': `Bearer ${MINIMAX_API_KEY}`,
                     'Content-Type': 'application/json'

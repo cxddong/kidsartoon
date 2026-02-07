@@ -1,4 +1,4 @@
-import { adminDb } from '../services/firebaseAdmin';
+import { adminDb } from '../services/firebaseAdmin.js';
 
 export const pricingController = {
     /**

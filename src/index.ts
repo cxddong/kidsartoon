@@ -1,28 +1,27 @@
-// src/index.ts
 import 'dotenv/config'; // Read .env (Must be at the top)
-// Server Status: Restarted with Fallback Support
-import { router as pictureBookRouter } from './routes/picturebook.js';
-import fs from 'fs'; // For checking clientDist
-import express from 'express';
-import cors from 'cors';
+import fs from 'fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
 
-// Restore __dirname under ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Global Crash Handler
+// Global Crash Handler (Establish immediately)
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err);
-  // Keep process alive for debugging per user request context (normally should exit)
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
+
+console.log('[SERVER-START] Booting server process...');
+
+// Business Logic Imports (AFTER error handlers)
+import { router as pictureBookRouter } from './routes/picturebook.js';
+import express from 'express';
+import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 
 const app = express();
 
@@ -106,9 +105,11 @@ import artReportRouter from './routes/artReport.js'; // Art Growth Reports
 import { optionalApiKeyAuth } from './middleware/auth.js';
 
 // --- Health Check (Highest Priority for load balancers) ---
+console.log('[SERVER-START] Setting up health check...');
 app.get('/health', (_req, res) => res.json({ status: 'ok', version: '0.1.1', timestamp: new Date().toISOString() }));
 
 // --- API Routes ---
+console.log('[SERVER-START] Registering API routers...');
 app.use('/api/media', mediaRouter);
 app.use('/api/migration', migrationRouter);
 app.use('/api/images', imageRouter);
@@ -133,6 +134,7 @@ import { artclassRouter } from './routes/artclass.js'; // Art Class Save Routes
 import reportsRouter from './routes/reports.js'; // Parent Reports
 
 // ... (API Routes)
+console.log('[SERVER-START] Registering additional routers...');
 app.use('/api/cartoon-book', cartoonBookRouter); // Cartoon Book Routes
 app.use('/api/magic', magicRouter); // Magic Mirror Routes
 app.use('/api/magic-lab', magicLabRouter); // Magic Lab AI Chat Routes
@@ -158,11 +160,11 @@ app.get('/demo', (_req, res) => {
 
 // OpenAPI /docs
 try {
-  const openapiPath = path.join(__dirname, '..', 'openapi', 'openapi.yaml');
+  const openapiPath = path.join(rootDir, 'openapi', 'openapi.yaml');
   const openapiDoc = YAML.load(openapiPath);
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiDoc));
-} catch {
-  console.warn('OpenAPI spec not found; /docs will be disabled until yaml is present.');
+} catch (err: any) {
+  console.warn(`[SERVER-START] OpenAPI spec not found at ${path.join(rootDir, 'openapi', 'openapi.yaml')}; /docs will be disabled.`);
 }
 
 // 4. Serve Frontend SPA (Last Priority)

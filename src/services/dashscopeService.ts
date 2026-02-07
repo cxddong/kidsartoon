@@ -1,4 +1,4 @@
-import { QWEN_OFFICIAL_VOICES } from './qwenVoiceConfig';
+import { QWEN_OFFICIAL_VOICES } from './qwenVoiceConfig.js';
 import fetch from 'node-fetch';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
@@ -6,11 +6,19 @@ import fs from 'fs';
 import path from 'path';
 import * as nodeCrypto from 'crypto';
 import NodeFormData from 'form-data';
-import { ossService } from './ossService';
+import { ossService } from './ossService.js';
+
+const logDir = path.join(process.cwd(), 'logs');
+const debugLog = (filename: string, text: string) => {
+    try {
+        if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+        fs.appendFileSync(path.join(logDir, filename), text);
+    } catch (e) { }
+};
 
 // Configure ffmpeg
 if (ffmpegPath) {
-    ffmpeg.setFfmpegPath(ffmpegPath);
+    ffmpeg.setFfmpegPath(ffmpegPath as any);
 }
 
 const DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
@@ -109,10 +117,7 @@ export const dashscopeService = {
             response.body.on('data', (chunk: Buffer) => {
                 const text = chunk.toString();
                 // DEBUG: Log every chunk to prove we are receiving data
-                try {
-                    if (!fs.existsSync('d:/KAT/KAT/logs')) fs.mkdirSync('d:/KAT/KAT/logs');
-                    fs.appendFileSync('d:/KAT/KAT/logs/raw_stream_debug.log', `[${new Date().toISOString()}] Chunk (${chunk.length}b): ${text}\n`);
-                } catch (e) { }
+                debugLog('raw_stream_debug.log', `[${new Date().toISOString()}] Chunk (${chunk.length}b): ${text}\n`);
 
                 try {
                     // qwen3-tts-flash sends audio embedded in JSON SSE blocks
@@ -148,12 +153,10 @@ export const dashscopeService = {
                                 // V3 returns output.audio.data, while some other models return output.audio_bin
 
                                 // DEBUG: Log the full output structure
-                                try {
-                                    fs.appendFileSync('d:/KAT/KAT/logs/json_structure.log', `[${new Date().toISOString()}] OUTPUT KEYS: ${Object.keys(obj.output || {}).join(', ')}\n`);
-                                    if (obj.output?.audio) {
-                                        fs.appendFileSync('d:/KAT/KAT/logs/json_structure.log', `[${new Date().toISOString()}] AUDIO KEYS: ${Object.keys(obj.output.audio).join(', ')}\n`);
-                                    }
-                                } catch (e) { }
+                                debugLog('json_structure.log', `[${new Date().toISOString()}] OUTPUT KEYS: ${Object.keys(obj.output || {}).join(', ')}\n`);
+                                if (obj.output?.audio) {
+                                    debugLog('json_structure.log', `[${new Date().toISOString()}] AUDIO KEYS: ${Object.keys(obj.output.audio).join(', ')}\n`);
+                                }
 
                                 let audioData = obj.output?.audio?.data || obj.output?.audio_bin;
                                 if (audioData) {
@@ -177,10 +180,7 @@ export const dashscopeService = {
                                 // If parsing fails, it might be that the line was split mid-JSON. 
                                 // But with split('\n'), this shouldn't happen for valid SSE.
                                 // Log strictly to file to avoid console noise if it's just a blip
-                                try {
-                                    if (!fs.existsSync('d:/KAT/KAT/logs')) fs.mkdirSync('d:/KAT/KAT/logs');
-                                    fs.appendFileSync('d:/KAT/KAT/logs/parse_errors.log', `[${new Date().toISOString()}] Parse Error: ${e.message}. Line: ${trimmed.substring(0, 50)}...\n`);
-                                } catch (err) { }
+                                debugLog('parse_errors.log', `[${new Date().toISOString()}] Parse Error: ${e.message}. Line: ${trimmed.substring(0, 50)}...\n`);
                             }
                         }
                     }
@@ -191,10 +191,7 @@ export const dashscopeService = {
 
             response.body.on('end', async () => {
                 // DEBUG: Mark end
-                try {
-                    const fs = require('fs');
-                    fs.appendFileSync('d:/KAT/KAT/logs/sse_debug.log', '\n[STREAM END]\n');
-                } catch (e) { }
+                debugLog('sse_debug.log', '\n[STREAM END]\n');
 
                 if (audioChunks.length > 0) {
                     console.log(`[DashScope] Synthesis complete. Collected ${totalReceived} bytes.`);
@@ -214,12 +211,7 @@ export const dashscopeService = {
                 // DEBUG: Log Raw Stream content on failure
                 if (audioChunks.length === 0 && !falloutUrl) {
                     console.error("[DashScope] STREAM FAILED. Dumping partial stream content...");
-                    try {
-                        const logPath = 'd:/KAT/KAT/logs/stream_dump.log';
-                        if (!fs.existsSync('d:/KAT/KAT/logs')) fs.mkdirSync('d:/KAT/KAT/logs');
-                        fs.appendFileSync(logPath, `\n\n[${new Date().toISOString()}] FAILURE DUMP (Model: ${model}):\n${sseTextBuffer}\n`);
-                        // Also log entire buffer if we kept it? We didn't keep raw buffer. 
-                    } catch (e) { }
+                    debugLog('stream_dump.log', `\n\n[${new Date().toISOString()}] FAILURE DUMP (Model: ${model}):\n${sseTextBuffer}\n`);
 
                     reject(new Error("No audio data recovered from stream."));
                     return;
@@ -382,12 +374,7 @@ export const dashscopeService = {
 
                     if (!response.ok) {
                         // DEBUG: Log to file
-                        try {
-                            const logPath = 'd:/KAT/KAT/logs/enroll_error.log';
-                            const logMsg = `[${new Date().toISOString()}] Enrollment Failed: Status=${response.status}, Body=${JSON.stringify(data)}\n`;
-                            if (!fs.existsSync('d:/KAT/KAT/logs')) fs.mkdirSync('d:/KAT/KAT/logs');
-                            fs.appendFileSync(logPath, logMsg);
-                        } catch (e) { }
+                        debugLog('enroll_error.log', `[${new Date().toISOString()}] Enrollment Failed: Status=${response.status}, Body=${JSON.stringify(data)}\n`);
 
                         throw new Error(`Enrollment Failed (${response.status}): ${JSON.stringify(data)}`);
                     }

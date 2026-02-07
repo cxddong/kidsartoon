@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { artworkAnalysisService } from '../services/artworkAnalysisService';
-import { adminDb } from '../services/firebaseAdmin';
+import { artworkAnalysisService } from '../services/artworkAnalysisService.js';
+import { adminDb } from '../services/firebaseAdmin.js';
 
 const router = Router();
 

@@ -71,7 +71,7 @@ class MinimaxService {
                 }
             };
 
-            const response = await axios.post(`${MINIMAX_API_URL}?GroupId=${MINIMAX_GROUP_ID}`, payload, {
+            const response = await (axios as any).post(`${MINIMAX_API_URL}?GroupId=${MINIMAX_GROUP_ID}`, payload, {
                 headers: {
                     'Authorization': `Bearer ${MINIMAX_API_KEY}`,
                     'Content-Type': 'application/json'

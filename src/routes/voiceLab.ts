@@ -2,14 +2,22 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { dashscopeService } from '../services/dashscopeService';
-import { minimaxService } from '../services/minimax';
-import { admin, adminDb } from '../services/firebaseAdmin';
-import { resolveVoiceId } from '../services/qwenVoiceConfig';
-import { requireAuth } from '../middleware/auth';
-import { pricingController } from '../controllers/pricingController';
+import { dashscopeService } from '../services/dashscopeService.js';
+import { minimaxService } from '../services/minimax.js';
+import { admin, adminDb } from '../services/firebaseAdmin.js';
+import { resolveVoiceId } from '../services/qwenVoiceConfig.js';
+import { requireAuth } from '../middleware/auth.js';
+import { pricingController } from '../controllers/pricingController.js';
 
 const voiceLabRouter = express.Router();
+
+const logDir = path.join(process.cwd(), 'logs');
+const debugLog = (filename: string, text: string) => {
+    try {
+        if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+        fs.appendFileSync(path.join(logDir, filename), text);
+    } catch (e) { }
+};
 
 
 
@@ -126,10 +134,7 @@ voiceLabRouter.post('/preview', async (req, res) => {
 
         // DEBUG: Log resolution to file (Absolute Path)
         try {
-            const fs = require('fs');
-            const logPath = 'd:/KAT/KAT/logs/voice_debug.log';
-            const logMsg = `[${new Date().toISOString()}] Raw: '${rawTargetId}' | Resolved: '${targetVoiceId}' | IsCustom: ${targetVoiceId.startsWith('v')}\n`;
-            fs.appendFileSync(logPath, logMsg);
+            debugLog('voice_debug.log', `[${new Date().toISOString()}] Raw: '${rawTargetId}' | Resolved: '${targetVoiceId}' | IsCustom: ${targetVoiceId.startsWith('v')}\n`);
         } catch (e) { }
 
         console.log(`[VoiceLab] DEBUG: RawID='${rawTargetId}' -> ResolvedID='${targetVoiceId}'`);
@@ -157,7 +162,7 @@ voiceLabRouter.post('/preview', async (req, res) => {
 
             // BRIDGE MODE CACHE HIT: Upload cached file to Storage and return URL
             const cachedBuffer = fs.readFileSync(filePath);
-            const { adminStorageService } = await import('../services/adminStorage');
+            const { adminStorageService } = await import('../services/adminStorage.js');
             const publicUrl = await adminStorageService.uploadFile(cachedBuffer, 'audio/mp3', 'voice_previews');
 
             res.json({
@@ -227,13 +232,7 @@ voiceLabRouter.post('/preview', async (req, res) => {
                 console.error(`[VoiceLab] MiniMax TTS Failed for ${targetVoiceId}. Falling back to Qwen (Aiden)...`);
 
                 // DEBUG: Write error to file (Absolute Path)
-                // DEBUG: Write error to file (Absolute Path)
-                try {
-                    const logPath = 'd:/KAT/KAT/logs/voice_error.log';
-                    const logMsg = `[${new Date().toISOString()}] Provider: QWEN | Voice: ${targetVoiceId} | Error: ${err.message}\n`;
-                    if (!fs.existsSync('d:/KAT/KAT/logs')) fs.mkdirSync('d:/KAT/KAT/logs');
-                    fs.appendFileSync(logPath, logMsg);
-                } catch (e) { console.error("Log failed", e); }
+                debugLog('voice_error.log', `[${new Date().toISOString()}] Provider: QWEN | Voice: ${targetVoiceId} | Error: ${err.message}\n`);
 
                 // Fallback to Qwen Aiden if legacy MiniMax fails (e.g. invalid ID)
                 audioBuffer = await dashscopeService.generateSpeech({
@@ -253,7 +252,7 @@ voiceLabRouter.post('/preview', async (req, res) => {
         }
 
         // FABRICATED BRIDGE MODE: Upload to Firebase Storage
-        const { adminStorageService } = await import('../services/adminStorage');
+        const { adminStorageService } = await import('../services/adminStorage.js');
         const publicUrl = await adminStorageService.uploadFile(audioBuffer, 'audio/mp3', 'voice_previews');
 
         console.log(`[VoiceLab] Bridge Mode: Uploaded preview to ${publicUrl}`);
@@ -291,7 +290,7 @@ voiceLabRouter.post('/clone', upload.single('audio'), async (req: any, res) => {
         console.log(`[VoiceLab] V2.0 Matching Phase for User ${userId}...`);
 
         // 1. AI Analysis & Matching (Brain)
-        const { openAIService } = await import('../services/openai');
+        const { openAIService } = await import('../services/openai.js');
         const archetypes = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/data/voiceArchetypes.json'), 'utf-8'));
 
         const prompt = `

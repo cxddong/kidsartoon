@@ -1,4 +1,4 @@
-import { geminiService } from './gemini';
+import { geminiService } from './gemini.js';
 
 /**
  * Artwork Analysis Service - Expert Panel System

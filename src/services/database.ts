@@ -1,6 +1,6 @@
 import { adminDb, adminStorage, admin } from './firebaseAdmin.js'; // Use centralized admin
 import { v4 as uuidv4 } from 'uuid';
-import { CreativeSeries } from '../types/mentor';
+import { CreativeSeries } from '../types/mentor.js';
 
 export interface ImageRecord {
     id: string; // Firestore ID usually, but we keep our UUID for compatibility
